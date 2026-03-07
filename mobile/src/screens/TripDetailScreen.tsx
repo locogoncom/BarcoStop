@@ -308,6 +308,14 @@ export default function TripDetailScreen() {
   }
 
   const avgRating = ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1) : 'N/A';
+  const timeWindowLabel =
+    trip.timeWindow === 'morning'
+      ? 'Manana'
+      : trip.timeWindow === 'afternoon'
+        ? 'Tarde'
+        : trip.timeWindow === 'night'
+          ? 'Noche'
+          : null;
 
   return (
     <ScrollView style={styles.container}>
@@ -334,7 +342,7 @@ export default function TripDetailScreen() {
       <View style={styles.infoSection}>
         <View style={styles.infoRow}>
           <Text style={styles.label}>📅 {t('tripDetailDeparture')}:</Text>
-          <Text style={styles.value}>{trip.departureDate}</Text>
+          <Text style={styles.value}>{timeWindowLabel ? `${trip.departureDate} · ${timeWindowLabel}` : trip.departureDate}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.label}>💺 {t('tripDetailSeats')}:</Text>
@@ -342,8 +350,15 @@ export default function TripDetailScreen() {
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.label}>💵 {t('tripDetailPrice')}:</Text>
-          <Text style={styles.value}>${trip.price}</Text>
+          <Text style={styles.value}>{trip.price > 0 ? `${trip.price}€` : '0€ (aporte en tareas)'}</Text>
         </View>
+        {trip.price === 0 ? (
+          <View style={styles.infoRowContribution}>
+            <Text style={styles.label}>🤝 Contribucion:</Text>
+            <Text style={styles.valueContribution}>{trip.contributionType || 'A definir con el capitan'}</Text>
+            {trip.contributionNote ? <Text style={styles.valueContributionNote}>{trip.contributionNote}</Text> : null}
+          </View>
+        ) : null}
       </View>
 
       {/* Mapa simple de ruta (ligero) */}
@@ -579,8 +594,11 @@ const styles = StyleSheet.create({
 
   infoSection: {padding: 16, backgroundColor: colors.surface, marginTop: 12},
   infoRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12},
+  infoRowContribution: {marginBottom: 12},
   label: {fontSize: 14, color: colors.textStrong, fontWeight: '600'},
   value: {fontSize: 14, color: '#0c4a6e', fontWeight: 'bold'},
+  valueContribution: {fontSize: 14, color: colors.textStrong, fontWeight: '700', marginTop: 2},
+  valueContributionNote: {fontSize: 12, color: colors.textMuted, marginTop: 4, lineHeight: 17},
 
   routeMapSection: {padding: 16, backgroundColor: colors.surface, marginTop: 8},
   routeMapCard: {

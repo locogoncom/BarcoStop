@@ -19,6 +19,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [bio, setBio] = useState('');
 
   const [boatName, setBoatName] = useState('');
@@ -58,6 +59,13 @@ export default function ProfileScreen() {
       return 'Fecha no disponible';
     }
     return date.toLocaleDateString('es-ES');
+  };
+
+  const sanitizeAvatarUrl = (value: string): string => {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return '';
   };
 
   const openPayPalDonation = (amount: number) => {
@@ -116,6 +124,7 @@ export default function ProfileScreen() {
         }
 
         setName(data.name || '');
+        setAvatarUrl(typeof data.avatar === 'string' ? data.avatar : '');
         setBio(data.bio || '');
         setBoatName(data.boatName || '');
         setBoatType(data.boatType || '');
@@ -185,6 +194,7 @@ export default function ProfileScreen() {
       setSaving(true);
       await userService.update(session.userId, {
         name: name.trim() || session.name,
+        avatar: sanitizeAvatarUrl(avatarUrl),
         bio: bio.trim(),
         boatName: session.role === 'patron' ? boatName.trim() : undefined,
         boatType: session.role === 'patron' ? `${boatType.trim()}${boatDetails.trim() ? ` · ${boatDetails.trim()}` : ''}` : undefined,
@@ -230,6 +240,30 @@ export default function ProfileScreen() {
       <Text style={[styles.line, styles.roleLine]}>
         {t('profileRole')}: {session?.role === 'patron' ? t('roleCaptain') : t('roleTraveler')}
       </Text>
+
+      <View style={styles.avatarSection}>
+        <Text style={styles.avatarTitle}>Foto de perfil</Text>
+        <View style={styles.avatarMediaWrap}>
+          {sanitizeAvatarUrl(avatarUrl) ? (
+            <Image source={{uri: sanitizeAvatarUrl(avatarUrl)}} style={styles.avatarPreview} />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarFallbackText}>📷</Text>
+            </View>
+          )}
+        </View>
+        <TextInput
+          style={[styles.input, styles.avatarInput]}
+          placeholder="URL de foto (https://...)"
+          value={avatarUrl}
+          onChangeText={setAvatarUrl}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <Text style={styles.avatarHint}>
+          Pega la URL publica de tu imagen para mostrarla en tu perfil y chat.
+        </Text>
+      </View>
 
       {/* Sección de Ratings */}
       <View style={styles.ratingsSection}>
@@ -437,6 +471,47 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     alignItems: 'center',
   },
+  avatarSection: {
+    marginBottom: spacing.lg,
+    alignItems: 'stretch',
+  },
+  avatarTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  avatarMediaWrap: {
+    alignItems: 'center',
+  },
+  avatarPreview: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  avatarFallback: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarFallbackText: {fontSize: 28},
+  avatarHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    alignSelf: 'flex-start',
+    marginTop: -4,
+    marginBottom: spacing.sm,
+  },
   donationMessage: {
     fontSize: 14,
     color: colors.textMuted,
@@ -465,6 +540,9 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  avatarInput: {
+    width: '100%',
   },
   ratingCard: {
     backgroundColor: colors.surface,

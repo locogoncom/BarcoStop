@@ -5,6 +5,8 @@ import {useLanguage} from '../contexts/LanguageContext';
 import type {LanguageCode} from '../i18n/translations';
 import type {RootStackParamList} from '../navigation/AppNavigator';
 
+const heroAccentTone = '#0369a1';
+
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
 };
@@ -37,6 +39,8 @@ export default function HomeScreen({navigation}: Props) {
         <Text style={styles.buttonText}>{t('homeTraveler')}</Text>
       </TouchableOpacity>
 
+      <Text style={[styles.subtitle, styles.calloutSpacing]}>animate marinero!!!!</Text>
+
       <View style={styles.languageWrap}>
         <Text style={styles.languageTitle}>{t('languageTitle')}</Text>
         <View style={styles.flagsRow}>
@@ -56,9 +60,10 @@ export default function HomeScreen({navigation}: Props) {
 
 const styles = StyleSheet.create({
   container: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#f0f9ff'},
-  logo: {fontSize: 54, marginBottom: 2},
+  logo: {fontSize: 108, marginBottom: 2},
   title: {fontSize: 32, fontWeight: '800', color: '#0c4a6e', marginTop: 4},
-  subtitle: {fontSize: 16, color: '#0369a1', marginTop: 8, marginBottom: 24, textAlign: 'center'},
+  subtitle: {fontSize: 16, color: heroAccentTone, marginTop: 8, marginBottom: 24, textAlign: 'center'},
+  calloutSpacing: {marginTop: 6, marginBottom: 8},
   button: {width: '100%', backgroundColor: '#0284c7', paddingVertical: 14, borderRadius: 10, marginBottom: 12},
   secondary: {backgroundColor: '#0ea5e9'},
   buttonText: {textAlign: 'center', color: '#fff', fontWeight: '700', fontSize: 16},

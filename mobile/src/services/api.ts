@@ -132,7 +132,7 @@ const mapBoat = (raw: any): Boat => {
 
   return {
     id: String(raw.id ?? ''),
-    patronId: String(raw.patronId ?? raw.patron_id ?? patron?.id ?? ''),
+    patronId: String(raw.patronId ?? raw.patron_id ?? raw.patron?.id ?? ''),
     name: String(raw.name ?? ''),
     type: String(raw.type ?? ''),
     capacity: Number(raw.capacity ?? 0),
@@ -145,6 +145,55 @@ const mapBoat = (raw: any): Boat => {
     status: (raw.status ?? 'active') as Boat['status'],
     createdAt: raw.createdAt,
   };
+};
+
+const parseTripDescription = (
+  description: unknown,
+): {
+  title: string;
+  timeWindow?: Trip['timeWindow'];
+  contributionType?: string;
+  contributionNote?: string;
+} => {
+  const text = typeof description === 'string' ? description : '';
+  const marker = '\n[BSMETA]';
+  const markerIndex = text.indexOf(marker);
+
+  if (markerIndex < 0) {
+    return {title: text.trim()};
+  }
+
+  const title = text.slice(0, markerIndex).trim();
+  const rawMeta = text.slice(markerIndex + marker.length).trim();
+
+  try {
+    const parsed = JSON.parse(rawMeta);
+    const timeWindow =
+      parsed?.timeWindow === 'morning' || parsed?.timeWindow === 'afternoon' || parsed?.timeWindow === 'night'
+        ? parsed.timeWindow
+        : undefined;
+    const contributionType =
+      typeof parsed?.contributionType === 'string' && parsed.contributionType.trim()
+        ? parsed.contributionType.trim()
+        : undefined;
+    const contributionNote =
+      typeof parsed?.contributionNote === 'string' && parsed.contributionNote.trim()
+        ? parsed.contributionNote.trim()
+        : undefined;
+
+    return {title, timeWindow, contributionType, contributionNote};
+  } catch {
+    return {title: text.trim()};
+  }
+};
+
+const inferTimeWindow = (departureTime: unknown): Trip['timeWindow'] | undefined => {
+  if (typeof departureTime !== 'string' || !departureTime) return undefined;
+  const hour = Number(departureTime.slice(0, 2));
+  if (!Number.isFinite(hour)) return undefined;
+  if (hour < 12) return 'morning';
+  if (hour < 19) return 'afternoon';
+  return 'night';
 };
 
 const mapTrip = (raw: any): Trip => {
@@ -183,21 +232,51 @@ const mapTrip = (raw: any): Trip => {
           boatType: raw.boatType ? String(raw.boatType) : undefined,
           averageRating: Number(raw.averageRating ?? raw.rating ?? 0),
         }
-    : undefined;
+      : undefined;
+
+  const parsedDescription = parseTripDescription(raw.description);
+  const departureTime = String(raw.route?.departureTime || raw.departureTime || raw.departure_time || '');
 
   return {
     id: String(raw.id ?? ''),
-    title: String(raw.description || `${raw.route?.origin || raw.origin || ''} → ${raw.route?.destination || raw.destination || ''}` || 'Viaje'),
+    title: String(
+      parsedDescription.title ||
+        `${raw.route?.origin || raw.origin || ''} → ${raw.route?.destination || raw.destination || ''}` ||
+        'Viaje',
+    ),
     origin: String(raw.route?.origin || raw.origin || ''),
     destination: String(raw.route?.destination || raw.destination || ''),
     departureDate: String(raw.route?.departureDate || raw.departureDate || raw.departure_date || ''),
-    departureTime: String(raw.route?.departureTime || raw.departureTime || raw.departure_time || ''),
+    departureTime,
+    timeWindow: parsedDescription.timeWindow ?? inferTimeWindow(departureTime),
     availableSeats: Number(raw.availableSeats ?? raw.available_seats ?? 0),
     price: Number(raw.cost ?? raw.price ?? 0),
+    contributionType: parsedDescription.contributionType,
+    contributionNote: parsedDescription.contributionNote,
     patronId: String(raw.patronId ?? raw.patron_id ?? ''),
     status: (raw.status ?? 'active') as Trip['status'],
     patron,
   };
+};
+
+const encodeTripDescription = (payload: {
+  title: string;
+  timeWindow?: Trip['timeWindow'];
+  contributionType?: string;
+  contributionNote?: string;
+}): string => {
+  const title = payload.title.trim();
+  const metadata: Record<string, string> = {};
+
+  if (payload.timeWindow) metadata.timeWindow = payload.timeWindow;
+  if (payload.contributionType) metadata.contributionType = payload.contributionType.trim();
+  if (payload.contributionNote) metadata.contributionNote = payload.contributionNote.trim();
+
+  if (Object.keys(metadata).length === 0) {
+    return title;
+  }
+
+  return `${title}\n[BSMETA]${JSON.stringify(metadata)}`;
 };
 
 const mapConversation = (raw: any): Conversation => ({
@@ -243,7 +322,7 @@ export const userService = {
   },
   async update(
     userId: string,
-    payload: Partial<Pick<User, 'name' | 'bio' | 'boatName' | 'boatType'>> & {skills?: UserSkill[]},
+    payload: Partial<Pick<User, 'name' | 'avatar' | 'bio' | 'boatName' | 'boatType'>> & {skills?: UserSkill[]},
   ): Promise<User> {
     const {data} = await api.patch(`/users/${userId}`, payload);
     return data;
@@ -267,6 +346,9 @@ export const tripService = {
     availableSeats: number;
     price: number;
     patronId: string;
+    timeWindow?: Trip['timeWindow'];
+    contributionType?: string;
+    contributionNote?: string;
   }): Promise<Trip> {
     const [datePart, timePart] = payload.departureDate.split(' ');
 
@@ -280,7 +362,12 @@ export const tripService = {
         departureTime: timePart || '10:00:00',
         estimatedDuration: '',
       },
-      description: payload.title,
+      description: encodeTripDescription({
+        title: payload.title,
+        timeWindow: payload.timeWindow,
+        contributionType: payload.contributionType,
+        contributionNote: payload.contributionNote,
+      }),
       availableSeats: payload.availableSeats,
       cost: payload.price,
     };
@@ -297,12 +384,22 @@ export const tripService = {
     departureTime: string;
     availableSeats: number;
     price: number;
+    timeWindow: Trip['timeWindow'];
+    contributionType: string;
+    contributionNote: string;
   }>): Promise<Trip> {
     const requestBody: any = {};
 
     if (payload.actorId !== undefined) requestBody.actorId = payload.actorId;
 
-    if (payload.title !== undefined) requestBody.description = payload.title;
+    if (payload.title !== undefined) {
+      requestBody.description = encodeTripDescription({
+        title: payload.title,
+        timeWindow: payload.timeWindow,
+        contributionType: payload.contributionType,
+        contributionNote: payload.contributionNote,
+      });
+    }
     if (
       payload.origin !== undefined ||
       payload.destination !== undefined ||

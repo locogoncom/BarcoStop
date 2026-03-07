@@ -10,6 +10,7 @@ export type User = {
   name: string;
   email: string;
   role: Role;
+  avatar?: string | null;
   bio?: string | null;
   boatName?: string | null;
   boatType?: string | null;
@@ -33,8 +34,11 @@ export type Trip = {
   destination: string;
   departureDate: string;
   departureTime?: string;
+  timeWindow?: 'morning' | 'afternoon' | 'night';
   availableSeats: number;
   price: number;
+  contributionType?: string;
+  contributionNote?: string;
   patronId: string;
   status: 'active' | 'completed' | 'cancelled';
   patron?: Patron;

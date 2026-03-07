@@ -361,11 +361,20 @@ export default function TripListScreen() {
           </View>
         }
         renderItem={({item}) => {
+          const timeWindowLabel = (windowValue?: string) => {
+            if (windowValue === 'morning') return 'Manana';
+            if (windowValue === 'afternoon') return 'Tarde';
+            if (windowValue === 'night') return 'Noche';
+            return '';
+          };
+
           const formatDate = (date: string, time?: string) => {
             if (!date) return t('tripListDateMissing');
             const d = new Date(date + 'T00:00:00');
             const locale = language === 'en' ? 'en-GB' : language === 'fr' ? 'fr-FR' : language === 'pt' ? 'pt-PT' : 'es-ES';
             const dateStr = d.toLocaleDateString(locale, {day: '2-digit', month: 'short'});
+            const windowText = timeWindowLabel(item.timeWindow);
+            if (windowText) return `${dateStr} · ${windowText}`;
             return time ? `${dateStr} · ${time.slice(0,5)}` : dateStr;
           };
           return (
@@ -456,7 +465,14 @@ export default function TripListScreen() {
               <View style={styles.footer}>
                 <View>
                   <Text style={styles.seats}>👥 {item.availableSeats} {t('tripListSeats')}</Text>
-                  <Text style={styles.price}>{item.price}€</Text>
+                  {item.price > 0 ? (
+                    <Text style={styles.price}>{item.price}€</Text>
+                  ) : (
+                    <>
+                      <Text style={styles.priceFree}>0€ · Aporte en tareas</Text>
+                      <Text style={styles.priceContribution}>{item.contributionType || 'Contribucion a acordar'}</Text>
+                    </>
+                  )}
                 </View>
                 {session?.role === 'viajero' && (
                   <>
@@ -658,6 +674,8 @@ const styles = StyleSheet.create({
   footer: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8},
   seats: {color: colors.textStrong, fontSize: 14},
   price: {fontSize: 18, fontWeight: '700', color: colors.primary},
+  priceFree: {fontSize: 15, fontWeight: '700', color: colors.success},
+  priceContribution: {fontSize: 12, color: colors.textMuted, marginTop: 2},
   completeBtn: {backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
   completeBtnText: {color: colors.white, fontWeight: '600', fontSize: 13},
   reserveBtn: {backgroundColor: colors.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
