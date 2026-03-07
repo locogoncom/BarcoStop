@@ -2,6 +2,7 @@ export type LanguageCode = 'en' | 'es' | 'fr' | 'pt';
 
 type TranslationKeys =
   | 'homeSubtitle'
+  | 'homeAnimateSailor'
   | 'homeCaptain'
   | 'homeTraveler'
   | 'languageTitle'
@@ -121,6 +122,7 @@ type TranslationKeys =
 export const translations: Record<LanguageCode, Record<TranslationKeys, string>> = {
   en: {
     homeSubtitle: 'A new travel experience',
+    homeAnimateSailor: 'Animate sailor!!!!',
     homeCaptain: 'I am Captain',
     homeTraveler: 'I am Traveler',
     languageTitle: 'Language',
@@ -239,6 +241,7 @@ export const translations: Record<LanguageCode, Record<TranslationKeys, string>>
   },
   es: {
     homeSubtitle: 'Una nueva experiencia de viaje',
+    homeAnimateSailor: 'Animate marinero!!!!',
     homeCaptain: 'Soy Patrón',
     homeTraveler: 'Soy Viajero',
     languageTitle: 'Idioma',
@@ -357,6 +360,7 @@ export const translations: Record<LanguageCode, Record<TranslationKeys, string>>
   },
   fr: {
     homeSubtitle: 'Une nouvelle expérience de voyage',
+    homeAnimateSailor: 'Anime marin!!!!',
     homeCaptain: 'Je suis Capitaine',
     homeTraveler: 'Je suis Voyageur',
     languageTitle: 'Langue',
@@ -475,6 +479,7 @@ export const translations: Record<LanguageCode, Record<TranslationKeys, string>>
   },
   pt: {
     homeSubtitle: 'Uma nova experiência de viagem',
+    homeAnimateSailor: 'Anime marinheiro!!!!',
     homeCaptain: 'Sou Capitão',
     homeTraveler: 'Sou Viajante',
     languageTitle: 'Idioma',

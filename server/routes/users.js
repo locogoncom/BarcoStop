@@ -1,7 +1,42 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+const {randomUUID} = require('crypto');
 const router = express.Router();
 const User = require('../models/User');
 const {createToken} = require('../utils/token');
+const requireAuth = require('../middleware/requireAuth');
+
+const avatarUploadDir = path.join(__dirname, '..', 'uploads', 'avatars');
+fs.mkdirSync(avatarUploadDir, {recursive: true});
+
+const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, avatarUploadDir),
+  filename: (_req, file, cb) => {
+    const extByMime = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+    };
+    const ext = extByMime[file.mimetype] || path.extname(file.originalname || '') || '.jpg';
+    cb(null, `${Date.now()}-${randomUUID()}${ext}`);
+  },
+});
+
+const uploadAvatar = multer({
+  storage,
+  limits: {fileSize: 5 * 1024 * 1024},
+  fileFilter: (_req, file, cb) => {
+    if (!allowedMimeTypes.has(file.mimetype)) {
+      cb(new Error('Formato de imagen no permitido. Usa JPG, PNG o WEBP.'));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 // register new user
 router.post('/', async (req, res) => {
@@ -81,6 +116,40 @@ router.patch('/:id', async (req, res) => {
     res.json(user);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// upload avatar image
+router.post('/:id/avatar', requireAuth, uploadAvatar.single('avatar'), async (req, res) => {
+  try {
+    const {id} = req.params;
+
+    if (!req.auth?.userId || req.auth.userId !== id) {
+      if (req.file?.path) {
+        fs.unlink(req.file.path, () => {});
+      }
+      return res.status(403).json({error: 'No autorizado para actualizar este avatar'});
+    }
+
+    if (!req.file) {
+      return res.status(400).json({error: 'No se recibio imagen'});
+    }
+
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    const avatarUrl = `${req.protocol}://${req.get('host')}${avatarPath}`;
+
+    const user = await User.update(id, {avatar: avatarUrl});
+    if (!user) {
+      fs.unlink(req.file.path, () => {});
+      return res.sendStatus(404);
+    }
+
+    return res.status(201).json({avatar: avatarUrl, user});
+  } catch (err) {
+    if (req.file?.path) {
+      fs.unlink(req.file.path, () => {});
+    }
+    return res.status(400).json({error: err.message});
   }
 });
 

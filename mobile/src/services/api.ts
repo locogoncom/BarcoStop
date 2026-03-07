@@ -327,6 +327,30 @@ export const userService = {
     const {data} = await api.patch(`/users/${userId}`, payload);
     return data;
   },
+  async uploadAvatar(userId: string, fileUri: string): Promise<string> {
+    const normalizedUri = fileUri.trim();
+    const filename = normalizedUri.split('/').pop() || `avatar-${Date.now()}.jpg`;
+    const mimeType = filename.toLowerCase().endsWith('.png')
+      ? 'image/png'
+      : filename.toLowerCase().endsWith('.webp')
+        ? 'image/webp'
+        : 'image/jpeg';
+
+    const formData = new FormData();
+    formData.append('avatar', {
+      uri: normalizedUri,
+      name: filename,
+      type: mimeType,
+    } as any);
+
+    const {data} = await api.post(`/users/${userId}/avatar`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return String(data?.avatar || '');
+  },
 };
 
 export const tripService = {

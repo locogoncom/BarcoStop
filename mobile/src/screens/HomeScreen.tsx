@@ -39,7 +39,7 @@ export default function HomeScreen({navigation}: Props) {
         <Text style={styles.buttonText}>{t('homeTraveler')}</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.subtitle, styles.calloutSpacing]}>animate marinero!!!!</Text>
+      <Text style={[styles.subtitle, styles.calloutSpacing]}>{t('homeAnimateSailor')}</Text>
 
       <View style={styles.languageWrap}>
         <Text style={styles.languageTitle}>{t('languageTitle')}</Text>

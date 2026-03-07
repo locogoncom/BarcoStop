@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const mysqlDb = require('./database/db');
 const sqliteDb = require('./database/sqlite-db');
 
@@ -10,6 +11,7 @@ const PORT = process.env.PORT || 5000;
 // middlewares
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Request logging middleware
 app.use((req, res, next) => {

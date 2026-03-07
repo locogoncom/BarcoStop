@@ -1,6 +1,7 @@
 import {useNavigation} from '@react-navigation/native';
 import React, {useEffect, useState} from 'react';
 import {ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, Image} from 'react-native';
+import {launchImageLibrary, type ImageLibraryOptions} from 'react-native-image-picker';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
 import {userService, ratingService, donationService} from '../services/api';
@@ -64,8 +65,41 @@ export default function ProfileScreen() {
   const sanitizeAvatarUrl = (value: string): string => {
     const trimmed = value.trim();
     if (!trimmed) return '';
-    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (/^(https?:\/\/|content:\/\/|file:\/\/|ph:\/\/|assets-library:\/\/)/i.test(trimmed)) return trimmed;
     return '';
+  };
+
+  const isLocalAvatarUri = (value: string): boolean => /^(content:\/\/|file:\/\/|ph:\/\/|assets-library:\/\/)/i.test(value.trim());
+
+  const pickAvatarFromGallery = async () => {
+    const options: ImageLibraryOptions = {
+      mediaType: 'photo',
+      selectionLimit: 1,
+      quality: 0.8,
+    };
+
+    try {
+      const response = await launchImageLibrary(options);
+
+      if (response.didCancel) {
+        return;
+      }
+
+      if (response.errorCode) {
+        feedback.info('No se pudo abrir la galeria', 'Aviso');
+        return;
+      }
+
+      const selectedUri = response.assets?.[0]?.uri?.trim();
+      if (!selectedUri) {
+        feedback.info('No se pudo obtener la foto seleccionada', 'Aviso');
+        return;
+      }
+
+      setAvatarUrl(selectedUri);
+    } catch (_error) {
+      feedback.info('No se pudo seleccionar la foto', 'Aviso');
+    }
   };
 
   const openPayPalDonation = (amount: number) => {
@@ -192,9 +226,20 @@ export default function ProfileScreen() {
 
     try {
       setSaving(true);
+      let resolvedAvatar = sanitizeAvatarUrl(avatarUrl);
+
+      if (resolvedAvatar && isLocalAvatarUri(resolvedAvatar)) {
+        const uploadedUrl = await userService.uploadAvatar(session.userId, resolvedAvatar);
+        if (!uploadedUrl) {
+          throw new Error('No se pudo subir el avatar');
+        }
+        resolvedAvatar = uploadedUrl;
+        setAvatarUrl(uploadedUrl);
+      }
+
       await userService.update(session.userId, {
         name: name.trim() || session.name,
-        avatar: sanitizeAvatarUrl(avatarUrl),
+        avatar: resolvedAvatar,
         bio: bio.trim(),
         boatName: session.role === 'patron' ? boatName.trim() : undefined,
         boatType: session.role === 'patron' ? `${boatType.trim()}${boatDetails.trim() ? ` · ${boatDetails.trim()}` : ''}` : undefined,
@@ -260,8 +305,11 @@ export default function ProfileScreen() {
           autoCapitalize="none"
           autoCorrect={false}
         />
+        <TouchableOpacity style={styles.galleryBtn} onPress={pickAvatarFromGallery}>
+          <Text style={styles.galleryBtnText}>Elegir de galeria</Text>
+        </TouchableOpacity>
         <Text style={styles.avatarHint}>
-          Pega la URL publica de tu imagen para mostrarla en tu perfil y chat.
+          Puedes pegar URL publica o elegir una foto desde tu galeria.
         </Text>
       </View>
 
@@ -543,6 +591,18 @@ const styles = StyleSheet.create({
   },
   avatarInput: {
     width: '100%',
+  },
+  galleryBtn: {
+    backgroundColor: '#0ea5e9',
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  galleryBtnText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 14,
   },
   ratingCard: {
     backgroundColor: colors.surface,
