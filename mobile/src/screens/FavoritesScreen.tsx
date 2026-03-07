@@ -1,9 +1,25 @@
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import React, {useState, useCallback} from 'react';
-import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View, Alert, Image} from 'react-native';
+import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
-import {favoriteService} from '../services/api';
+import {favoriteService, messageService} from '../services/api';
+import {colors} from '../theme/colors';
+import {feedback} from '../theme/feedback';
+import {radius, shadows, spacing} from '../theme/layout';
+
+const toSafeRating = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const normalizeFavorite = (raw: any) => ({
+  ...raw,
+  id: String(raw?.id ?? raw?.favoriteUserId ?? ''),
+  name: typeof raw?.name === 'string' && raw.name.trim() ? raw.name.trim() : 'Usuario',
+  role: raw?.role === 'patron' ? 'patron' : 'traveler',
+  averageRating: toSafeRating(raw?.averageRating),
+});
 
 export default function FavoritesScreen() {
   const navigation = useNavigation<any>();
@@ -22,7 +38,12 @@ export default function FavoritesScreen() {
 
     try {
       const data = await favoriteService.getUserFavorites(session.userId);
-      setFavorites(Array.isArray(data) ? data : []);
+      const normalized = Array.isArray(data)
+        ? data
+            .map(normalizeFavorite)
+            .filter(item => item.id.length > 0)
+        : [];
+      setFavorites(normalized);
     } catch (error) {
       console.error('Error loading favorites:', error);
       setFavorites([]);
@@ -42,7 +63,7 @@ export default function FavoritesScreen() {
   const handleRemoveFavorite = async (favoriteUserId: string) => {
     if (!session?.userId) return;
 
-    Alert.alert(
+    feedback.confirm(
       'Eliminar favorito',
       '¿Estás seguro de que quieres eliminar este usuario de tus favoritos?',
       [
@@ -53,10 +74,10 @@ export default function FavoritesScreen() {
           onPress: async () => {
             try {
               await favoriteService.removeFavorite(session.userId, favoriteUserId);
-              Alert.alert('Éxito', 'Usuario eliminado de favoritos');
+              feedback.success('Usuario eliminado de favoritos');
               await loadFavorites();
             } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar el favorito');
+              feedback.error('No se pudo eliminar el favorito');
             }
           },
         },
@@ -64,10 +85,36 @@ export default function FavoritesScreen() {
     );
   };
 
+  const handleStartChat = async (user: any) => {
+    if (!session?.userId || !user?.id) {
+      feedback.error('No pudimos iniciar el chat');
+      return;
+    }
+
+    try {
+      const convo = await messageService.createOrGetConversation({
+        userId1: session.userId,
+        userId2: user.id,
+      });
+
+      navigation.navigate('Messages', {
+        screen: 'Chat',
+        params: {
+          conversationId: convo.id,
+          otherUserId: user.id,
+          otherUserName: user.name,
+        },
+      });
+    } catch (error) {
+      console.error('Error starting chat from favorites:', error);
+      feedback.error('No pudimos abrir el chat');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0284c7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -90,7 +137,7 @@ export default function FavoritesScreen() {
       ) : (
         <FlatList
           data={favorites}
-          keyExtractor={item => item.id}
+          keyExtractor={(item, index) => item.id || `favorite-${index}`}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadFavorites(); }} />
           }
@@ -103,7 +150,7 @@ export default function FavoritesScreen() {
                   </Text>
                 </View>
                 <View style={styles.userDetails}>
-                  <Text style={styles.userName}>{item.name || 'Usuario'}</Text>
+                  <Text style={styles.userName}>{item.name}</Text>
                   <Text style={styles.userRole}>
                     {item.role === 'patron' ? '👨‍✈️ Capitán' : '🧳 Viajero'}
                   </Text>
@@ -112,9 +159,9 @@ export default function FavoritesScreen() {
                       {item.bio}
                     </Text>
                   )}
-                  {item.averageRating > 0 && (
+                  {toSafeRating(item.averageRating) > 0 && (
                     <Text style={styles.rating}>
-                      ⭐ {item.averageRating.toFixed(1)} / 5.0
+                      ⭐ {toSafeRating(item.averageRating).toFixed(1)} / 5.0
                     </Text>
                   )}
                 </View>
@@ -123,16 +170,7 @@ export default function FavoritesScreen() {
               <View style={styles.actions}>
                 <TouchableOpacity
                   style={styles.chatBtn}
-                  onPress={() => {
-                    // Navegar al chat con este usuario
-                    navigation.navigate('Messages', {
-                      screen: 'Chat',
-                      params: {
-                        otherUserId: item.id,
-                        otherUserName: item.name,
-                      },
-                    });
-                  }}
+                  onPress={() => handleStartChat(item)}
                 >
                   <Text style={styles.chatBtnText}>💬 Mensaje</Text>
                 </TouchableOpacity>
@@ -152,34 +190,30 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f8fafc'},
+  container: {flex: 1, backgroundColor: colors.background},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   
   header: {
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: colors.surface,
+    padding: spacing.xl,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: colors.border,
   },
   headerTitle: {fontSize: 24, fontWeight: 'bold', color: '#0c4a6e', marginBottom: 4},
-  headerSubtitle: {fontSize: 14, color: '#64748b'},
+  headerSubtitle: {fontSize: 14, color: colors.textMuted},
 
-  emptyContainer: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20},
+  emptyContainer: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl},
   emptyIcon: {fontSize: 64, marginBottom: 16},
-  emptyTitle: {fontSize: 20, fontWeight: 'bold', color: '#1e293b', marginBottom: 8},
-  emptyText: {fontSize: 14, color: '#64748b', textAlign: 'center'},
+  emptyTitle: {fontSize: 20, fontWeight: 'bold', color: colors.textStrong, marginBottom: 8},
+  emptyText: {fontSize: 14, color: colors.textMuted, textAlign: 'center'},
 
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginHorizontal: spacing.lg,
     marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadows.card,
   },
   userInfo: {flexDirection: 'row', marginBottom: 12},
   avatar: {
@@ -194,23 +228,23 @@ const styles = StyleSheet.create({
   avatarText: {fontSize: 28},
   userDetails: {flex: 1},
   userName: {fontSize: 18, fontWeight: 'bold', color: '#0c4a6e', marginBottom: 4},
-  userRole: {fontSize: 13, color: '#64748b', marginBottom: 4},
-  userBio: {fontSize: 13, color: '#475569', marginTop: 4},
+  userRole: {fontSize: 13, color: colors.textMuted, marginBottom: 4},
+  userBio: {fontSize: 13, color: colors.textStrong, marginTop: 4},
   rating: {fontSize: 13, color: '#f59e0b', marginTop: 4, fontWeight: '600'},
 
-  actions: {flexDirection: 'row', gap: 8},
+  actions: {flexDirection: 'row', gap: spacing.sm},
   chatBtn: {
     flex: 1,
-    backgroundColor: '#0284c7',
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
     paddingVertical: 10,
     alignItems: 'center',
   },
-  chatBtnText: {color: '#fff', fontWeight: '600', fontSize: 14},
+  chatBtnText: {color: colors.white, fontWeight: '600', fontSize: 14},
   removeBtn: {
     width: 48,
     backgroundColor: '#fee2e2',
-    borderRadius: 8,
+    borderRadius: radius.md,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',

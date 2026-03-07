@@ -1,9 +1,12 @@
 import {useNavigation} from '@react-navigation/native';
 import React, {useState} from 'react';
-import {Alert, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
 import {userService} from '../services/api';
+import {colors} from '../theme/colors';
+import {feedback} from '../theme/feedback';
+import {radius, spacing} from '../theme/layout';
 
 export default function AuthScreen({route}: any) {
   const {role} = route.params;
@@ -17,7 +20,7 @@ export default function AuthScreen({route}: any) {
 
   const onSubmit = async () => {
     if (!email.trim() || (isRegister && !name.trim())) {
-      Alert.alert(t('authRequiredTitle'), t('authRequiredMessage'));
+      feedback.alert(t('authRequiredTitle'), t('authRequiredMessage'));
       return;
     }
 
@@ -43,7 +46,7 @@ export default function AuthScreen({route}: any) {
       console.error('[AUTH] Error:', err);
       console.error('[AUTH] Error response:', err.response?.data);
       const errorMsg = err.response?.data?.error || err.message || t('authErrorMessage');
-      Alert.alert(t('alertErrorTitle'), errorMsg);
+      feedback.alert(t('alertErrorTitle'), errorMsg);
     } finally {
       setLoading(false);
     }
@@ -86,18 +89,19 @@ export default function AuthScreen({route}: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#f8fafc'},
-  title: {fontSize: 26, fontWeight: '700', marginBottom: 24, color: '#0f172a', textAlign: 'center'},
+  container: {flex: 1, padding: spacing.xxl, justifyContent: 'center', backgroundColor: colors.background},
+  title: {fontSize: 26, fontWeight: '700', marginBottom: spacing.xxl, color: colors.text, textAlign: 'center'},
   input: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.lg,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 12,
-    backgroundColor: '#fff',
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    color: colors.text,
   },
-  button: {backgroundColor: '#0284c7', paddingVertical: 14, borderRadius: 10, marginTop: 4},
-  buttonText: {color: '#fff', textAlign: 'center', fontWeight: '700'},
-  link: {marginTop: 16, textAlign: 'center', color: '#0369a1', fontWeight: '600'},
+  button: {backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.lg, marginTop: spacing.xs},
+  buttonText: {color: colors.white, textAlign: 'center', fontWeight: '700'},
+  link: {marginTop: spacing.lg, textAlign: 'center', color: colors.primaryAlt, fontWeight: '600'},
 });

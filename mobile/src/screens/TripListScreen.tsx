@@ -7,6 +7,7 @@ import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
 import {RatingStars} from '../components/RatingStars';
 import {RatingModal} from '../components/RatingModal';
+import {colors} from '../theme/colors';
 type TripListNavigationProp = any;
 
 export default function TripListScreen() {
@@ -27,6 +28,7 @@ export default function TripListScreen() {
   const [searchDate, setSearchDate] = useState('');
   const [favoriteUserIds, setFavoriteUserIds] = useState<string[]>([]);
   const [savingFavoriteUserId, setSavingFavoriteUserId] = useState<string | null>(null);
+  const [ratedUserIds, setRatedUserIds] = useState<Set<string>>(new Set());
 
   const toIsoDate = (date: Date) => {
     const y = date.getFullYear();
@@ -85,6 +87,24 @@ export default function TripListScreen() {
     }
   };
 
+  const loadGivenRatings = async () => {
+    if (!session?.userId) {
+      setRatedUserIds(new Set());
+      return;
+    }
+
+    try {
+      const ratings = await ratingService.getRatingsByUser(session.userId);
+      const ids = Array.isArray(ratings)
+        ? ratings.map(r => String((r as any).userId ?? '')).filter(Boolean)
+        : [];
+      setRatedUserIds(new Set(ids));
+    } catch (error) {
+      console.error('Error loading given ratings:', error);
+      setRatedUserIds(new Set());
+    }
+  };
+
   const toggleFavorite = async (favoriteUserId: string) => {
     if (!session?.userId || !favoriteUserId) return;
 
@@ -107,6 +127,18 @@ export default function TripListScreen() {
 
   const getUserReservationForTrip = (tripId: string) => {
     return userReservations.find(r => r.tripId === tripId || r.trip_id === tripId);
+  };
+
+  const canRateTrip = (tripId: string) => {
+    const reservation = getUserReservationForTrip(tripId);
+    if (!reservation) return false;
+    const status = String(reservation.status || '').toLowerCase();
+    return status === 'approved' || status === 'confirmed' || status === 'completed';
+  };
+
+  const hasAlreadyRatedCaptain = (captainId?: string) => {
+    const id = String(captainId ?? '');
+    return Boolean(id && ratedUserIds.has(id));
   };
 
   const handleCreateReservation = async (tripId: string) => {
@@ -194,7 +226,8 @@ export default function TripListScreen() {
       setSelectedTrip(null);
     } catch (error) {
       console.error('Error submitting rating:', error);
-      Alert.alert('Error', 'No se pudo enviar la calificación');
+      const backendMessage = (error as any)?.response?.data?.error;
+      Alert.alert('Error', backendMessage || 'No se pudo enviar la calificación');
     } finally {
       setRatingLoading(false);
     }
@@ -209,6 +242,7 @@ export default function TripListScreen() {
       loadTrips();
       loadUserReservations();
       loadFavorites();
+      loadGivenRatings();
     }, [])
   );
 
@@ -225,7 +259,7 @@ export default function TripListScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0284c7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -250,21 +284,21 @@ export default function TripListScreen() {
             value={searchOrigin}
             onChangeText={setSearchOrigin}
             placeholder="Origen"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={colors.textSubtle}
             style={styles.searchInput}
           />
           <TextInput
             value={searchDestination}
             onChangeText={setSearchDestination}
             placeholder="Destino"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={colors.textSubtle}
             style={styles.searchInput}
           />
           <TextInput
             value={searchDate}
             onChangeText={setSearchDate}
             placeholder="Fecha (ej: 2026-03-06)"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={colors.textSubtle}
             keyboardType="numbers-and-punctuation"
             style={styles.searchInput}
           />
@@ -382,10 +416,40 @@ export default function TripListScreen() {
                       ) : null}
                     </View>
                   </View>
-                  <RatingStars 
-                    rating={item.patron.averageRating || 0}
-                    size="sm"
-                  />
+                  <TouchableOpacity
+                    style={styles.ratingPressable}
+                    onPress={(e: any) => {
+                      e?.stopPropagation?.();
+
+                      if (session?.role !== 'viajero') {
+                        Alert.alert('Información', 'La calificación está disponible para viajeros.');
+                        return;
+                      }
+
+                      if (!canRateTrip(item.id)) {
+                        Alert.alert(
+                          'No disponible aún',
+                          'Podrás puntuar al capitán cuando tu reserva esté aceptada o completada.',
+                        );
+                        return;
+                      }
+
+                      if (hasAlreadyRatedCaptain(item.patronId)) {
+                        Alert.alert('Ya calificado', 'Ya has calificado a este capitán.');
+                        return;
+                      }
+
+                      handleMarkComplete(item);
+                    }}
+                  >
+                    <RatingStars 
+                      rating={item.patron.averageRating || 0}
+                      size="sm"
+                    />
+                    {session?.role === 'viajero' ? (
+                      <Text style={styles.ratingHint}>Toca estrellas para puntuar</Text>
+                    ) : null}
+                  </TouchableOpacity>
                 </View>
               )}
               
@@ -465,16 +529,16 @@ export default function TripListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f8fafc', padding: 16},
+  container: {flex: 1, backgroundColor: colors.background, padding: 16},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   topActions: {flexDirection: 'row', gap: 10, marginBottom: 12},
-  actionBtn: {backgroundColor: '#0284c7', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8},
-  profileBtn: {backgroundColor: '#0ea5e9'},
-  actionText: {color: '#fff', fontWeight: '700'},
+  actionBtn: {backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8},
+  profileBtn: {backgroundColor: colors.primaryAlt},
+  actionText: {color: colors.white, fontWeight: '700'},
   summaryCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -483,26 +547,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  summaryTitle: {color: '#334155', fontWeight: '600'},
-  summaryCount: {color: '#0284c7', fontWeight: '800', fontSize: 20},
+  summaryTitle: {color: colors.textStrong, fontWeight: '600'},
+  summaryCount: {color: colors.primary, fontWeight: '800', fontSize: 20},
   searchCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
   },
-  searchTitle: {color: '#0f172a', fontWeight: '700', marginBottom: 8},
+  searchTitle: {color: colors.text, fontWeight: '700', marginBottom: 8},
   searchInput: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: colors.borderStrong,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    color: '#0f172a',
+    color: colors.text,
     marginBottom: 8,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   quickDateRow: {flexDirection: 'row', gap: 8, marginBottom: 8},
   quickDateBtn: {
@@ -521,7 +585,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  clearSearchText: {color: '#334155', fontWeight: '600', fontSize: 12},
+  clearSearchText: {color: colors.textStrong, fontWeight: '600', fontSize: 12},
   errorBanner: {
     backgroundColor: '#fee2e2',
     borderWidth: 1,
@@ -537,7 +601,7 @@ const styles = StyleSheet.create({
   errorText: {color: '#991b1b', flex: 1, marginRight: 12},
   errorAction: {color: '#b91c1c', fontWeight: '700'},
   cardWrap: {marginBottom: 10},
-  card: {backgroundColor: '#fff', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0'},
+  card: {backgroundColor: colors.surface, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border},
   ownerActions: {
     flexDirection: 'row',
     gap: 8,
@@ -549,10 +613,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 9,
   },
-  editOwnerBtn: {backgroundColor: '#0284c7'},
-  deleteOwnerBtn: {backgroundColor: '#ef4444'},
-  ownerBtnText: {color: '#fff', fontWeight: '700', textAlign: 'center', fontSize: 13},
-  title: {fontSize: 17, fontWeight: '700', color: '#0f172a', marginBottom: 6},
+  editOwnerBtn: {backgroundColor: colors.primary},
+  deleteOwnerBtn: {backgroundColor: colors.danger},
+  ownerBtnText: {color: colors.white, fontWeight: '700', textAlign: 'center', fontSize: 13},
+  title: {fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: 6},
   cardHeaderRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10},
   favoriteIconBtn: {
     width: 34,
@@ -560,12 +624,12 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   favoriteIconText: {fontSize: 18},
-  meta: {marginTop: 3, color: '#64748b', fontSize: 14},
+  meta: {marginTop: 3, color: colors.textMuted, fontSize: 14},
   patronInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -575,28 +639,30 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f1f5f9',
   },
-  patronName: {color: '#475569', fontSize: 14, fontWeight: '600'},
+  patronName: {color: colors.textStrong, fontSize: 14, fontWeight: '600'},
   boatInfoRow: {flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2},
-  boatInfo: {color: '#94a3b8', fontSize: 12, marginTop: 2},
+  boatInfo: {color: colors.textSubtle, fontSize: 12, marginTop: 2},
   inlineFavoriteBtn: {
     width: 24,
     height: 24,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   inlineFavoriteText: {fontSize: 14},
+  ratingPressable: {alignItems: 'flex-end'},
+  ratingHint: {fontSize: 11, color: colors.textSubtle, marginTop: 2},
   footer: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8},
-  seats: {color: '#475569', fontSize: 14},
-  price: {fontSize: 18, fontWeight: '700', color: '#0284c7'},
-  completeBtn: {backgroundColor: '#0284c7', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
-  completeBtnText: {color: '#fff', fontWeight: '600', fontSize: 13},
-  reserveBtn: {backgroundColor: '#f59e0b', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
-  reserveBtnText: {color: '#fff', fontWeight: '600', fontSize: 13},
-  reservedBtn: {backgroundColor: '#10b981'},
+  seats: {color: colors.textStrong, fontSize: 14},
+  price: {fontSize: 18, fontWeight: '700', color: colors.primary},
+  completeBtn: {backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
+  completeBtnText: {color: colors.white, fontWeight: '600', fontSize: 13},
+  reserveBtn: {backgroundColor: colors.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
+  reserveBtnText: {color: colors.white, fontWeight: '600', fontSize: 13},
+  reservedBtn: {backgroundColor: colors.success},
   fullBtn: {backgroundColor: '#e5e7eb', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
   fullBtnText: {color: '#6b7280', fontWeight: '600', fontSize: 13},
   emptyContainer: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60},

@@ -1,9 +1,13 @@
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import React, {useState, useCallback} from 'react';
-import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View, Alert} from 'react-native';
+import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
 import {tripService, reservationService, messageService} from '../services/api';
+import {colors} from '../theme/colors';
+import {feedback} from '../theme/feedback';
+import {radius, shadows, spacing} from '../theme/layout';
+import {getReservationStatusColor, getReservationStatusLabel} from '../theme/reservationStatus';
 
 export default function PatronRequestsScreen() {
   const navigation = useNavigation<any>();
@@ -62,24 +66,29 @@ export default function PatronRequestsScreen() {
     const tripId = request.trip?.id || request.tripId || request.trip_id;
 
     if (!travelerId) {
-      Alert.alert('Error', 'No encontramos el usuario del viajero');
+      feedback.error('No encontramos el usuario del viajero');
       return;
     }
 
-    const conversation = await messageService.createOrGetConversation({
-      userId1: session.userId,
-      userId2: travelerId,
-      tripId,
-    });
+    try {
+      const conversation = await messageService.createOrGetConversation({
+        userId1: session.userId,
+        userId2: travelerId,
+        tripId,
+      });
 
-    navigation.navigate('Messages', {
-      screen: 'Chat',
-      params: {
-        conversationId: conversation.id,
-        otherUserName: travelerName,
-        otherUserId: travelerId,
-      },
-    });
+      navigation.navigate('Messages', {
+        screen: 'Chat',
+        params: {
+          conversationId: conversation.id,
+          otherUserName: travelerName,
+          otherUserId: travelerId,
+        },
+      });
+    } catch (error) {
+      console.error('Error opening chat from patron requests:', error);
+      feedback.error('No pudimos abrir el chat');
+    }
   };
 
   const handleApproveRequest = async (request: any) => {
@@ -98,20 +107,20 @@ export default function PatronRequestsScreen() {
         console.error('Error creating conversation on approval:', chatError);
       }
 
-      Alert.alert('Éxito', 'Solicitud aceptada. Ya podéis hablar por chat.', [
+      feedback.confirm('Exito', 'Solicitud aceptada. Ya podeis hablar por chat.', [
         {text: 'Cerrar', style: 'cancel'},
         {text: 'Abrir chat', onPress: () => openChatForRequest(request)},
       ]);
       await loadRequests();
     } catch (error) {
-      Alert.alert('Error', 'No pudimos aceptar la solicitud');
+      feedback.error('No pudimos aceptar la solicitud');
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleRejectRequest = async (id: string) => {
-    Alert.alert('Rechazar', '¿Estás seguro de que quieres rechazar esta solicitud?', [
+    feedback.confirm('Rechazar', '¿Estas seguro de que quieres rechazar esta solicitud?', [
       {text: 'No', style: 'cancel'},
       {
         text: 'Sí, rechazar',
@@ -119,10 +128,10 @@ export default function PatronRequestsScreen() {
           try {
             setProcessingId(id);
             await reservationService.updateReservation(id, 'rejected');
-            Alert.alert('Éxito', 'Solicitud rechazada');
+            feedback.success('Solicitud rechazada');
             await loadRequests();
           } catch (error) {
-            Alert.alert('Error', 'No pudimos rechazar la solicitud');
+            feedback.error('No pudimos rechazar la solicitud');
           } finally {
             setProcessingId(null);
           }
@@ -138,40 +147,10 @@ export default function PatronRequestsScreen() {
     return d.toLocaleDateString(locale, {day: '2-digit', month: 'short', year: 'numeric'});
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return '#f59e0b';
-      case 'approved':
-      case 'confirmed':
-        return '#10b981';
-      case 'rejected':
-      case 'cancelled':
-        return '#ef4444';
-      default:
-        return '#0284c7';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return '🟡 Pendiente';
-      case 'approved':
-      case 'confirmed':
-        return '✅ Aceptada';
-      case 'rejected':
-      case 'cancelled':
-        return '❌ Rechazada';
-      default:
-        return status;
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0284c7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -196,8 +175,8 @@ export default function PatronRequestsScreen() {
                   <Text style={styles.tripTitle}>{item.trip?.title || 'Viaje'}</Text>
                   <Text style={styles.route}>📍 {item.trip?.origin} → {item.trip?.destination}</Text>
                 </View>
-                <View style={[styles.statusBadge, {backgroundColor: getStatusColor(item.status)}]}>
-                  <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
+                <View style={[styles.statusBadge, {backgroundColor: getReservationStatusColor(item.status)}]}>
+                  <Text style={styles.statusText}>{getReservationStatusLabel(item.status)}</Text>
                 </View>
               </View>
 
@@ -264,32 +243,32 @@ export default function PatronRequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f8fafc', padding: 16},
+  container: {flex: 1, backgroundColor: colors.background, padding: spacing.lg},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   emptyContainer: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   emptyIcon: {fontSize: 60, marginBottom: 16},
-  emptyTitle: {fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 8},
-  emptyText: {fontSize: 14, color: '#64748b'},
+  emptyTitle: {fontSize: 18, fontWeight: 'bold', color: colors.textStrong, marginBottom: 8},
+  emptyText: {fontSize: 14, color: colors.textMuted},
 
-  card: {backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3},
+  card: {backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, ...shadows.card},
   header: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12},
   titleSection: {flex: 1},
   tripTitle: {fontSize: 16, fontWeight: 'bold', color: '#0c4a6e', marginBottom: 4},
-  route: {fontSize: 13, color: '#475569'},
-  statusBadge: {paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20},
-  statusText: {color: '#fff', fontWeight: '600', fontSize: 12},
+  route: {fontSize: 13, color: colors.textStrong},
+  statusBadge: {paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.round},
+  statusText: {color: colors.white, fontWeight: '600', fontSize: 12},
 
-  details: {backgroundColor: '#f8fafc', borderRadius: 8, padding: 12, marginBottom: 12},
+  details: {backgroundColor: colors.background, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md},
   detailRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8},
-  detailLabel: {fontSize: 13, color: '#64748b', flex: 1},
-  detailValue: {fontSize: 13, fontWeight: '600', color: '#1e293b', flex: 1, textAlign: 'right'},
+  detailLabel: {fontSize: 13, color: colors.textMuted, flex: 1},
+  detailValue: {fontSize: 13, fontWeight: '600', color: colors.textStrong, flex: 1, textAlign: 'right'},
 
-  messageText: {fontSize: 12, color: '#475569', fontStyle: 'italic', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e2e8f0'},
+  messageText: {fontSize: 12, color: colors.textStrong, fontStyle: 'italic', paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border},
 
   actionRow: {flexDirection: 'row', gap: 10},
-  actionBtn: {flex: 1, borderRadius: 8, paddingVertical: 10, alignItems: 'center'},
-  approveBtn: {backgroundColor: '#10b981'},
-  rejectBtn: {backgroundColor: '#ef4444'},
-  chatBtn: {backgroundColor: '#0284c7'},
-  actionBtnText: {color: '#fff', fontWeight: '600', fontSize: 13},
+  actionBtn: {flex: 1, borderRadius: radius.md, paddingVertical: 10, alignItems: 'center'},
+  approveBtn: {backgroundColor: colors.success},
+  rejectBtn: {backgroundColor: colors.danger},
+  chatBtn: {backgroundColor: colors.primary},
+  actionBtnText: {color: colors.white, fontWeight: '600', fontSize: 13},
 });

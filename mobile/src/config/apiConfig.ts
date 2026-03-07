@@ -13,6 +13,16 @@ const normalizeEnv = (value: unknown): AppEnv | null => {
   return null;
 };
 
+const normalizeApiUrl = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const withoutTrailingSlash = trimmed.replace(/\/+$/, '');
+  return withoutTrailingSlash.endsWith('/api')
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api`;
+};
+
 const detectEnv = (): AppEnv => {
   const fromProcess =
     typeof process !== 'undefined'
@@ -26,5 +36,10 @@ const detectEnv = (): AppEnv => {
 };
 
 export const APP_ENV: AppEnv = detectEnv();
-export const API_BASE_URL = API_BASE_URLS[APP_ENV];
+const apiUrlFromEnv =
+  typeof process !== 'undefined'
+    ? normalizeApiUrl(process.env?.BARCOSTOP_API_URL || process.env?.API_BASE_URL)
+    : null;
+
+export const API_BASE_URL = apiUrlFromEnv ?? API_BASE_URLS[APP_ENV];
 export const API_BASE_URLS_BY_ENV = API_BASE_URLS;

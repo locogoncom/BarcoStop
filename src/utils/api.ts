@@ -1,7 +1,18 @@
 import axios from 'axios';
 import { User, Trip, Reservation, Message, Conversation } from '../types';
 
-const API_URL = 'http://localhost:5000/api';
+const normalizeApiUrl = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const withoutTrailingSlash = trimmed.replace(/\/+$/, '');
+  return withoutTrailingSlash.endsWith('/api')
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api`;
+};
+
+const envApiUrl = normalizeApiUrl((import.meta as any)?.env?.VITE_API_URL);
+const API_URL = envApiUrl ?? 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,

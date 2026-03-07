@@ -14,6 +14,9 @@ import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
 import {messageService, userService} from '../services/api';
 import type {Conversation, User} from '../types';
+import {colors} from '../theme/colors';
+import {feedback} from '../theme/feedback';
+import {radius, spacing} from '../theme/layout';
 
 export default function MessagesScreen({navigation}: any) {
   const {session} = useAuth();
@@ -85,6 +88,7 @@ export default function MessagesScreen({navigation}: any) {
       });
     } catch (error) {
       console.error('Error starting chat:', error);
+      feedback.error('No pudimos abrir el chat');
     }
   };
 
@@ -174,7 +178,7 @@ export default function MessagesScreen({navigation}: any) {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0284c7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -187,7 +191,7 @@ export default function MessagesScreen({navigation}: any) {
             value={query}
             onChangeText={setQuery}
             placeholder="Buscar conversación o usuario"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={colors.textSubtle}
             style={styles.searchInput}
           />
           <TouchableOpacity
@@ -243,62 +247,62 @@ export default function MessagesScreen({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: colors.border,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.lg,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#0f172a',
+    color: colors.text,
   },
   newChatBtn: {
-    backgroundColor: '#0284c7',
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   newChatBtnActive: {
-    backgroundColor: '#0369a1',
+    backgroundColor: colors.primaryAlt,
   },
   newChatBtnText: {
-    color: '#fff',
+    color: colors.white,
     fontWeight: '700',
     fontSize: 13,
   },
   userResultsSection: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
     paddingTop: 4,
   },
   userResultsTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#475569',
-    marginBottom: 8,
+    color: colors.textStrong,
+    marginBottom: spacing.sm,
   },
   userChip: {
     backgroundColor: '#e0f2fe',
-    borderRadius: 999,
+    borderRadius: radius.round,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginRight: 8,
+    marginRight: spacing.sm,
     borderWidth: 1,
     borderColor: '#7dd3fc',
   },
@@ -308,39 +312,39 @@ const styles = StyleSheet.create({
   },
   noUserText: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.textMuted,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   conversationItem: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: colors.border,
     alignItems: 'center',
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   avatar: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: '#0284c7',
+    borderRadius: radius.round,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarPlaceholder: {
-    backgroundColor: '#cbd5e1',
+    backgroundColor: colors.borderStrong,
   },
   avatarInitial: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -348,15 +352,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    backgroundColor: '#ef4444',
-    borderRadius: 10,
+    backgroundColor: colors.danger,
+    borderRadius: radius.round,
     width: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -372,25 +376,25 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: colors.textStrong,
     flex: 1,
   },
   unreadText: {
     fontWeight: '700',
-    color: '#0284c7',
+    color: colors.primary,
   },
   timestamp: {
     fontSize: 12,
-    color: '#94a3b8',
-    marginLeft: 8,
+    color: colors.textSubtle,
+    marginLeft: spacing.sm,
   },
   lastMessage: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.textMuted,
   },
   unreadMessage: {
     fontWeight: '600',
-    color: '#1e293b',
+    color: colors.textStrong,
   },
   emptyText: {
     fontSize: 20,

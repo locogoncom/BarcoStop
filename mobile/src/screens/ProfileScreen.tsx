@@ -1,12 +1,15 @@
 import {useNavigation} from '@react-navigation/native';
 import React, {useEffect, useState} from 'react';
-import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, Image} from 'react-native';
+import {ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, Image} from 'react-native';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
 import {userService, ratingService, donationService} from '../services/api';
 import {RatingStars} from '../components/RatingStars';
 import {PayPalWebViewModal} from '../components/PayPalWebViewModal';
 import type {UserSkill, Rating} from '../types';
+import {colors} from '../theme/colors';
+import {feedback} from '../theme/feedback';
+import {radius, shadows, spacing} from '../theme/layout';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -33,6 +36,30 @@ export default function ProfileScreen() {
   const [paypalUrl, setPaypalUrl] = useState('');
   const [pendingDonationAmount, setPendingDonationAmount] = useState<number | null>(null);
 
+  const safeAverageRating = (() => {
+    const parsed = Number(averageRating);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.min(5, Math.max(0, parsed));
+  })();
+
+  const normalizeReviewerName = (value: unknown) => {
+    if (typeof value === 'string' && value.trim()) return value;
+    if (typeof value === 'number') return String(value);
+    if (value && typeof value === 'object') {
+      const candidate = (value as any).name ?? (value as any).email ?? (value as any).id;
+      if (typeof candidate === 'string' && candidate.trim()) return candidate;
+    }
+    return 'Usuario anonimo';
+  };
+
+  const formatReviewDate = (value: unknown) => {
+    const date = typeof value === 'string' || typeof value === 'number' ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) {
+      return 'Fecha no disponible';
+    }
+    return date.toLocaleDateString('es-ES');
+  };
+
   const openPayPalDonation = (amount: number) => {
     const fixedAmount = Math.max(2.5, amount);
     setPendingDonationAmount(fixedAmount);
@@ -47,7 +74,7 @@ export default function ProfileScreen() {
       return;
     }
 
-    Alert.alert(
+    feedback.confirm(
       'Confirmar donación',
       `¿Completaste la donación de €${pendingDonationAmount.toFixed(2)} en PayPal?`,
       [
@@ -60,9 +87,9 @@ export default function ProfileScreen() {
                 userId: session.userId,
                 amount: pendingDonationAmount,
               });
-              Alert.alert('Gracias', `Donación de €${pendingDonationAmount.toFixed(2)} registrada`);
+              feedback.success(`Donacion de €${pendingDonationAmount.toFixed(2)} registrada`, 'Gracias');
             } catch (error) {
-              Alert.alert('Aviso', 'No pudimos registrar la donación automáticamente');
+              feedback.info('No pudimos registrar la donacion automaticamente', 'Aviso');
             } finally {
               setPendingDonationAmount(null);
             }
@@ -109,8 +136,20 @@ export default function ProfileScreen() {
         try {
           setRatingsLoading(true);
           const ratingsData = await ratingService.getRatings(session.userId);
-          setAverageRating(ratingsData.averageRating || 0);
-          setRatings(Array.isArray(ratingsData.ratings) ? ratingsData.ratings : []);
+          setAverageRating(Number(ratingsData.averageRating) || 0);
+          const safeRatings = Array.isArray(ratingsData.ratings)
+            ? ratingsData.ratings.map((raw: any) => ({
+                ...raw,
+                id: String(raw?.id ?? `${raw?.ratedBy ?? 'anon'}-${raw?.createdAt ?? Date.now()}`),
+                rating: Number(raw?.rating ?? 0),
+                comment: typeof raw?.comment === 'string' ? raw.comment : '',
+                ratedBy: normalizeReviewerName(raw?.ratedBy),
+                createdAt: typeof raw?.createdAt === 'string' || typeof raw?.createdAt === 'number'
+                  ? String(raw.createdAt)
+                  : '',
+              }))
+            : [];
+          setRatings(safeRatings);
         } catch (ratingError) {
           console.warn('Error loading ratings:', ratingError);
         } finally {
@@ -118,7 +157,7 @@ export default function ProfileScreen() {
         }
       } catch (error) {
         console.error('Error loading profile:', error);
-        Alert.alert(t('alertErrorTitle'), t('profileLoadError'));
+        feedback.alert(t('alertErrorTitle'), t('profileLoadError'));
       } finally {
         setLoading(false);
       }
@@ -151,16 +190,16 @@ export default function ProfileScreen() {
         boatType: session.role === 'patron' ? `${boatType.trim()}${boatDetails.trim() ? ` · ${boatDetails.trim()}` : ''}` : undefined,
         skills,
       });
-      Alert.alert(t('alertOkTitle'), t('profileSaved'));
+      feedback.alert(t('alertOkTitle'), t('profileSaved'));
     } catch (_e) {
-      Alert.alert(t('alertErrorTitle'), t('profileLoadError'));
+      feedback.alert(t('alertErrorTitle'), t('profileLoadError'));
     } finally {
       setSaving(false);
     }
   };
 
   const onLogout = async () => {
-    Alert.alert(t('profileLogoutTitle'), t('profileLogoutMessage'), [
+    feedback.confirm(t('profileLogoutTitle'), t('profileLogoutMessage'), [
       {text: t('profileCancel'), style: 'cancel'},
       {
         text: t('profileConfirm'),
@@ -175,7 +214,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0284c7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -200,8 +239,8 @@ export default function ProfileScreen() {
             <View style={styles.ratingHeaderLeft}>
               <Text style={styles.ratingTitle}>Mi Puntuación</Text>
               <View style={styles.ratingStarContainer}>
-                <RatingStars rating={averageRating} size="lg" />
-                <Text style={styles.ratingScore}>{averageRating.toFixed(1)}</Text>
+                <RatingStars rating={safeAverageRating} size="lg" />
+                <Text style={styles.ratingScore}>{safeAverageRating.toFixed(1)}</Text>
               </View>
             </View>
             <View style={styles.ratingHeaderRight}>
@@ -225,7 +264,7 @@ export default function ProfileScreen() {
                     <View style={styles.reviewerDetails}>
                       <Text style={styles.reviewerName}>{rating.ratedBy || 'Usuario anónimo'}</Text>
                       <Text style={styles.reviewDate}>
-                        {new Date(rating.createdAt || '').toLocaleDateString('es-ES')}
+                        {formatReviewDate(rating.createdAt)}
                       </Text>
                     </View>
                   </View>
@@ -305,7 +344,7 @@ export default function ProfileScreen() {
         <TouchableOpacity 
           style={styles.donationBtn}
           onPress={() => {
-            Alert.alert(
+            feedback.confirm(
               '💙 Donación PayPal',
               'Gracias por tu apoyo al equipo BarcoStop. Mínimo de donación: €2.50',
               [
@@ -344,63 +383,63 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {padding: 20, backgroundColor: '#f8fafc'},
-  center: {flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc'},
+  container: {padding: spacing.xl, backgroundColor: colors.background},
+  center: {flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background},
   homeBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 12,
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
   },
-  homeBtnText: {color: '#0f172a', fontWeight: '700'},
-  title: {fontSize: 24, fontWeight: '800', marginBottom: 16, color: '#0f172a'},
-  line: {fontSize: 16, marginBottom: 6, color: '#334155'},
+  homeBtnText: {color: colors.text, fontWeight: '700'},
+  title: {fontSize: 24, fontWeight: '800', marginBottom: 16, color: colors.text},
+  line: {fontSize: 16, marginBottom: 6, color: colors.textStrong},
   roleLine: {marginBottom: 14},
-  sectionTitle: {fontSize: 18, fontWeight: '700', color: '#0f172a', marginTop: 6, marginBottom: 10},
-  label: {fontSize: 13, color: '#334155', fontWeight: '600', marginBottom: 6},
+  sectionTitle: {fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 6, marginBottom: 10},
+  label: {fontSize: 13, color: colors.textStrong, fontWeight: '600', marginBottom: 6},
   input: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.lg,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    color: '#0f172a',
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    color: colors.text,
   },
   multiline: {minHeight: 70, textAlignVertical: 'top'},
   levelRow: {flexDirection: 'row', gap: 8, marginBottom: 12},
   levelBtn: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: colors.borderStrong,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
-  levelBtnActive: {borderColor: '#0284c7', backgroundColor: '#e0f2fe'},
-  levelText: {color: '#334155', fontWeight: '600', fontSize: 12},
-  levelTextActive: {color: '#0369a1'},
-  saveButton: {marginTop: 4, backgroundColor: '#0284c7', borderRadius: 10, paddingVertical: 14},
-  saveText: {textAlign: 'center', color: '#fff', fontWeight: '700'},
+  levelBtnActive: {borderColor: colors.primary, backgroundColor: '#e0f2fe'},
+  levelText: {color: colors.textStrong, fontWeight: '600', fontSize: 12},
+  levelTextActive: {color: colors.primaryAlt},
+  saveButton: {marginTop: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 14},
+  saveText: {textAlign: 'center', color: colors.white, fontWeight: '700'},
   buttonDisabled: {opacity: 0.6},
-  logoutButton: {marginTop: 12, backgroundColor: '#dc2626', borderRadius: 10, paddingVertical: 14},
-  logoutText: {textAlign: 'center', color: '#fff', fontWeight: '700'},
+  logoutButton: {marginTop: spacing.md, backgroundColor: colors.danger, borderRadius: radius.lg, paddingVertical: 14},
+  logoutText: {textAlign: 'center', color: colors.white, fontWeight: '700'},
   
   // Donation styles
   donationSection: {
-    marginTop: 20,
-    paddingTop: 20,
+    marginTop: spacing.xl,
+    paddingTop: spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: colors.border,
     alignItems: 'center',
   },
   donationMessage: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 12,
     lineHeight: 20,
@@ -408,14 +447,14 @@ const styles = StyleSheet.create({
   },
   donationBtn: {
     backgroundColor: '#003087',
-    borderRadius: 8,
+    borderRadius: radius.md,
     paddingVertical: 12,
     alignItems: 'center',
     width: '100%',
   },
   donationBtnText: {
     textAlign: 'center',
-    color: '#fff',
+    color: colors.white,
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -425,15 +464,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: colors.border,
   },
   ratingCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
+    ...shadows.card,
   },
   ratingHeaderRow: {
     flexDirection: 'row',
@@ -445,7 +485,7 @@ const styles = StyleSheet.create({
   },
   ratingTitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.textMuted,
     marginBottom: 8,
   },
   ratingStarContainer: {
@@ -456,7 +496,7 @@ const styles = StyleSheet.create({
   ratingScore: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0284c7',
+    color: colors.primary,
   },
   ratingHeaderRight: {
     alignItems: 'center',
@@ -465,17 +505,17 @@ const styles = StyleSheet.create({
   ratingCount: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
   },
   ratingCountLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textMuted,
   },
   reviewsList: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   reviewsTitle: {
     fontSize: 14,
@@ -484,13 +524,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   reviewItem: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -521,16 +561,16 @@ const styles = StyleSheet.create({
   reviewerName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#0f172a',
+    color: colors.text,
   },
   reviewDate: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: colors.textSubtle,
     marginTop: 2,
   },
   reviewComment: {
     fontSize: 13,
-    color: '#475569',
+    color: colors.textStrong,
     lineHeight: 18,
   },
 });

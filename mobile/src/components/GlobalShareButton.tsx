@@ -3,6 +3,7 @@ import {
   Alert,
   Linking,
   Modal,
+  Platform,
   Share,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import QRCode from 'react-native-qrcode-svg';
+import {colors} from '../theme/colors';
 
 const APP_SHARE_TEXT = [
   '🚤 BarcoStop: comparte travesias, conoce tripulacion y vive el mar en comunidad.',
@@ -29,6 +31,9 @@ export function GlobalShareButton() {
   const [visible, setVisible] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [shareCount, setShareCount] = useState(0);
+
+  // Keep the button at bottom-right, but high enough to avoid tab bar/content overlap.
+  const fabBottom = Platform.OS === 'android' ? 86 : 98;
 
   const sharePayload = useMemo(() => APP_SHARE_TEXT, []);
 
@@ -92,7 +97,7 @@ export function GlobalShareButton() {
 
   return (
     <>
-      <TouchableOpacity style={styles.fab} onPress={() => setVisible(true)}>
+      <TouchableOpacity style={[styles.fab, {bottom: fabBottom}]} onPress={() => setVisible(true)}>
         <Text style={styles.fabText}>📣</Text>
       </TouchableOpacity>
 
@@ -135,7 +140,7 @@ export function GlobalShareButton() {
             <Text style={styles.title}>QR de BarcoStop</Text>
             <Text style={styles.counterText}>Compartidos totales: {shareCount}</Text>
             <View style={styles.qrWrap}>
-              <QRCode value={APP_QR_URL} size={180} color="#0284c7" backgroundColor="#fff" />
+              <QRCode value={APP_QR_URL} size={180} color={colors.primary} backgroundColor={colors.white} />
             </View>
             <Text style={styles.helperText}>Escanéalo con la cámara de tu móvil para ir a barcostop.app</Text>
             <TouchableOpacity style={styles.closeBtn} onPress={() => setShowQr(false)}>
@@ -152,11 +157,10 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 16,
-    bottom: 84,
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#0ea5e9',
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
@@ -173,44 +177,44 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 16,
   },
   qrCard: {
     width: '100%',
     maxWidth: 320,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
   },
-  title: {fontSize: 17, fontWeight: '700', color: '#0f172a', marginBottom: 12},
-  subtitle: {fontSize: 12, color: '#64748b', marginBottom: 10},
-  counterText: {fontSize: 12, color: '#0369a1', fontWeight: '700', marginBottom: 10},
+  title: {fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: 12},
+  subtitle: {fontSize: 12, color: colors.textMuted, marginBottom: 10},
+  counterText: {fontSize: 12, color: colors.primary, fontWeight: '700', marginBottom: 10},
   actionBtn: {
     borderRadius: 8,
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginBottom: 8,
   },
-  qrBtn: {backgroundColor: '#0ea5e9'},
-  actionText: {color: '#fff', fontWeight: '700', textAlign: 'center'},
+  qrBtn: {backgroundColor: colors.primaryAlt},
+  actionText: {color: colors.white, fontWeight: '700', textAlign: 'center'},
   closeBtn: {
     marginTop: 6,
     borderRadius: 8,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.border,
     paddingVertical: 10,
   },
-  closeText: {textAlign: 'center', color: '#334155', fontWeight: '700'},
+  closeText: {textAlign: 'center', color: colors.textStrong, fontWeight: '700'},
   qrWrap: {
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     marginBottom: 10,
   },
-  helperText: {fontSize: 12, color: '#64748b', marginBottom: 8},
+  helperText: {fontSize: 12, color: colors.textMuted, marginBottom: 8},
 });

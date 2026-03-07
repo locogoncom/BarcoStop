@@ -36,28 +36,26 @@ Deberías ver:
 Server running on port 5000
 ```
 
-### Paso 3: Configurar la App Móvil
+### Paso 3: Configurar URLs API (solo 1 cambio)
 
-Obtén la IP de tu computadora:
+Web (Vite) usa `VITE_API_URL` y mobile usa `BARCOSTOP_API_URL`.
 
-```powershell
-ipconfig
+1. En la raíz del proyecto crea/edita `.env`:
+
+```env
+VITE_API_URL=https://tu-backend-publico.com/api
 ```
 
-Busca tu "IPv4 Address" (ejemplo: 192.168.1.100)
+2. En `mobile/` crea/edita `.env`:
 
-Edita `c:\BarcoStop\mobile\src\services\api.ts` línea 9:
-
-```typescript
-// Cambia esto:
-const API_BASE_URL = 'http://localhost:5000/api';
-
-// Por esto (usando tu IP):
-const API_BASE_URL = 'http://192.168.1.100:5000/api';
-
-// O si usas emulador Android:
-const API_BASE_URL = 'http://10.0.2.2:5000/api';
+```env
+APP_ENV=prod
+BARCOSTOP_API_URL=https://tu-backend-publico.com/api
 ```
+
+Notas:
+- Si omites `/api`, la app lo agrega automáticamente.
+- En mobile también puedes usar solo `APP_ENV=dev|staging|prod` y tomar URLs por entorno desde `mobile/src/config/apiConfig.ts`.
 
 ### Paso 4: Iniciar la App Móvil
 

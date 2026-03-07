@@ -7,6 +7,66 @@ const api = axios.create({
   timeout: 10000,
 });
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+type RequestPolicy = {
+  retries: number;
+  delayMs: number;
+  timeoutMs: number;
+};
+
+const REQUEST_POLICIES = {
+  chatRead: {retries: 2, delayMs: 300, timeoutMs: 6000},
+  chatWrite: {retries: 2, delayMs: 350, timeoutMs: 8000},
+  reservationRead: {retries: 1, delayMs: 350, timeoutMs: 7000},
+  reservationWrite: {retries: 2, delayMs: 400, timeoutMs: 9000},
+  paymentRead: {retries: 1, delayMs: 400, timeoutMs: 9000},
+  paymentWrite: {retries: 1, delayMs: 450, timeoutMs: 12000},
+} as const satisfies Record<string, RequestPolicy>;
+
+const shouldRetryRequest = (error: unknown): boolean => {
+  if (!axios.isAxiosError(error)) return true;
+
+  const status = error.response?.status;
+  const code = error.code ?? '';
+
+  // Client/business validation errors are not recoverable via retries.
+  if (status && status >= 400 && status < 500 && status !== 408 && status !== 429) {
+    return false;
+  }
+
+  return (
+    code === 'ECONNABORTED' ||
+    code === 'ERR_NETWORK' ||
+    !status ||
+    status >= 500 ||
+    status === 408 ||
+    status === 429
+  );
+};
+
+const withPolicy = async <T>(
+  run: (timeoutMs: number) => Promise<T>,
+  policy: RequestPolicy,
+): Promise<T> => {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= policy.retries; attempt++) {
+    try {
+      return await run(policy.timeoutMs);
+    } catch (error) {
+      lastError = error;
+      const canRetry = shouldRetryRequest(error);
+      if (!canRetry || attempt >= policy.retries) {
+        throw error;
+      }
+      await sleep(policy.delayMs * (attempt + 1));
+    }
+  }
+
+  throw lastError;
+};
+
 // Token management
 let authToken: string | null = null;
 
@@ -139,6 +199,29 @@ const mapTrip = (raw: any): Trip => {
     patron,
   };
 };
+
+const mapConversation = (raw: any): Conversation => ({
+  id: String(raw?.id ?? raw?.conversationId ?? raw?.conversation_id ?? ''),
+  tripId: raw?.tripId ?? raw?.trip_id ?? undefined,
+  otherUserId: String(raw?.otherUserId ?? raw?.other_user_id ?? ''),
+  otherUserName: String(raw?.otherUserName ?? raw?.other_user_name ?? ''),
+  otherUserAvatar: raw?.otherUserAvatar ?? raw?.other_user_avatar ?? undefined,
+  lastMessage: raw?.lastMessage ?? raw?.last_message ?? undefined,
+  lastMessageTime: String(raw?.lastMessageTime ?? raw?.last_message_time ?? ''),
+  unreadCount: Number(raw?.unreadCount ?? raw?.unread_count ?? 0),
+  updatedAt: String(raw?.updatedAt ?? raw?.updated_at ?? ''),
+});
+
+const mapMessage = (raw: any): Message => ({
+  id: String(raw?.id ?? ''),
+  conversationId: String(raw?.conversationId ?? raw?.conversation_id ?? ''),
+  senderId: String(raw?.senderId ?? raw?.sender_id ?? ''),
+  senderName: raw?.senderName ?? raw?.sender_name ?? undefined,
+  senderAvatar: raw?.senderAvatar ?? raw?.sender_avatar ?? undefined,
+  content: String(raw?.content ?? ''),
+  isRead: Boolean(raw?.isRead ?? raw?.is_read ?? false),
+  createdAt: String(raw?.createdAt ?? raw?.created_at ?? ''),
+});
 
 export const userService = {
   async register(payload: {name: string; email: string; role: Role}): Promise<User> {
@@ -310,45 +393,112 @@ export const ratingService = {
 
 export const reservationService = {
   async createReservation(payload: {tripId: string; userId: string; seats?: number}): Promise<any> {
-    const {data} = await api.post('/reservations', payload);
+    const {data} = await withPolicy(
+      timeout => api.post('/reservations', payload, {timeout}),
+      REQUEST_POLICIES.reservationWrite,
+    );
     return data;
   },
   async getUserReservations(userId: string): Promise<any[]> {
-    const {data} = await api.get(`/reservations?userId=${userId}`);
+    const {data} = await withPolicy(
+      timeout => api.get(`/reservations?userId=${userId}`, {timeout}),
+      REQUEST_POLICIES.reservationRead,
+    );
     return Array.isArray(data) ? data : [];
   },
   async getTripReservations(tripId: string): Promise<any[]> {
-    const {data} = await api.get(`/reservations?tripId=${tripId}`);
+    const {data} = await withPolicy(
+      timeout => api.get(`/reservations?tripId=${tripId}`, {timeout}),
+      REQUEST_POLICIES.reservationRead,
+    );
     return Array.isArray(data) ? data : [];
   },
   async updateReservation(id: string, status: string): Promise<any> {
-    const {data} = await api.patch(`/reservations/${id}`, {status});
+    const {data} = await withPolicy(
+      timeout => api.patch(`/reservations/${id}`, {status}, {timeout}),
+      REQUEST_POLICIES.reservationWrite,
+    );
     return data;
   },
 };
 
 export const messageService = {
   async getConversations(userId: string): Promise<Conversation[]> {
-    const {data} = await api.get(`/messages/conversations/${userId}`);
-    return Array.isArray(data) ? data : [];
+    const {data} = await withPolicy(
+      timeout => api.get(`/messages/conversations/${userId}`, {timeout}),
+      REQUEST_POLICIES.chatRead,
+    );
+    return Array.isArray(data) ? data.map(mapConversation).filter(c => c.id) : [];
   },
   async getMessages(conversationId: string, limit = 50, offset = 0): Promise<Message[]> {
-    const {data} = await api.get(`/messages/conversation/${conversationId}/messages?limit=${limit}&offset=${offset}`);
-    return Array.isArray(data) ? data : [];
+    const {data} = await withPolicy(
+      timeout => api.get(`/messages/conversation/${conversationId}/messages?limit=${limit}&offset=${offset}`, {timeout}),
+      REQUEST_POLICIES.chatRead,
+    );
+    return Array.isArray(data) ? data.map(mapMessage).filter(m => m.id) : [];
   },
   async sendMessage(payload: {conversationId: string; senderId: string; content: string}): Promise<Message> {
-    const {data} = await api.post('/messages/send', payload);
-    return data;
+    if (!payload.conversationId || !payload.senderId || !payload.content?.trim()) {
+      throw new Error('Payload de mensaje invalido');
+    }
+
+    const {data} = await withPolicy(
+      timeout => api.post('/messages/send', payload, {timeout}),
+      REQUEST_POLICIES.chatWrite,
+    );
+    const message = mapMessage(data);
+    if (!message.id) {
+      throw new Error('Respuesta invalida al enviar mensaje');
+    }
+    return message;
   },
   async createOrGetConversation(payload: {userId1: string; userId2: string; tripId?: string}): Promise<{id: string; created: boolean}> {
-    const {data} = await api.post('/messages/conversation', payload);
-    return data;
+    if (!payload.userId1 || !payload.userId2) {
+      throw new Error('Usuarios invalidos para crear chat');
+    }
+
+    const primaryPayload = {
+      ...payload,
+      tripId: payload.tripId || null,
+    };
+
+    try {
+      const {data} = await withPolicy(
+        timeout => api.post('/messages/conversation', primaryPayload, {timeout}),
+        REQUEST_POLICIES.chatWrite,
+      );
+      if (!data?.id) throw new Error('Respuesta invalida de conversacion');
+      return {id: String(data.id), created: Boolean(data.created)};
+    } catch (error) {
+      // Fallback defensivo: si falla por tripId, reintenta chat directo entre usuarios.
+      if (payload.tripId) {
+        const {data} = await withPolicy(
+          timeout =>
+            api.post(
+              '/messages/conversation',
+              {
+                userId1: payload.userId1,
+                userId2: payload.userId2,
+                tripId: null,
+              },
+              {timeout},
+            ),
+          REQUEST_POLICIES.chatWrite,
+        );
+        if (!data?.id) throw error;
+        return {id: String(data.id), created: Boolean(data.created)};
+      }
+      throw error;
+    }
   },
   async markMessageAsRead(messageId: string): Promise<void> {
     await api.patch(`/messages/${messageId}/read`);
   },
   async markConversationAsRead(conversationId: string, userId: string): Promise<void> {
-    await api.patch(`/messages/conversation/${conversationId}/read-all`, {userId});
+    await withPolicy(
+      timeout => api.patch(`/messages/conversation/${conversationId}/read-all`, {userId}, {timeout}),
+      REQUEST_POLICIES.chatRead,
+    );
   },
 };
 
@@ -376,11 +526,17 @@ export const favoriteService = {
 
 export const donationService = {
   async createDonation(payload: {userId: string; amount: number; paypalTransactionId?: string}): Promise<any> {
-    const {data} = await api.post('/donations', payload);
+    const {data} = await withPolicy(
+      timeout => api.post('/donations', payload, {timeout}),
+      REQUEST_POLICIES.paymentWrite,
+    );
     return data;
   },
   async getUserDonations(userId: string): Promise<{donations: any[]; total: number; count: number}> {
-    const {data} = await api.get(`/donations/user/${userId}`);
+    const {data} = await withPolicy(
+      timeout => api.get(`/donations/user/${userId}`, {timeout}),
+      REQUEST_POLICIES.paymentRead,
+    );
     return data;
   },
 };

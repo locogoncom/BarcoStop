@@ -9,12 +9,13 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { boatService } from '../services/api';
 import type { Boat } from '../types';
+import {colors} from '../theme/colors';
+import {feedback} from '../theme/feedback';
 
 const BoatsScreen: React.FC = () => {
   const { session } = useAuth();
@@ -43,7 +44,7 @@ const BoatsScreen: React.FC = () => {
       setBoats(boatList);
     } catch (error) {
       console.error('Error loading boats:', error);
-      Alert.alert('Error', 'No se pudieron cargar los barcos');
+      feedback.error('No se pudieron cargar los barcos');
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,7 @@ const BoatsScreen: React.FC = () => {
   };
 
   const handleDeleteBoat = (boatId: string) => {
-    Alert.alert('Eliminar barco', '¿Estás seguro?', [
+    feedback.confirm('Eliminar barco', '¿Estas seguro?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -83,10 +84,10 @@ const BoatsScreen: React.FC = () => {
           try {
             await boatService.delete(boatId, session?.userId || '');
             setBoats(boats.filter(b => b.id !== boatId));
-            Alert.alert('Éxito', 'Barco eliminado correctamente');
+            feedback.success('Barco eliminado correctamente');
           } catch (error) {
             console.error('Error deleting boat:', error);
-            Alert.alert('Error', 'No se pudo eliminar el barco');
+            feedback.error('No se pudo eliminar el barco');
           }
         },
       },
@@ -95,12 +96,12 @@ const BoatsScreen: React.FC = () => {
 
   const handleSaveBoat = async () => {
     if (!formData.name || !formData.type || !formData.safetyEquipment) {
-      Alert.alert('Campos requeridos', 'Nombre, tipo y equipo de seguridad son obligatorios');
+      feedback.info('Nombre, tipo y equipo de seguridad son obligatorios', 'Campos requeridos');
       return;
     }
 
     if (!session?.userId) {
-      Alert.alert('Error', 'Usuario no autenticado');
+      feedback.error('Usuario no autenticado');
       return;
     }
 
@@ -120,7 +121,7 @@ const BoatsScreen: React.FC = () => {
           safetyEquipment: safetyArray,
         });
         setBoats(boats.map(b => (b.id === editingBoat.id ? updated : b)));
-        Alert.alert('Éxito', 'Barco actualizado correctamente');
+        feedback.success('Barco actualizado correctamente');
       } else {
         const newBoat = await boatService.create({
           patronId: session.userId,
@@ -131,20 +132,20 @@ const BoatsScreen: React.FC = () => {
           description: formData.description,
         });
         setBoats([...boats, newBoat]);
-        Alert.alert('Éxito', 'Barco creado correctamente');
+        feedback.success('Barco creado correctamente');
       }
 
       setShowForm(false);
     } catch (error) {
       console.error('Error saving boat:', error);
-      Alert.alert('Error', 'No se pudo guardar el barco');
+      feedback.error('No se pudo guardar el barco');
     }
   };
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0284c7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -363,7 +364,7 @@ const FormField: React.FC<FormFieldProps> = ({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#cbd5e1"
+        placeholderTextColor={colors.borderStrong}
         multiline={multiline}
         numberOfLines={multiline ? 4 : 1}
         keyboardType={keyboardType}
@@ -376,21 +377,21 @@ const FormField: React.FC<FormFieldProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     paddingTop: 16,
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: colors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -398,16 +399,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
   },
   addButton: {
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   addButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -428,20 +429,20 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   boatCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 8,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
   },
   boatHeader: {
     marginBottom: 12,
@@ -449,12 +450,12 @@ const styles = StyleSheet.create({
   boatName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
     marginBottom: 4,
   },
   boatType: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.textMuted,
   },
   boatDetail: {
     marginBottom: 12,
@@ -465,13 +466,13 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: colors.textStrong,
     marginBottom: 4,
     textTransform: 'uppercase',
   },
   detailText: {
     fontSize: 14,
-    color: '#0f172a',
+    color: colors.text,
     lineHeight: 20,
   },
   detailTextSafety: {
@@ -487,13 +488,13 @@ const styles = StyleSheet.create({
   },
   editButton: {
     flex: 1,
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     paddingVertical: 8,
     borderRadius: 6,
     alignItems: 'center',
   },
   editButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -511,31 +512,31 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   formHeader: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     paddingTop: 16,
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: colors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   closeButton: {
     fontSize: 24,
-    color: '#64748b',
+    color: colors.textMuted,
     fontWeight: '300',
   },
   formTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
   },
   saveButton: {
-    color: '#0284c7',
+    color: colors.primary,
     fontWeight: '600',
     fontSize: 16,
   },
@@ -556,7 +557,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
     marginBottom: 12,
   },
   safetySublabel: {
@@ -576,13 +577,13 @@ const styles = StyleSheet.create({
   },
   fieldInput: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: colors.borderStrong,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#0f172a',
-    backgroundColor: '#fff',
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
   fieldInputMultiline: {
     height: 100,

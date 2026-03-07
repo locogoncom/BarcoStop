@@ -18,6 +18,7 @@ import ReservationsScreen from '../screens/ReservationsScreen';
 import PatronRequestsScreen from '../screens/PatronRequestsScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import {GlobalShareButton} from '../components/GlobalShareButton';
+import {colors} from '../theme/colors';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -49,8 +50,8 @@ function TripListStack({navigation}: any) {
   return (
     <TripStack.Navigator
       screenOptions={{
-        headerStyle: {backgroundColor: '#0284c7'},
-        headerTintColor: '#fff',
+        headerStyle: {backgroundColor: colors.primary},
+        headerTintColor: colors.white,
         headerTitleStyle: {fontWeight: '700'},
       }}>
       <TripStack.Screen
@@ -77,8 +78,8 @@ function ProfileStack_({navigation}: any) {
   return (
     <ProfileStack.Navigator
       screenOptions={{
-        headerStyle: {backgroundColor: '#0284c7'},
-        headerTintColor: '#fff',
+        headerStyle: {backgroundColor: colors.primary},
+        headerTintColor: colors.white,
         headerTitleStyle: {fontWeight: '700'},
       }}>
       <ProfileStack.Screen
@@ -95,8 +96,8 @@ function MessagesStack_({navigation}: any) {
   return (
     <MessagesStack.Navigator
       screenOptions={{
-        headerStyle: {backgroundColor: '#0284c7'},
-        headerTintColor: '#fff',
+        headerStyle: {backgroundColor: colors.primary},
+        headerTintColor: colors.white,
         headerTitleStyle: {fontWeight: '700'},
       }}>
       <MessagesStack.Screen
@@ -126,11 +127,11 @@ function MainAppTabs() {
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#0284c7',
-          tabBarInactiveTintColor: '#94a3b8',
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textSubtle,
           tabBarStyle: {
-            backgroundColor: '#fff',
-            borderTopColor: '#e2e8f0',
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
             borderTopWidth: 1,
             paddingVertical: 4,
             height: 60,
@@ -141,7 +142,7 @@ function MainAppTabs() {
           component={TripListStack}
           options={{
             tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
                 🔍 Buscar
               </Text>
             ),
@@ -153,7 +154,7 @@ function MainAppTabs() {
           component={ReservationsScreen}
           options={{
             tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
                 📋 Mis Reservas
               </Text>
             ),
@@ -165,7 +166,7 @@ function MainAppTabs() {
           component={MessagesStack_}
           options={{
             tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
                 💬 Mensajes
               </Text>
             ),
@@ -177,7 +178,7 @@ function MainAppTabs() {
           component={FavoritesScreen}
           options={{
             tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
                 ❤️ Favoritos
               </Text>
             ),
@@ -189,7 +190,7 @@ function MainAppTabs() {
           component={ProfileStack_}
           options={{
             tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
                 👤 Perfil
               </Text>
             ),
@@ -205,11 +206,11 @@ function MainAppTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#0284c7',
-        tabBarInactiveTintColor: '#94a3b8',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSubtle,
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopColor: '#e2e8f0',
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           paddingVertical: 4,
           height: 60,
@@ -220,7 +221,7 @@ function MainAppTabs() {
         component={TripListStack}
         options={{
           tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
               🚢 Mis Viajes
             </Text>
           ),
@@ -232,7 +233,7 @@ function MainAppTabs() {
         component={PatronRequestsScreen}
         options={{
           tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
               📬 Solicitudes
             </Text>
           ),
@@ -244,7 +245,7 @@ function MainAppTabs() {
         component={MessagesStack_}
         options={{
           tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
               💬 Mensajes
             </Text>
           ),
@@ -256,7 +257,7 @@ function MainAppTabs() {
         component={FavoritesScreen}
         options={{
           tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
               ❤️ Favoritos
             </Text>
           ),
@@ -268,7 +269,7 @@ function MainAppTabs() {
         component={ProfileStack_}
         options={{
           tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? '#0284c7' : '#94a3b8', marginTop: 4}}>
+            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
               👤 Perfil
             </Text>
           ),
@@ -286,7 +287,7 @@ export default function AppNavigator() {
   if (isLoading) {
     return (
       <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <ActivityIndicator size="large" color="#0284c7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -296,8 +297,8 @@ export default function AppNavigator() {
       <View style={{flex: 1}}>
         <Stack.Navigator
           screenOptions={{
-            headerStyle: {backgroundColor: '#0284c7'},
-            headerTintColor: '#fff',
+            headerStyle: {backgroundColor: colors.primary},
+            headerTintColor: colors.white,
             headerTitleStyle: {fontWeight: '700'},
           }}
           initialRouteName={session ? 'MainApp' : 'Home'}>

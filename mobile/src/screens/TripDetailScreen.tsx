@@ -9,6 +9,7 @@ import type {RootStackParamList} from '../navigation/AppNavigator';
 import {tripService, ratingService, tripCheckpointService, favoriteService, messageService, reservationService} from '../services/api';
 import {PayPalWebViewModal} from '../components/PayPalWebViewModal';
 import type {Trip, Rating} from '../types';
+import {colors} from '../theme/colors';
 
 export default function TripDetailScreen() {
   const route = useRoute<any>();
@@ -292,7 +293,7 @@ export default function TripDetailScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0284c7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -445,8 +446,8 @@ export default function TripDetailScreen() {
           <QRCode
             value={appShareText}
             size={140}
-            color="#0284c7"
-            backgroundColor="#fff"
+            color={colors.primary}
+            backgroundColor={colors.white}
           />
         </View>
         <TouchableOpacity style={styles.shareBtn} onPress={shareTrip}>
@@ -495,6 +496,10 @@ export default function TripDetailScreen() {
           <Text style={styles.donateBtnText}>💝 Apoyar BarcoStop</Text>
         </TouchableOpacity>
         <Text style={styles.donateText}>Tu donativo nos ayuda a crecer</Text>
+        <Text style={styles.paymentNoticeText}>
+          Nota: el enlace PayPal mostrado ahora es temporal de BarcoStop. El pago del viaje debe acordarse
+          directamente entre capitán y viajero (o actualizarse manualmente con los datos del capitán).
+        </Text>
       </View>
 
       {/* Solicitar asiento (solo viajeros) */}
@@ -551,12 +556,12 @@ export default function TripDetailScreen() {
 
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f0f9ff'},
+  container: {flex: 1, backgroundColor: colors.backgroundSoft},
   center: {flex: 1, justifyContent: 'center', alignItems: 'center'},
 
-  header: {backgroundColor: '#0284c7', padding: 20, paddingTop: 10},
+  header: {backgroundColor: colors.primary, padding: 20, paddingTop: 10},
   headerTitleRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10},
-  title: {fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 8},
+  title: {fontSize: 24, fontWeight: 'bold', color: colors.white, marginBottom: 8},
   headerFavBtn: {
     width: 38,
     height: 38,
@@ -570,18 +575,18 @@ const styles = StyleSheet.create({
   headerFavBtnActive: {backgroundColor: 'rgba(236,72,153,0.28)'},
   headerFavBtnText: {fontSize: 20},
   routeContainer: {backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 8},
-  route: {fontSize: 16, color: '#fff', fontWeight: '600'},
+  route: {fontSize: 16, color: colors.white, fontWeight: '600'},
 
-  infoSection: {padding: 16, backgroundColor: '#fff', marginTop: 12},
+  infoSection: {padding: 16, backgroundColor: colors.surface, marginTop: 12},
   infoRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12},
-  label: {fontSize: 14, color: '#475569', fontWeight: '600'},
+  label: {fontSize: 14, color: colors.textStrong, fontWeight: '600'},
   value: {fontSize: 14, color: '#0c4a6e', fontWeight: 'bold'},
 
-  routeMapSection: {padding: 16, backgroundColor: '#fff', marginTop: 8},
+  routeMapSection: {padding: 16, backgroundColor: colors.surface, marginTop: 8},
   routeMapCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     borderRadius: 10,
     padding: 12,
   },
@@ -590,11 +595,11 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     marginRight: 8,
   },
   routeDotEnd: {backgroundColor: '#10b981'},
-  routeNodeText: {fontSize: 14, color: '#0f172a', fontWeight: '600'},
+  routeNodeText: {fontSize: 14, color: colors.text, fontWeight: '600'},
   routeLine: {
     height: 18,
     width: 2,
@@ -604,14 +609,14 @@ const styles = StyleSheet.create({
   },
   routeMapBtn: {
     marginTop: 12,
-    backgroundColor: '#0ea5e9',
+    backgroundColor: colors.primaryAlt,
     borderRadius: 8,
     paddingVertical: 10,
   },
-  routeMapBtnText: {color: '#fff', fontWeight: '700', textAlign: 'center'},
+  routeMapBtnText: {color: colors.white, fontWeight: '700', textAlign: 'center'},
 
-  captainSection: {padding: 16, backgroundColor: '#fff', marginTop: 8},
-  ownerSection: {padding: 16, backgroundColor: '#fff', marginTop: 8},
+  captainSection: {padding: 16, backgroundColor: colors.surface, marginTop: 8},
+  ownerSection: {padding: 16, backgroundColor: colors.surface, marginTop: 8},
   sectionTitle: {fontSize: 16, fontWeight: 'bold', color: '#0c4a6e', marginBottom: 12},
   captainCard: {backgroundColor: '#f8f9fa', borderRadius: 10, padding: 12},
   captainName: {fontSize: 16, fontWeight: '700', color: '#0284c7', marginBottom: 8},
@@ -620,59 +625,66 @@ const styles = StyleSheet.create({
   ratingValue: {fontSize: 14, fontWeight: 'bold', color: '#dc2626', marginLeft: 4},
   reviewCount: {fontSize: 12, color: '#78909c', marginLeft: 4},
   captainActions: {flexDirection: 'row', gap: 8},
-  actionBtn: {flex: 1, backgroundColor: '#0284c7', paddingVertical: 10, borderRadius: 8},
+  actionBtn: {flex: 1, backgroundColor: colors.primary, paddingVertical: 10, borderRadius: 8},
   actionBtnActive: {backgroundColor: '#ec4899'},
   chatBtn: {backgroundColor: '#14b8a6'},
-  actionBtnText: {color: '#fff', fontWeight: '600', textAlign: 'center', fontSize: 13},
+  actionBtnText: {color: colors.white, fontWeight: '600', textAlign: 'center', fontSize: 13},
   patronActions: {flexDirection: 'row', gap: 8, marginTop: 12},
   patronActionBtn: {flex: 1, paddingVertical: 10, borderRadius: 8},
   editBtn: {backgroundColor: '#f59e0b'},
-  cancelBtn: {backgroundColor: '#ef4444'},
-  patronActionBtnText: {color: '#fff', fontWeight: '600', textAlign: 'center', fontSize: 13},
+  cancelBtn: {backgroundColor: colors.danger},
+  patronActionBtnText: {color: colors.white, fontWeight: '600', textAlign: 'center', fontSize: 13},
 
-  commentsSection: {padding: 16, backgroundColor: '#fff', marginTop: 8},
+  commentsSection: {padding: 16, backgroundColor: colors.surface, marginTop: 8},
   commentCard: {backgroundColor: '#f8f9fa', borderRadius: 8, padding: 12, marginBottom: 10},
   commentHeader: {flexDirection: 'row', alignItems: 'center', marginBottom: 6},
   stars: {fontSize: 14, marginRight: 6},
-  commentRating: {fontSize: 12, fontWeight: 'bold', color: '#0284c7'},
-  commentText: {fontSize: 13, color: '#475569', fontStyle: 'italic'},
+  commentRating: {fontSize: 12, fontWeight: 'bold', color: colors.primary},
+  commentText: {fontSize: 13, color: colors.textStrong, fontStyle: 'italic'},
 
-  qrSection: {padding: 16, backgroundColor: '#fff', marginTop: 8, alignItems: 'center'},
+  qrSection: {padding: 16, backgroundColor: colors.surface, marginTop: 8, alignItems: 'center'},
   qrContainer: {marginVertical: 12, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 10},
-  shareBtn: {backgroundColor: '#0ea5e9', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, marginTop: 8, width: '100%'},
-  shareBtnText: {color: '#fff', fontWeight: '600', textAlign: 'center', fontSize: 14},
+  shareBtn: {backgroundColor: colors.primaryAlt, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, marginTop: 8, width: '100%'},
+  shareBtnText: {color: colors.white, fontWeight: '600', textAlign: 'center', fontSize: 14},
 
-  checkpointSection: {padding: 16, backgroundColor: '#fff', marginTop: 8},
+  checkpointSection: {padding: 16, backgroundColor: colors.surface, marginTop: 8},
   checkpointSubtitle: {fontSize: 13, color: '#64748b', marginBottom: 10},
   checkpointActions: {flexDirection: 'row', gap: 8, marginBottom: 10},
-  checkpointBtn: {flex: 1, backgroundColor: '#0284c7', paddingVertical: 10, borderRadius: 8},
+  checkpointBtn: {flex: 1, backgroundColor: colors.primary, paddingVertical: 10, borderRadius: 8},
   shareExperienceBtn: {backgroundColor: '#14b8a6'},
-  checkpointBtnText: {color: '#fff', fontWeight: '700', textAlign: 'center', fontSize: 13},
+  checkpointBtnText: {color: colors.white, fontWeight: '700', textAlign: 'center', fontSize: 13},
   noCheckpointText: {fontSize: 13, color: '#94a3b8', fontStyle: 'italic'},
   checkpointList: {gap: 8},
   checkpointItem: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     backgroundColor: '#f8fafc',
   },
-  checkpointType: {fontWeight: '700', color: '#0f172a', marginBottom: 2},
+  checkpointType: {fontWeight: '700', color: colors.text, marginBottom: 2},
   checkpointDate: {fontSize: 12, color: '#64748b', marginBottom: 3},
-  checkpointNote: {fontSize: 13, color: '#334155'},
+  checkpointNote: {fontSize: 13, color: colors.textStrong},
 
-  donateSection: {padding: 16, backgroundColor: '#fff', marginTop: 8, alignItems: 'center'},
+  donateSection: {padding: 16, backgroundColor: colors.surface, marginTop: 8, alignItems: 'center'},
   donateBtn: {width: '100%', backgroundColor: '#ec4899', paddingVertical: 12, borderRadius: 8},
-  donateBtnText: {color: '#fff', fontWeight: '700', textAlign: 'center', fontSize: 16},
+  donateBtnText: {color: colors.white, fontWeight: '700', textAlign: 'center', fontSize: 16},
   donateText: {fontSize: 12, color: '#78909c', marginTop: 6},
+  paymentNoticeText: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#475569',
+    textAlign: 'center',
+  },
 
   requestBtn: {marginHorizontal: 16, marginTop: 12, backgroundColor: '#22c55e', paddingVertical: 14, borderRadius: 10},
   requestBtnDisabled: {opacity: 0.6},
-  requestBtnText: {color: '#fff', fontWeight: '700', textAlign: 'center', fontSize: 16},
+  requestBtnText: {color: colors.white, fontWeight: '700', textAlign: 'center', fontSize: 16},
 
   homeBtn: {marginHorizontal: 16, marginTop: 8, backgroundColor: '#94a3b8', paddingVertical: 12, borderRadius: 8},
-  homeBtnText: {color: '#fff', fontWeight: '600', textAlign: 'center', fontSize: 14},
+  homeBtnText: {color: colors.white, fontWeight: '600', textAlign: 'center', fontSize: 14},
 
   errorIcon: {fontSize: 64, marginBottom: 16},
   errorTitle: {fontSize: 20, fontWeight: '700', color: '#334155', marginBottom: 8, textAlign: 'center'},

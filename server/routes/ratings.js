@@ -14,6 +14,12 @@ router.post('/', async (req, res) => {
       });
     }
 
+    if (req.body.userId === req.body.ratedBy) {
+      return res.status(400).json({
+        error: 'No puedes calificarte a ti mismo'
+      });
+    }
+
     if (req.body.rating < 1 || req.body.rating > 5) {
       return res.status(400).json({ 
         error: 'rating must be between 1 and 5' 
@@ -23,8 +29,8 @@ router.post('/', async (req, res) => {
     // Check if rating already exists
     const exists = await Rating.existsRating(req.body.userId, req.body.ratedBy);
     if (exists) {
-      return res.status(400).json({ 
-        error: 'Rating already exists between these users' 
+      return res.status(409).json({ 
+        error: 'Ya has calificado a este usuario' 
       });
     }
 

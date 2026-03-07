@@ -11,16 +11,22 @@ import {
   Platform,
   Image,
 } from 'react-native';
+import {feedback} from '../theme/feedback';
+import {radius, spacing} from '../theme/layout';
 import {useAuth} from '../contexts/AuthContext';
 import {messageService} from '../services/api';
 import type {Message} from '../types';
+import {colors} from '../theme/colors';
 
 export default function ChatScreen({route, navigation}: any) {
-  const {conversationId, otherUserName, otherUserId} = route.params;
+  const routeParams = route?.params?.params ?? route?.params ?? {};
+  const {conversationId, otherUserName, otherUserId} = routeParams;
   const {session} = useAuth();
+  const [activeConversationId, setActiveConversationId] = useState<string>(conversationId || '');
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [initializingChat, setInitializingChat] = useState(false);
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
@@ -31,9 +37,48 @@ export default function ChatScreen({route, navigation}: any) {
     });
   }, [navigation, otherUserName]);
 
+  useEffect(() => {
+    setActiveConversationId(conversationId || '');
+  }, [conversationId]);
+
+  useEffect(() => {
+    const ensureConversation = async () => {
+      if (activeConversationId || !session?.userId || !otherUserId) {
+        return;
+      }
+
+      try {
+        setInitializingChat(true);
+        const convo = await messageService.createOrGetConversation({
+          userId1: session.userId,
+          userId2: otherUserId,
+        });
+        setActiveConversationId(convo.id);
+        navigation.setParams({
+          ...(route?.params ?? {}),
+          conversationId: convo.id,
+          otherUserId,
+          otherUserName,
+        });
+      } catch (error) {
+        console.error('Error ensuring conversation in ChatScreen:', error);
+        feedback.error('No pudimos abrir el chat. Vuelve a intentarlo.');
+      } finally {
+        setInitializingChat(false);
+      }
+    };
+
+    ensureConversation();
+  }, [activeConversationId, session?.userId, otherUserId, otherUserName, navigation, route?.params]);
+
   const loadMessages = async () => {
+    if (!activeConversationId) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const data = await messageService.getMessages(conversationId);
+      const data = await messageService.getMessages(activeConversationId);
       setMessages(data);
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({animated: true});
@@ -49,17 +94,17 @@ export default function ChatScreen({route, navigation}: any) {
     loadMessages();
 
     // Mark conversation as read
-    if (session?.userId) {
-      messageService.markConversationAsRead(conversationId, session.userId).catch(() => {});
+    if (session?.userId && activeConversationId) {
+      messageService.markConversationAsRead(activeConversationId, session.userId).catch(() => {});
     }
 
     // Poll for new messages every 2 seconds
     const interval = setInterval(loadMessages, 2000);
     return () => clearInterval(interval);
-  }, [conversationId, session?.userId]);
+  }, [activeConversationId, session?.userId]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !session?.userId) return;
+    if (!activeConversationId || !newMessage.trim() || !session?.userId) return;
 
     const messageContent = newMessage.trim();
     setNewMessage('');
@@ -67,17 +112,18 @@ export default function ChatScreen({route, navigation}: any) {
 
     try {
       const message = await messageService.sendMessage({
-        conversationId,
+        conversationId: activeConversationId,
         senderId: session.userId,
         content: messageContent,
       });
-      setMessages([...messages, message]);
+      setMessages(prev => [...prev, message]);
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({animated: true});
       }, 100);
     } catch (error) {
       console.error('Error sending message:', error);
       setNewMessage(messageContent);
+      feedback.error('No pudimos enviar el mensaje. Intenta de nuevo.');
     } finally {
       setSending(false);
     }
@@ -117,10 +163,10 @@ export default function ChatScreen({route, navigation}: any) {
     </View>
   );
 
-  if (loading) {
+  if (loading || initializingChat) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0284c7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -145,7 +191,7 @@ export default function ChatScreen({route, navigation}: any) {
         <TextInput
           style={styles.input}
           placeholder="Escribe un mensaje..."
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={colors.textSubtle}
           value={newMessage}
           onChangeText={setNewMessage}
           multiline
@@ -155,10 +201,10 @@ export default function ChatScreen({route, navigation}: any) {
         <TouchableOpacity
           style={[styles.sendButton, (!newMessage.trim() || sending) && styles.sendButtonDisabled]}
           onPress={handleSendMessage}
-          disabled={!newMessage.trim() || sending}
+          disabled={!activeConversationId || !newMessage.trim() || sending}
         >
           {sending ? (
-            <ActivityIndicator size="small" color="#0284c7" />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <Text style={styles.sendButtonText}>📤</Text>
           )}
@@ -171,18 +217,18 @@ export default function ChatScreen({route, navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   messageContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     alignItems: 'flex-end',
   },
   ownMessage: {
@@ -195,13 +241,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#cbd5e1',
+    backgroundColor: colors.borderStrong,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
   },
   avatarInitial: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -209,14 +255,14 @@ const styles = StyleSheet.create({
     maxWidth: '80%',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 16,
+    borderRadius: radius.round,
   },
   ownBubble: {
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     borderBottomRightRadius: 4,
   },
   otherBubble: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.border,
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -224,10 +270,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   ownText: {
-    color: '#fff',
+    color: colors.white,
   },
   otherText: {
-    color: '#1e293b',
+    color: colors.textStrong,
   },
   timestamp: {
     fontSize: 11,
@@ -237,7 +283,7 @@ const styles = StyleSheet.create({
     color: '#bfdbfe',
   },
   otherTimestamp: {
-    color: '#64748b',
+    color: colors.textMuted,
   },
   emptyContainer: {
     flex: 1,
@@ -257,8 +303,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderTopColor: '#e2e8f0',
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
     borderTopWidth: 1,
     alignItems: 'flex-end',
   },
@@ -270,19 +316,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginRight: 8,
     fontSize: 14,
-    color: '#1e293b',
+    color: colors.textStrong,
     maxHeight: 100,
   },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: '#cbd5e1',
+    backgroundColor: colors.borderStrong,
   },
   sendButtonText: {
     fontSize: 18,

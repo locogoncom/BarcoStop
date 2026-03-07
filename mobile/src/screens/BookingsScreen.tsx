@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {useLanguage} from '../contexts/LanguageContext';
+import {colors} from '../theme/colors';
 
 export default function BookingsScreen({navigation}: any) {
   const {t} = useLanguage();
@@ -23,28 +24,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
     padding: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#0f172a',
+    color: colors.text,
     marginBottom: 16,
   },
   placeholder: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textMuted,
     marginBottom: 32,
   },
   button: {
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
