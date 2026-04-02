@@ -38,6 +38,18 @@ const uploadAvatar = multer({
   },
 });
 
+const updateUserHandler = async (req, res) => {
+  try {
+    const user = await User.update(req.params.id, req.body);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado para actualizar perfil' });
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
 // register new user
 router.post('/', async (req, res) => {
   try {
@@ -109,18 +121,10 @@ router.get('/:id', async (req, res) => {
 });
 
 // update user
-router.patch('/:id', async (req, res) => {
-  try {
-    const user = await User.update(req.params.id, req.body);
-    if (!user) return res.sendStatus(404);
-    res.json(user);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
+router.patch('/:id', requireAuth, updateUserHandler);
+router.put('/:id', requireAuth, updateUserHandler);
 
-// upload avatar image
-router.post('/:id/avatar', requireAuth, uploadAvatar.single('avatar'), async (req, res) => {
+const handleAvatarUpload = async (req, res) => {
   try {
     const {id} = req.params;
 
@@ -136,22 +140,25 @@ router.post('/:id/avatar', requireAuth, uploadAvatar.single('avatar'), async (re
     }
 
     const avatarPath = `/uploads/avatars/${req.file.filename}`;
-    const avatarUrl = `${req.protocol}://${req.get('host')}${avatarPath}`;
 
-    const user = await User.update(id, {avatar: avatarUrl});
+    const user = await User.update(id, {avatar: avatarPath});
     if (!user) {
       fs.unlink(req.file.path, () => {});
       return res.sendStatus(404);
     }
 
-    return res.status(201).json({avatar: avatarUrl, user});
+    return res.status(201).json({avatar: avatarPath, user});
   } catch (err) {
     if (req.file?.path) {
       fs.unlink(req.file.path, () => {});
     }
     return res.status(400).json({error: err.message});
   }
-});
+};
+
+// upload avatar image
+router.post('/:id/avatar', requireAuth, uploadAvatar.single('avatar'), handleAvatarUpload);
+router.post('/avatar/:id', requireAuth, uploadAvatar.single('avatar'), handleAvatarUpload);
 
 // delete user
 router.delete('/:id', async (req, res) => {
