@@ -38,30 +38,19 @@ const uploadAvatar = multer({
   },
 });
 
-const updateUserHandler = async (req, res) => {
-  try {
-    const user = await User.update(req.params.id, req.body);
-    if (!user) {
-      return res.status(404).json({ error: 'Usuario no encontrado para actualizar perfil' });
-    }
-    res.json(user);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
-
-// register new user
 router.post('/', async (req, res) => {
   try {
+    if (!req.body.password || req.body.password.length < 4) {
+      return res.status(400).json({error: 'La contraseña es requerida y debe tener al menos 4 caracteres.'});
+    }
     const user = await User.create(req.body);
     res.status(201).json(user);
   } catch (err) {
     console.error('User creation error:', err);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({error: err.message});
   }
 });
 
-// list users
 router.get('/', async (req, res) => {
   try {
     const filters = {};
@@ -69,26 +58,30 @@ router.get('/', async (req, res) => {
     const users = await User.findAll(filters);
     res.json(users);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({error: err.message});
   }
 });
 
-// login user
 router.post('/login', async (req, res) => {
   try {
-    const { email, role } = req.body || {};
+    const {email, password, role} = req.body || {};
 
-    if (!email) {
-      return res.status(400).json({ error: 'Email es requerido' });
+    if (!email || !password) {
+      return res.status(400).json({error: 'Email y contraseña son requeridos'});
     }
 
     const user = await User.findByEmail(email);
     if (!user) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
+      return res.status(404).json({error: 'Usuario no encontrado'});
     }
 
     if (role && user.role !== role) {
-      return res.status(400).json({ error: 'Rol no coincide con el usuario' });
+      return res.status(400).json({error: 'Rol no coincide con el usuario'});
+    }
+
+    const valid = await User.validatePassword(email, password);
+    if (!valid) {
+      return res.status(401).json({error: 'Contraseña incorrecta'});
     }
 
     return res.json({
@@ -105,22 +98,35 @@ router.post('/login', async (req, res) => {
     });
   } catch (err) {
     console.error('Login error:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({error: err.message});
   }
 });
 
-// get single user
 router.get('/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.sendStatus(404);
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({error: err.message});
   }
 });
 
-// update user
+const updateUserHandler = async (req, res) => {
+  try {
+    if (String(req.auth?.userId || '') !== String(req.params.id || '')) {
+      return res.status(403).json({error: 'No autorizado para actualizar este usuario'});
+    }
+    const user = await User.update(req.params.id, req.body);
+    if (!user) {
+      return res.status(404).json({error: 'Usuario no encontrado para actualizar perfil'});
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({error: err.message});
+  }
+};
+
 router.patch('/:id', requireAuth, updateUserHandler);
 router.put('/:id', requireAuth, updateUserHandler);
 
@@ -156,28 +162,31 @@ const handleAvatarUpload = async (req, res) => {
   }
 };
 
-// upload avatar image
 router.post('/:id/avatar', requireAuth, uploadAvatar.single('avatar'), handleAvatarUpload);
 router.post('/avatar/:id', requireAuth, uploadAvatar.single('avatar'), handleAvatarUpload);
 
-// delete user
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
+    if (String(req.auth?.userId || '') !== String(req.params.id || '')) {
+      return res.status(403).json({error: 'No autorizado para eliminar este usuario'});
+    }
     await User.delete(req.params.id);
     res.sendStatus(204);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({error: err.message});
   }
 });
 
-// add rating to user
-router.post('/:id/ratings', async (req, res) => {
+router.post('/:id/ratings', requireAuth, async (req, res) => {
   try {
+    if (String(req.auth?.userId || '') !== String(req.body?.ratedBy || '')) {
+      return res.status(403).json({error: 'No autorizado para calificar en nombre de otro usuario'});
+    }
     const user = await User.addRating(req.params.id, req.body);
     if (!user) return res.sendStatus(404);
     res.json(user);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({error: err.message});
   }
 });
 

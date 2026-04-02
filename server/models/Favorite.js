@@ -1,4 +1,4 @@
-const { query, queryOne, pool } = require('../database/db');
+const { query, queryOne, pool } = require('../database');
 
 class Favorite {
   // Agregar usuario a favoritos

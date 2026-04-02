@@ -1,4 +1,4 @@
-const { query, queryOne } = require('../database/db');
+const { query, queryOne } = require('../database');
 
 class Rating {
   // Crear una nueva calificación

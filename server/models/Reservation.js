@@ -1,4 +1,4 @@
-const { query, queryOne, pool } = require('../database/db');
+const { query, queryOne, pool } = require('../database');
 const { v4: uuidv4 } = require('uuid');
 
 class Reservation {

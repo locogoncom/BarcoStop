@@ -1,4 +1,4 @@
-const { query, queryOne } = require('../database/db');
+const { query, queryOne } = require('../database');
 const { v4: uuidv4 } = require('uuid');
 
 class Donation {
