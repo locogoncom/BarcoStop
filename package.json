@@ -4,6 +4,8 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+     "start": "npm --prefix server start",
+     "postinstall": "npm --prefix server install",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"
