@@ -17,6 +17,7 @@ import type {Conversation, User} from '../types';
 import {colors} from '../theme/colors';
 import {feedback} from '../theme/feedback';
 import {radius, spacing} from '../theme/layout';
+import {getErrorMessage} from '../utils/errors';
 
 export default function MessagesScreen({navigation}: any) {
   const {session} = useAuth();
@@ -35,6 +36,7 @@ export default function MessagesScreen({navigation}: any) {
       setConversations(data);
     } catch (error) {
       console.error('Error loading conversations:', error);
+      feedback.error(getErrorMessage(error, 'No pudimos cargar las conversaciones'));
     } finally {
       setLoading(false);
     }
@@ -46,6 +48,7 @@ export default function MessagesScreen({navigation}: any) {
       setUsers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading users:', error);
+      feedback.error(getErrorMessage(error, 'No pudimos cargar los usuarios'));
     }
   };
 
@@ -83,7 +86,7 @@ export default function MessagesScreen({navigation}: any) {
       });
     } catch (error) {
       console.error('Error starting chat:', error);
-      feedback.error('No pudimos abrir el chat');
+      feedback.error(getErrorMessage(error, 'No pudimos abrir el chat'));
     }
   };
 
@@ -303,30 +306,29 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   userCard: {
-    backgroundColor: colors.background,
+    backgroundColor: '#e0f2fe',
     borderRadius: radius.lg,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#7dd3fc',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   userCardName: {
-    color: colors.textStrong,
+    color: '#0369a1',
     fontWeight: '700',
-    fontSize: 14,
   },
   userCardMeta: {
-    color: colors.textMuted,
+    color: '#0369a1',
+    opacity: 0.8,
     fontSize: 12,
     marginTop: 2,
   },
   userCardAction: {
-    color: colors.primaryAlt,
+    color: '#075985',
     fontWeight: '700',
-    fontSize: 13,
   },
   noUserText: {
     fontSize: 13,

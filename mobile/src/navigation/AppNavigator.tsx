@@ -1,7 +1,7 @@
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import React from 'react';
+import React, {useState} from 'react';
 import {ActivityIndicator, View, Text} from 'react-native';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
@@ -17,7 +17,7 @@ import TripListScreen from '../screens/TripListScreen';
 import ReservationsScreen from '../screens/ReservationsScreen';
 import PatronRequestsScreen from '../screens/PatronRequestsScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
-import {GlobalShareButton} from '../components/GlobalShareButton';
+import {ShareTabModal} from '../components/ShareTabModal';
 import {colors} from '../theme/colors';
 
 export type RootStackParamList = {
@@ -31,6 +31,7 @@ export type MainTabParamList = {
   Bookings: undefined;
   Favorites: undefined;
   Messages: undefined;
+  Share: undefined;
   Chat: {conversationId?: string; otherUserName: string; otherUserId: string; tripId?: string};
   Profile: undefined;
   Reservations: undefined;
@@ -44,6 +45,31 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const TripStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 const MessagesStack = createNativeStackNavigator();
+
+function SharePlaceholderScreen() {
+  return null;
+}
+
+const tabBarBaseScreenOptions = {
+  headerShown: false,
+  tabBarActiveTintColor: colors.primary,
+  tabBarInactiveTintColor: colors.textSubtle,
+  tabBarShowIcon: true,
+  tabBarLabelPosition: 'below-icon' as const,
+  tabBarLabelStyle: {fontSize: 11, marginTop: 4},
+  tabBarStyle: {
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingVertical: 4,
+    height: 60,
+  },
+};
+
+const makeTabOptions = (label: string, icon: string) => ({
+  tabBarLabel: label,
+  tabBarIcon: () => <Text style={{fontSize: 22}}>{icon}</Text>,
+});
 
 function TripListStack({navigation}: any) {
   const {t} = useLanguage();
@@ -103,7 +129,7 @@ function MessagesStack_({navigation}: any) {
       <MessagesStack.Screen
         name="MessagesList"
         component={MessagesScreen}
-        options={{title: t('navMessages') || '💬 Mensajes'}}
+        options={{title: t('navMessages') || 'Mensajes'}}
       />
       <MessagesStack.Screen
         name="Chat"
@@ -118,165 +144,97 @@ function MessagesStack_({navigation}: any) {
 }
 
 function MainAppTabs() {
-  const {t} = useLanguage();
   const {session} = useAuth();
+  const [shareVisible, setShareVisible] = useState(false);
 
-  // Para viajeros: Viajes y Mis Reservas
+  const shareTabOptions = makeTabOptions('Compartir', '📤');
+  const shareTabListeners = {
+    tabPress: (event: any) => {
+      event.preventDefault();
+      setShareVisible(true);
+    },
+  };
+
   if (session?.role === 'viajero') {
     return (
+      <>
+        <Tab.Navigator
+          screenOptions={tabBarBaseScreenOptions}>
+          <Tab.Screen
+            name="Trips"
+            component={TripListStack}
+            options={makeTabOptions('Buscar', '🔍')}
+          />
+          <Tab.Screen
+            name="Reservations"
+            component={ReservationsScreen}
+            options={makeTabOptions('Reservas', '📋')}
+          />
+          <Tab.Screen
+            name="Messages"
+            component={MessagesStack_}
+            options={makeTabOptions('Mensajes', '💬')}
+          />
+          <Tab.Screen
+            name="Favorites"
+            component={FavoritesScreen}
+            options={makeTabOptions('Favoritos', '❤️')}
+          />
+          <Tab.Screen
+            name="Share"
+            component={SharePlaceholderScreen}
+            options={shareTabOptions}
+            listeners={shareTabListeners}
+          />
+          <Tab.Screen
+            name="Profile"
+            component={ProfileStack_}
+            options={makeTabOptions('Perfil', '👤')}
+          />
+        </Tab.Navigator>
+        <ShareTabModal visible={shareVisible} onClose={() => setShareVisible(false)} />
+      </>
+    );
+  }
+
+  return (
+    <>
       <Tab.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textSubtle,
-          tabBarStyle: {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-            borderTopWidth: 1,
-            paddingVertical: 4,
-            height: 60,
-          },
-        }}>
+        screenOptions={tabBarBaseScreenOptions}>
         <Tab.Screen
           name="Trips"
           component={TripListStack}
-          options={{
-            tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-                🔍 Buscar
-              </Text>
-            ),
-            tabBarIcon: () => <Text style={{fontSize: 22}}>🔍</Text>,
-          }}
+          options={makeTabOptions('Viajes', '🚢')}
         />
         <Tab.Screen
-          name="Reservations"
-          component={ReservationsScreen}
-          options={{
-            tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-                📋 Mis Reservas
-              </Text>
-            ),
-            tabBarIcon: () => <Text style={{fontSize: 22}}>📋</Text>,
-          }}
+          name="PatronRequests"
+          component={PatronRequestsScreen}
+          options={makeTabOptions('Solicitudes', '📬')}
         />
         <Tab.Screen
           name="Messages"
           component={MessagesStack_}
-          options={{
-            tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-                💬 Mensajes
-              </Text>
-            ),
-            tabBarIcon: () => <Text style={{fontSize: 22}}>💬</Text>,
-          }}
+          options={makeTabOptions('Mensajes', '💬')}
         />
         <Tab.Screen
           name="Favorites"
           component={FavoritesScreen}
-          options={{
-            tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-                ❤️ Favoritos
-              </Text>
-            ),
-            tabBarIcon: () => <Text style={{fontSize: 22}}>❤️</Text>,
-          }}
+          options={makeTabOptions('Favoritos', '❤️')}
+        />
+        <Tab.Screen
+          name="Share"
+          component={SharePlaceholderScreen}
+          options={shareTabOptions}
+          listeners={shareTabListeners}
         />
         <Tab.Screen
           name="Profile"
           component={ProfileStack_}
-          options={{
-            tabBarLabel: ({focused}: {focused: boolean}) => (
-              <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-                👤 Perfil
-              </Text>
-            ),
-            tabBarIcon: () => <Text style={{fontSize: 22}}>👤</Text>,
-          }}
+          options={makeTabOptions('Perfil', '👤')}
         />
       </Tab.Navigator>
-    );
-  }
-
-  // Para patrones: Mis Viajes, Solicitudes, Barcos, etc.
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSubtle,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          paddingVertical: 4,
-          height: 60,
-        },
-      }}>
-      <Tab.Screen
-        name="Trips"
-        component={TripListStack}
-        options={{
-          tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-              🚢 Mis Viajes
-            </Text>
-          ),
-          tabBarIcon: () => <Text style={{fontSize: 22}}>🚢</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="PatronRequests"
-        component={PatronRequestsScreen}
-        options={{
-          tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-              📬 Solicitudes
-            </Text>
-          ),
-          tabBarIcon: () => <Text style={{fontSize: 22}}>📬</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Messages"
-        component={MessagesStack_}
-        options={{
-          tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-              💬 Mensajes
-            </Text>
-          ),
-          tabBarIcon: () => <Text style={{fontSize: 22}}>💬</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Favorites"
-        component={FavoritesScreen}
-        options={{
-          tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-              ❤️ Favoritos
-            </Text>
-          ),
-          tabBarIcon: () => <Text style={{fontSize: 22}}>❤️</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileStack_}
-        options={{
-          tabBarLabel: ({focused}: {focused: boolean}) => (
-            <Text style={{fontSize: 11, color: focused ? colors.primary : colors.textSubtle, marginTop: 4}}>
-              👤 Perfil
-            </Text>
-          ),
-          tabBarIcon: () => <Text style={{fontSize: 22}}>👤</Text>,
-        }}
-      />
-    </Tab.Navigator>
+      <ShareTabModal visible={shareVisible} onClose={() => setShareVisible(false)} />
+    </>
   );
 }
 
@@ -294,32 +252,29 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <View style={{flex: 1}}>
-        <Stack.Navigator
-          screenOptions={{
-            headerStyle: {backgroundColor: colors.primary},
-            headerTintColor: colors.white,
-            headerTitleStyle: {fontWeight: '700'},
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: {backgroundColor: colors.primary},
+          headerTintColor: colors.white,
+          headerTitleStyle: {fontWeight: '700'},
+        }}
+        initialRouteName={session ? 'MainApp' : 'Home'}>
+        <Stack.Screen name="Home" component={HomeScreen} options={{title: 'BarcoStop'}} />
+        <Stack.Screen
+          name="Auth"
+          component={AuthScreen}
+          options={{
+            title: t('navAccess'),
           }}
-          initialRouteName={session ? 'MainApp' : 'Home'}>
-          <Stack.Screen name="Home" component={HomeScreen} options={{title: 'BarcoStop'}} />
-          <Stack.Screen
-            name="Auth"
-            component={AuthScreen}
-            options={{
-              title: t('navAccess'),
-            }}
-          />
-          <Stack.Screen
-            name="MainApp"
-            component={MainAppTabs}
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack.Navigator>
-        <GlobalShareButton />
-      </View>
+        />
+        <Stack.Screen
+          name="MainApp"
+          component={MainAppTabs}
+          options={{
+            headerShown: false,
+          }}
+        />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }

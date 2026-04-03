@@ -4,6 +4,16 @@ const db = require('../database');
 const { v4: uuidv4 } = require('uuid');
 const requireAuth = require('../middleware/requireAuth');
 
+const DB_GUARD_TIMEOUT_MS = 1500;
+
+const withTimeout = (promise, timeoutMs, label) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timeout after ${timeoutMs}ms`)), timeoutMs);
+    }),
+  ]);
+
 const isMissingTableError = (error) => {
   const message = String(error?.message || '').toLowerCase();
   return (
@@ -27,17 +37,21 @@ const getConversationPeerId = async (conversationId, userId) => {
 
 const getBlockState = async (userId, otherUserId) => {
   try {
-    const rows = await db.query(
-      `SELECT blocker_id, blocked_user_id
-       FROM user_blocks
-       WHERE is_active = TRUE
-         AND (
-           (blocker_id = ? AND blocked_user_id = ?)
-           OR
-           (blocker_id = ? AND blocked_user_id = ?)
-         )
-       LIMIT 1`,
-      [userId, otherUserId, otherUserId, userId]
+    const rows = await withTimeout(
+      db.query(
+        `SELECT blocker_id, blocked_user_id
+         FROM user_blocks
+         WHERE is_active = TRUE
+           AND (
+             (blocker_id = ? AND blocked_user_id = ?)
+             OR
+             (blocker_id = ? AND blocked_user_id = ?)
+           )
+         LIMIT 1`,
+        [userId, otherUserId, otherUserId, userId]
+      ),
+      DB_GUARD_TIMEOUT_MS,
+      'user_blocks lookup'
     );
 
     const relation = Array.isArray(rows) ? rows[0] : null;
@@ -47,7 +61,7 @@ const getBlockState = async (userId, otherUserId) => {
       blockedByOther: Boolean(relation && relation.blocker_id === otherUserId),
     };
   } catch (error) {
-    if (isMissingTableError(error)) {
+    if (isMissingTableError(error) || String(error?.message || '').includes('user_blocks lookup timeout')) {
       return {blocked: false, blockedByMe: false, blockedByOther: false};
     }
     throw error;

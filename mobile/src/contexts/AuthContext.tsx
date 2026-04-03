@@ -19,30 +19,32 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const restore = async () => {
+    const restorePersistedSession = async () => {
       try {
         const raw = await AsyncStorage.getItem(SESSION_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          // Validar que la sesión tenga los campos necesarios
-          if (parsed && parsed.userId && parsed.email && parsed.name && parsed.role) {
-            setSession(parsed);
-            setAuthToken(parsed.token || null);
-          } else {
-            // Sesión inválida, limpiar
-            await AsyncStorage.removeItem(SESSION_KEY);
-            setAuthToken(null);
-          }
+        if (!raw) {
+          setAuthToken(null);
+          return;
         }
+
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.userId && parsed.email && parsed.name && parsed.role && parsed.token) {
+          setSession(parsed);
+          setAuthToken(parsed.token || null);
+          return;
+        }
+
+        await AsyncStorage.removeItem(SESSION_KEY);
+        setAuthToken(null);
       } catch (error) {
-        // Error al parsear, limpiar storage
         console.error('Error restoring session:', error);
         await AsyncStorage.removeItem(SESSION_KEY);
+        setAuthToken(null);
       } finally {
         setIsLoading(false);
       }
     };
-    restore();
+    restorePersistedSession();
   }, []);
 
   const login = async (sessionData: SessionData) => {
