@@ -3,7 +3,7 @@ services:
     name: barcostop-api
     env: node
     plan: free
-    rootDir: .
+    rootDir: server
     buildCommand: npm install
     startCommand: npm start
     autoDeploy: true
