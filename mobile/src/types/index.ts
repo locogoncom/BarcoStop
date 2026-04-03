@@ -74,6 +74,7 @@ export type SessionData = {
   email: string;
   name: string;
   role: Role;
+  token?: string;
 };
 export type Message = {
   id: string;

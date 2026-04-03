@@ -15,7 +15,7 @@ const toSafeRating = (value: unknown): number => {
 
 const normalizeFavorite = (raw: any) => ({
   ...raw,
-  id: String(raw?.id ?? raw?.favoriteUserId ?? ''),
+  id: String(raw?.favoriteUserId ?? raw?.id ?? ''),
   name: typeof raw?.name === 'string' && raw.name.trim() ? raw.name.trim() : 'Usuario',
   role: raw?.role === 'patron' ? 'patron' : 'traveler',
   averageRating: toSafeRating(raw?.averageRating),
@@ -92,15 +92,9 @@ export default function FavoritesScreen() {
     }
 
     try {
-      const convo = await messageService.createOrGetConversation({
-        userId1: session.userId,
-        userId2: user.id,
-      });
-
       navigation.navigate('Messages', {
         screen: 'Chat',
         params: {
-          conversationId: convo.id,
           otherUserId: user.id,
           otherUserName: user.name,
         },

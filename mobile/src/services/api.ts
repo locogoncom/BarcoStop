@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type {Role, SessionData, Trip, User, UserSkill, Boat, Rating, Message, Conversation, Patron} from '../types';
-import {API_BASE_URL} from '../config/apiConfig';
+import {API_BASE_URL, API_ORIGIN} from '../config/apiConfig';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -16,13 +16,102 @@ type RequestPolicy = {
 };
 
 const REQUEST_POLICIES = {
+  authWrite: {retries: 2, delayMs: 1200, timeoutMs: 25000},
   chatRead: {retries: 2, delayMs: 300, timeoutMs: 6000},
-  chatWrite: {retries: 2, delayMs: 350, timeoutMs: 8000},
+  chatWrite: {retries: 2, delayMs: 500, timeoutMs: 15000},
   reservationRead: {retries: 1, delayMs: 350, timeoutMs: 7000},
   reservationWrite: {retries: 2, delayMs: 400, timeoutMs: 9000},
+  userRead: {retries: 1, delayMs: 350, timeoutMs: 8000},
+  userWrite: {retries: 1, delayMs: 400, timeoutMs: 10000},
+  tripRead: {retries: 1, delayMs: 350, timeoutMs: 9000},
+  tripWrite: {retries: 1, delayMs: 450, timeoutMs: 12000},
+  miscRead: {retries: 1, delayMs: 350, timeoutMs: 9000},
+  miscWrite: {retries: 1, delayMs: 450, timeoutMs: 12000},
   paymentRead: {retries: 1, delayMs: 400, timeoutMs: 9000},
   paymentWrite: {retries: 1, delayMs: 450, timeoutMs: 12000},
 } as const satisfies Record<string, RequestPolicy>;
+
+const normalizeAssetUrl = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  if (/^(https?:\/\/|content:\/\/|file:\/\/|ph:\/\/|assets-library:\/\/)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('/')) {
+    return `${API_ORIGIN}${trimmed}`;
+  }
+
+  if (/^uploads\//i.test(trimmed)) {
+    return `${API_ORIGIN}/${trimmed}`;
+  }
+
+  return trimmed;
+};
+
+const toServerAssetPath = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  if (trimmed.startsWith('/uploads/')) return trimmed;
+  if (/^uploads\//i.test(trimmed)) return `/${trimmed}`;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.pathname.startsWith('/uploads/')) {
+        return parsed.pathname;
+      }
+    } catch {
+      return undefined;
+    }
+  }
+
+  return undefined;
+};
+
+const normalizeRole = (value: unknown): Role => {
+  const role = String(value || '').trim().toLowerCase();
+  if (role === 'patron' || role === 'captain' || role === 'capitan' || role === 'patrón') {
+    return 'patron';
+  }
+  return 'viajero';
+};
+
+const mapSessionData = (raw: any): SessionData => ({
+  userId: String(raw?.userId ?? raw?.user_id ?? ''),
+  email: String(raw?.email ?? ''),
+  name: String(raw?.name ?? ''),
+  role: normalizeRole(raw?.role),
+  token: typeof raw?.token === 'string' && raw.token.trim() ? raw.token : undefined,
+});
+
+const mapUser = (raw: any): User => ({
+  id: String(raw?.id ?? ''),
+  name: String(raw?.name ?? ''),
+  email: String(raw?.email ?? ''),
+  role: normalizeRole(raw?.role),
+  avatar: normalizeAssetUrl(raw?.avatar) ?? null,
+  bio: raw?.bio ?? null,
+  boatName: raw?.boatName ?? raw?.boat_name ?? null,
+  boatType: raw?.boatType ?? raw?.boat_type ?? null,
+  skills: Array.isArray(raw?.skills) ? raw.skills : [],
+  rating: typeof raw?.rating === 'number' ? raw.rating : undefined,
+  reviewCount: typeof raw?.reviewCount === 'number' ? raw.reviewCount : undefined,
+});
+
+const warmUpBackend = async (): Promise<void> => {
+  try {
+    await axios.get(`${API_ORIGIN}/`, {timeout: 8000});
+  } catch {
+    // El login real reintentara y mostrara el error si el backend sigue caido.
+  }
+};
 
 const shouldRetryRequest = (error: unknown): boolean => {
   if (!axios.isAxiosError(error)) return true;
@@ -284,7 +373,7 @@ const mapConversation = (raw: any): Conversation => ({
   tripId: raw?.tripId ?? raw?.trip_id ?? undefined,
   otherUserId: String(raw?.otherUserId ?? raw?.other_user_id ?? ''),
   otherUserName: String(raw?.otherUserName ?? raw?.other_user_name ?? ''),
-  otherUserAvatar: raw?.otherUserAvatar ?? raw?.other_user_avatar ?? undefined,
+  otherUserAvatar: normalizeAssetUrl(raw?.otherUserAvatar ?? raw?.other_user_avatar),
   lastMessage: raw?.lastMessage ?? raw?.last_message ?? undefined,
   lastMessageTime: String(raw?.lastMessageTime ?? raw?.last_message_time ?? ''),
   unreadCount: Number(raw?.unreadCount ?? raw?.unread_count ?? 0),
@@ -296,45 +385,86 @@ const mapMessage = (raw: any): Message => ({
   conversationId: String(raw?.conversationId ?? raw?.conversation_id ?? ''),
   senderId: String(raw?.senderId ?? raw?.sender_id ?? ''),
   senderName: raw?.senderName ?? raw?.sender_name ?? undefined,
-  senderAvatar: raw?.senderAvatar ?? raw?.sender_avatar ?? undefined,
+  senderAvatar: normalizeAssetUrl(raw?.senderAvatar ?? raw?.sender_avatar),
   content: String(raw?.content ?? ''),
   isRead: Boolean(raw?.isRead ?? raw?.is_read ?? false),
   createdAt: String(raw?.createdAt ?? raw?.created_at ?? ''),
 });
 
 export const userService = {
-  async register(payload: {name: string; email: string; role: Role}): Promise<User> {
-    const {data} = await api.post('/users', payload);
-    return data;
+  async register(payload: {name: string; email: string; password: string; role: Role}): Promise<User> {
+    const {data} = await withPolicy(
+      timeout => api.post('/users', payload, {timeout}),
+      REQUEST_POLICIES.authWrite,
+    );
+    return mapUser(data);
   },
   async getAll(role?: Role): Promise<User[]> {
     const params = role ? { role } : {};
-    const {data} = await api.get('/users', { params });
-    return Array.isArray(data) ? data : [];
+    const {data} = await withPolicy(
+      timeout => api.get('/users', {params, timeout}),
+      REQUEST_POLICIES.userRead,
+    );
+    return Array.isArray(data) ? data.map(mapUser) : [];
   },
-  async login(payload: {email: string; role: Role}): Promise<SessionData> {
-    const {data} = await api.post('/users/login', payload);
-    return data;
+  async login(payload: {email: string; password: string; role?: Role}): Promise<SessionData> {
+    await warmUpBackend();
+    const requestPayload = {
+      email: payload.email,
+      password: payload.password,
+    };
+    const {data} = await withPolicy(
+      timeout => api.post('/users/login', requestPayload, {timeout}),
+      REQUEST_POLICIES.authWrite,
+    );
+    return mapSessionData(data);
   },
   async getById(userId: string): Promise<User> {
-    const {data} = await api.get(`/users/${userId}`);
-    return data;
+    const {data} = await withPolicy(
+      timeout => api.get(`/users/${userId}`, {timeout}),
+      REQUEST_POLICIES.userRead,
+    );
+    return mapUser(data);
   },
   async update(
     userId: string,
     payload: Partial<Pick<User, 'name' | 'avatar' | 'bio' | 'boatName' | 'boatType'>> & {skills?: UserSkill[]},
   ): Promise<User> {
-    const {data} = await api.patch(`/users/${userId}`, payload);
-    return data;
+    const normalizedPayload = {
+      ...payload,
+      avatar: payload.avatar === undefined ? undefined : toServerAssetPath(payload.avatar) ?? payload.avatar,
+    };
+
+    const {data} = await withPolicy(
+      async timeout => {
+        try {
+          return await api.patch(`/users/${userId}`, normalizedPayload, {timeout});
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response?.status === 404) {
+            return api.put(`/users/${userId}`, normalizedPayload, {timeout});
+          }
+          throw error;
+        }
+      },
+      REQUEST_POLICIES.userWrite,
+    );
+    return mapUser(data);
   },
-  async uploadAvatar(userId: string, fileUri: string): Promise<string> {
+  async uploadAvatar(
+    userId: string,
+    fileUri: string,
+    options?: {filename?: string; mimeType?: string},
+  ): Promise<string> {
     const normalizedUri = fileUri.trim();
-    const filename = normalizedUri.split('/').pop() || `avatar-${Date.now()}.jpg`;
-    const mimeType = filename.toLowerCase().endsWith('.png')
-      ? 'image/png'
-      : filename.toLowerCase().endsWith('.webp')
-        ? 'image/webp'
-        : 'image/jpeg';
+    const fallbackFilename = normalizedUri.split('/').pop() || `avatar-${Date.now()}.jpg`;
+    const filename = (options?.filename?.trim() || fallbackFilename).trim();
+    const mimeType =
+      options?.mimeType?.trim() ||
+      (filename.toLowerCase().endsWith('.png')
+        ? 'image/png'
+        : filename.toLowerCase().endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg');
 
     const formData = new FormData();
     formData.append('avatar', {
@@ -343,23 +473,55 @@ export const userService = {
       type: mimeType,
     } as any);
 
-    const {data} = await api.post(`/users/${userId}/avatar`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const postAvatar = (path: string, timeout: number) =>
+      api.post(path, formData, {
+        timeout,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-    return String(data?.avatar || '');
+    let data: any;
+    try {
+      ({data} = await withPolicy(
+        timeout => postAvatar(`/users/${userId}/avatar`, timeout),
+        REQUEST_POLICIES.userWrite,
+      ));
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        try {
+          ({data} = await withPolicy(
+            timeout => postAvatar(`/users/avatar/${userId}`, timeout),
+            REQUEST_POLICIES.userWrite,
+          ));
+        } catch (legacyError) {
+          if (axios.isAxiosError(legacyError) && legacyError.response?.status === 404) {
+            throw new Error('El backend publicado no tiene activa la subida de foto de perfil. Hay que desplegar la API actualizada.');
+          }
+          throw legacyError;
+        }
+      } else {
+        throw error;
+      }
+    }
+
+    return toServerAssetPath(data?.avatar) || '';
   },
 };
 
 export const tripService = {
   async getAll(): Promise<Trip[]> {
-    const {data} = await api.get('/trips');
+    const {data} = await withPolicy(
+      timeout => api.get('/trips', {timeout}),
+      REQUEST_POLICIES.tripRead,
+    );
     return Array.isArray(data) ? data.map(mapTrip) : [];
   },
   async getById(tripId: string): Promise<Trip> {
-    const {data} = await api.get(`/trips/${tripId}`);
+    const {data} = await withPolicy(
+      timeout => api.get(`/trips/${tripId}`, {timeout}),
+      REQUEST_POLICIES.tripRead,
+    );
     return mapTrip(data);
   },
   async create(payload: {
@@ -396,7 +558,10 @@ export const tripService = {
       cost: payload.price,
     };
 
-    const {data} = await api.post('/trips', requestBody);
+    const {data} = await withPolicy(
+      timeout => api.post('/trips', requestBody, {timeout}),
+      REQUEST_POLICIES.tripWrite,
+    );
     return mapTrip(data);
   },
   async update(tripId: string, payload: Partial<{
@@ -440,7 +605,10 @@ export const tripService = {
     if (payload.availableSeats !== undefined) requestBody.availableSeats = payload.availableSeats;
     if (payload.price !== undefined) requestBody.cost = payload.price;
 
-    const {data} = await api.patch(`/trips/${tripId}`, requestBody);
+    const {data} = await withPolicy(
+      timeout => api.patch(`/trips/${tripId}`, requestBody, {timeout}),
+      REQUEST_POLICIES.tripWrite,
+    );
     return mapTrip(data);
   },
   async cancel(tripId: string): Promise<void> {
@@ -454,11 +622,17 @@ export const tripService = {
 export const boatService = {
   async getAll(patronId?: string): Promise<Boat[]> {
     const params = patronId ? { patronId } : {};
-    const {data} = await api.get('/boats', { params });
+    const {data} = await withPolicy(
+      timeout => api.get('/boats', {params, timeout}),
+      REQUEST_POLICIES.miscRead,
+    );
     return Array.isArray(data) ? data.map(mapBoat) : [];
   },
   async getById(boatId: string): Promise<Boat> {
-    const {data} = await api.get(`/boats/${boatId}`);
+    const {data} = await withPolicy(
+      timeout => api.get(`/boats/${boatId}`, {timeout}),
+      REQUEST_POLICIES.miscRead,
+    );
     return mapBoat(data);
   },
   async create(payload: {
@@ -473,18 +647,27 @@ export const boatService = {
     safetyEquipment: string[];
     description: string;
   }): Promise<Boat> {
-    const {data} = await api.post('/boats', {...payload, actorId: payload.patronId});
+    const {data} = await withPolicy(
+      timeout => api.post('/boats', {...payload, actorId: payload.patronId}, {timeout}),
+      REQUEST_POLICIES.miscWrite,
+    );
     return mapBoat(data);
   },
   async update(
     boatId: string,
     payload: Partial<Omit<Boat, 'id' | 'patronId' | 'createdAt'>> & {actorId: string}
   ): Promise<Boat> {
-    const {data} = await api.patch(`/boats/${boatId}`, payload);
+    const {data} = await withPolicy(
+      timeout => api.patch(`/boats/${boatId}`, payload, {timeout}),
+      REQUEST_POLICIES.miscWrite,
+    );
     return mapBoat(data);
   },
   async delete(boatId: string, actorId: string): Promise<void> {
-    await api.delete(`/boats/${boatId}`, {params: {actorId}});
+    await withPolicy(
+      timeout => api.delete(`/boats/${boatId}`, {params: {actorId}, timeout}),
+      REQUEST_POLICIES.miscWrite,
+    );
   },
 };
 
@@ -495,7 +678,10 @@ export const ratingService = {
     rating: number;
     comment?: string;
   }): Promise<Rating> {
-    const {data} = await api.post('/ratings', payload);
+    const {data} = await withPolicy(
+      timeout => api.post('/ratings', payload, {timeout}),
+      REQUEST_POLICIES.miscWrite,
+    );
     return data;
   },
   async getRatings(userId: string): Promise<{
@@ -503,11 +689,17 @@ export const ratingService = {
     averageRating: number;
     reviewCount: number;
   }> {
-    const {data} = await api.get(`/ratings/user/${userId}`);
+    const {data} = await withPolicy(
+      timeout => api.get(`/ratings/user/${userId}`, {timeout}),
+      REQUEST_POLICIES.miscRead,
+    );
     return data;
   },
   async getRatingsByUser(userId: string): Promise<Rating[]> {
-    const {data} = await api.get(`/ratings/from/${userId}`);
+    const {data} = await withPolicy(
+      timeout => api.get(`/ratings/from/${userId}`, {timeout}),
+      REQUEST_POLICIES.miscRead,
+    );
     return Array.isArray(data) ? data : [];
   },
 };
@@ -551,9 +743,12 @@ export const messageService = {
     );
     return Array.isArray(data) ? data.map(mapConversation).filter(c => c.id) : [];
   },
-  async getMessages(conversationId: string, limit = 50, offset = 0): Promise<Message[]> {
+  async getMessages(conversationId: string, userId: string, limit = 50, offset = 0): Promise<Message[]> {
     const {data} = await withPolicy(
-      timeout => api.get(`/messages/conversation/${conversationId}/messages?limit=${limit}&offset=${offset}`, {timeout}),
+      timeout =>
+        api.get(`/messages/conversation/${conversationId}/messages?limit=${limit}&offset=${offset}&userId=${encodeURIComponent(userId)}`, {
+          timeout,
+        }),
       REQUEST_POLICIES.chatRead,
     );
     return Array.isArray(data) ? data.map(mapMessage).filter(m => m.id) : [];
@@ -578,6 +773,36 @@ export const messageService = {
       throw new Error('Usuarios invalidos para crear chat');
     }
 
+    const findExistingConversation = async () => {
+      const existing = await messageService.getConversations(payload.userId1);
+      const exactTripMatch = existing.find(conversation => {
+        const sameUser = String(conversation.otherUserId || '') === String(payload.userId2);
+        const sameTrip = String(conversation.tripId || '') === String(payload.tripId || '');
+        return sameUser && sameTrip;
+      });
+
+      if (exactTripMatch?.id) {
+        return {id: exactTripMatch.id, created: false};
+      }
+
+      const directMatch = existing.find(conversation => {
+        const sameUser = String(conversation.otherUserId || '') === String(payload.userId2);
+        const noTrip = !conversation.tripId;
+        return sameUser && noTrip;
+      });
+
+      if (directMatch?.id) {
+        return {id: directMatch.id, created: false};
+      }
+
+      return null;
+    };
+
+    const existingConversation = await findExistingConversation().catch(() => null);
+    if (existingConversation) {
+      return existingConversation;
+    }
+
     const primaryPayload = {
       ...payload,
       tripId: payload.tripId || null,
@@ -591,6 +816,11 @@ export const messageService = {
       if (!data?.id) throw new Error('Respuesta invalida de conversacion');
       return {id: String(data.id), created: Boolean(data.created)};
     } catch (error) {
+      const fallbackExistingConversation = await findExistingConversation().catch(() => null);
+      if (fallbackExistingConversation) {
+        return fallbackExistingConversation;
+      }
+
       // Fallback defensivo: si falla por tripId, reintenta chat directo entre usuarios.
       if (payload.tripId) {
         const {data} = await withPolicy(
@@ -613,7 +843,10 @@ export const messageService = {
     }
   },
   async markMessageAsRead(messageId: string): Promise<void> {
-    await api.patch(`/messages/${messageId}/read`);
+    await withPolicy(
+      timeout => api.patch(`/messages/${messageId}/read`, undefined, {timeout}),
+      REQUEST_POLICIES.chatWrite,
+    );
   },
   async markConversationAsRead(conversationId: string, userId: string): Promise<void> {
     await withPolicy(

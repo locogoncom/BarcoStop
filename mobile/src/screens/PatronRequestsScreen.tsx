@@ -61,9 +61,11 @@ export default function PatronRequestsScreen() {
   const openChatForRequest = async (request: any) => {
     if (!session?.userId) return;
 
-    const travelerId = request.userId || request.user_id;
+    const travelerIdRaw = request.userId ?? request.user_id;
+    const travelerId = travelerIdRaw ? String(travelerIdRaw) : '';
     const travelerName = request.userName || request.user_name || 'Viajero';
-    const tripId = request.trip?.id || request.tripId || request.trip_id;
+    const tripIdRaw = request.trip?.id || request.tripId || request.trip_id;
+    const tripId = tripIdRaw ? String(tripIdRaw) : undefined;
 
     if (!travelerId) {
       feedback.error('No encontramos el usuario del viajero');
@@ -71,18 +73,18 @@ export default function PatronRequestsScreen() {
     }
 
     try {
-      const conversation = await messageService.createOrGetConversation({
-        userId1: session.userId,
-        userId2: travelerId,
-        tripId,
-      });
+      const patronId = String(session.userId);
+      if (patronId === travelerId) {
+        feedback.error('No puedes abrir un chat contigo mismo');
+        return;
+      }
 
       navigation.navigate('Messages', {
         screen: 'Chat',
         params: {
-          conversationId: conversation.id,
           otherUserName: travelerName,
           otherUserId: travelerId,
+          tripId,
         },
       });
     } catch (error) {

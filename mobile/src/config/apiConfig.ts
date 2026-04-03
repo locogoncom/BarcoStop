@@ -43,3 +43,4 @@ const apiUrlFromEnv =
 
 export const API_BASE_URL = apiUrlFromEnv ?? API_BASE_URLS[APP_ENV];
 export const API_BASE_URLS_BY_ENV = API_BASE_URLS;
+export const API_ORIGIN = API_BASE_URL.replace(/\/api$/, '');

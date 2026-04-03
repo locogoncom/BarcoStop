@@ -2,13 +2,65 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const { v4: uuidv4 } = require('uuid');
+const requireAuth = require('../middleware/requireAuth');
 
-// GET /api/messages/conversations/:userId - Obtener conversaciones del usuario
-router.get('/conversations/:userId', async (req, res) => {
+const isMissingTableError = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    error?.code === 'ER_NO_SUCH_TABLE' ||
+    message.includes('no such table') ||
+    message.includes("doesn't exist") ||
+    message.includes('does not exist')
+  );
+};
+
+const getConversationPeerId = async (conversationId, userId) => {
+  const rows = await db.query(
+    `SELECT user_id
+     FROM conversation_participants
+     WHERE conversation_id = ? AND user_id != ?
+     LIMIT 1`,
+    [conversationId, userId]
+  );
+  return Array.isArray(rows) && rows[0]?.user_id ? String(rows[0].user_id) : null;
+};
+
+const getBlockState = async (userId, otherUserId) => {
+  try {
+    const rows = await db.query(
+      `SELECT blocker_id, blocked_user_id
+       FROM user_blocks
+       WHERE is_active = TRUE
+         AND (
+           (blocker_id = ? AND blocked_user_id = ?)
+           OR
+           (blocker_id = ? AND blocked_user_id = ?)
+         )
+       LIMIT 1`,
+      [userId, otherUserId, otherUserId, userId]
+    );
+
+    const relation = Array.isArray(rows) ? rows[0] : null;
+    return {
+      blocked: Boolean(relation),
+      blockedByMe: Boolean(relation && relation.blocker_id === userId),
+      blockedByOther: Boolean(relation && relation.blocker_id === otherUserId),
+    };
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      return {blocked: false, blockedByMe: false, blockedByOther: false};
+    }
+    throw error;
+  }
+};
+
+router.get('/conversations/:userId', requireAuth, async (req, res) => {
   try {
     const { userId } = req.params;
+    if (String(req.auth?.userId || '') !== String(userId)) {
+      return res.status(403).json({ error: 'No autorizado para consultar conversaciones de otro usuario' });
+    }
 
-    // Obtener conversaciones donde el usuario participa
     const query = `
       SELECT DISTINCT
         c.id,
@@ -36,13 +88,23 @@ router.get('/conversations/:userId', async (req, res) => {
   }
 });
 
-// GET /api/messages/conversation/:conversationId/messages - Obtener mensajes de una conversación
-router.get('/conversation/:conversationId/messages', async (req, res) => {
+router.get('/conversation/:conversationId/messages', requireAuth, async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { limit = 50, offset = 0 } = req.query;
+    const { limit = 50, offset = 0, userId } = req.query;
     if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
       return res.status(400).json({ error: 'Invalid conversationId' });
+    }
+    if (!userId || String(userId) !== String(req.auth?.userId || '')) {
+      return res.status(403).json({ error: 'No autorizado para consultar estos mensajes' });
+    }
+
+    const participants = await db.query(
+      'SELECT 1 FROM conversation_participants WHERE conversation_id = ? AND user_id = ? LIMIT 1',
+      [conversationId, userId]
+    );
+    if (!Array.isArray(participants) || participants.length === 0) {
+      return res.status(403).json({ error: 'User not participant in conversation' });
     }
 
     const safeLimit = Number.parseInt(limit, 10) || 50;
@@ -65,14 +127,16 @@ router.get('/conversation/:conversationId/messages', async (req, res) => {
   }
 });
 
-// POST /api/messages/send - Enviar un mensaje
-router.post('/send', async (req, res) => {
+router.post('/send', requireAuth, async (req, res) => {
   try {
     const { conversationId, senderId, content } = req.body;
     const normalizedContent = typeof content === 'string' ? content.trim() : '';
 
     if (!conversationId || !senderId || !normalizedContent) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    if (String(req.auth?.userId || '') !== String(senderId)) {
+      return res.status(403).json({ error: 'No autorizado para enviar en nombre de otro usuario' });
     }
 
     if (normalizedContent.length > 500) {
@@ -86,6 +150,19 @@ router.post('/send', async (req, res) => {
 
     if (!Array.isArray(participants) || participants.length === 0) {
       return res.status(403).json({ error: 'User not participant in conversation' });
+    }
+
+    const otherUserId = await getConversationPeerId(conversationId, senderId);
+    if (!otherUserId) {
+      return res.status(400).json({ error: 'Conversation without valid recipient' });
+    }
+
+    const blockState = await getBlockState(senderId, otherUserId);
+    if (blockState.blockedByMe) {
+      return res.status(403).json({ error: 'Has bloqueado a este usuario. Desbloquealo para enviar mensajes.' });
+    }
+    if (blockState.blockedByOther) {
+      return res.status(403).json({ error: 'No puedes enviar mensajes: este usuario te ha bloqueado.' });
     }
 
     const messageId = uuidv4();
@@ -116,8 +193,7 @@ router.post('/send', async (req, res) => {
   }
 });
 
-// POST /api/messages/conversation - Crear o obtener conversación
-router.post('/conversation', async (req, res) => {
+router.post('/conversation', requireAuth, async (req, res) => {
   try {
     const { userId1, userId2, tripId } = req.body;
     const normalizedTripId = tripId ?? null;
@@ -125,9 +201,17 @@ router.post('/conversation', async (req, res) => {
     if (!userId1 || !userId2) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    if (String(req.auth?.userId || '') !== String(userId1)) {
+      return res.status(403).json({ error: 'No autorizado para crear chat en nombre de otro usuario' });
+    }
 
     if (userId1 === userId2) {
       return res.status(400).json({ error: 'Cannot create a conversation with the same user' });
+    }
+
+    const blockState = await getBlockState(userId1, userId2);
+    if (blockState.blocked) {
+      return res.status(403).json({ error: 'No se puede crear chat: existe un bloqueo entre usuarios.' });
     }
 
     const users = await db.query('SELECT id FROM users WHERE id IN (?, ?)', [userId1, userId2]);
@@ -187,11 +271,132 @@ router.post('/conversation', async (req, res) => {
   }
 });
 
-// PATCH /api/messages/:messageId/read - Marcar como leído
-router.patch('/:messageId/read', async (req, res) => {
+router.get('/block/status', requireAuth, async (req, res) => {
+  try {
+    const {userId, otherUserId} = req.query;
+    if (!userId || !otherUserId) {
+      return res.status(400).json({ error: 'userId y otherUserId son requeridos' });
+    }
+    if (String(req.auth?.userId || '') !== String(userId)) {
+      return res.status(403).json({ error: 'No autorizado para consultar este estado de bloqueo' });
+    }
+    const state = await getBlockState(String(userId), String(otherUserId));
+    return res.json(state);
+  } catch (error) {
+    console.error('Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/block', requireAuth, async (req, res) => {
+  try {
+    const {blockerId, blockedUserId, reason} = req.body || {};
+    if (!blockerId || !blockedUserId) {
+      return res.status(400).json({ error: 'blockerId y blockedUserId son requeridos' });
+    }
+    if (blockerId === blockedUserId) {
+      return res.status(400).json({ error: 'No puedes bloquearte a ti mismo' });
+    }
+    if (String(req.auth?.userId || '') !== String(blockerId)) {
+      return res.status(403).json({ error: 'No autorizado para bloquear en nombre de otro usuario' });
+    }
+
+    await db.query(
+      `INSERT INTO user_blocks (blocker_id, blocked_user_id, reason, is_active)
+       VALUES (?, ?, ?, TRUE)
+       ON DUPLICATE KEY UPDATE
+         reason = VALUES(reason),
+         is_active = TRUE,
+         updated_at = CURRENT_TIMESTAMP`,
+      [blockerId, blockedUserId, reason || null]
+    );
+
+    return res.status(201).json({ok: true});
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      return res.status(503).json({ error: 'Bloqueos no disponibles temporalmente' });
+    }
+    console.error('Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/block', requireAuth, async (req, res) => {
+  try {
+    const {blockerId, blockedUserId} = req.body || {};
+    if (!blockerId || !blockedUserId) {
+      return res.status(400).json({ error: 'blockerId y blockedUserId son requeridos' });
+    }
+    if (String(req.auth?.userId || '') !== String(blockerId)) {
+      return res.status(403).json({ error: 'No autorizado para desbloquear en nombre de otro usuario' });
+    }
+
+    await db.query(
+      `UPDATE user_blocks
+       SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+       WHERE blocker_id = ? AND blocked_user_id = ?`,
+      [blockerId, blockedUserId]
+    );
+
+    return res.json({ok: true});
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      return res.status(503).json({ error: 'Bloqueos no disponibles temporalmente' });
+    }
+    console.error('Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/report', requireAuth, async (req, res) => {
+  try {
+    const {reporterId, reportedUserId, conversationId, messageId, reason, details} = req.body || {};
+    if (!reporterId || !reportedUserId || !reason) {
+      return res.status(400).json({ error: 'reporterId, reportedUserId y reason son requeridos' });
+    }
+    if (reporterId === reportedUserId) {
+      return res.status(400).json({ error: 'No puedes reportarte a ti mismo' });
+    }
+    if (String(req.auth?.userId || '') !== String(reporterId)) {
+      return res.status(403).json({ error: 'No autorizado para reportar en nombre de otro usuario' });
+    }
+
+    const reportId = uuidv4();
+    await db.query(
+      `INSERT INTO user_reports
+        (id, reporter_id, reported_user_id, conversation_id, message_id, reason, details, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'open')`,
+      [
+        reportId,
+        reporterId,
+        reportedUserId,
+        conversationId || null,
+        messageId || null,
+        String(reason).slice(0, 120),
+        details || null,
+      ]
+    );
+
+    return res.status(201).json({id: reportId, status: 'open'});
+  } catch (error) {
+    if (isMissingTableError(error)) {
+      return res.status(503).json({ error: 'Reportes no disponibles temporalmente' });
+    }
+    console.error('Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch('/:messageId/read', requireAuth, async (req, res) => {
   try {
     const { messageId } = req.params;
-    await db.query('UPDATE messages SET is_read = TRUE WHERE id = ?', [messageId]);
+    await db.query(
+      `UPDATE messages m
+       JOIN conversation_participants cp ON cp.conversation_id = m.conversation_id
+       SET m.is_read = TRUE
+       WHERE m.id = ? AND cp.user_id = ?`,
+      [messageId, String(req.auth?.userId || '')]
+    );
     res.json({ id: messageId, is_read: true });
   } catch (error) {
     console.error('Error:', error);
@@ -199,11 +404,13 @@ router.patch('/:messageId/read', async (req, res) => {
   }
 });
 
-// PATCH /api/messages/conversation/:conversationId/read-all - Marcar todos como leídos
-router.patch('/conversation/:conversationId/read-all', async (req, res) => {
+router.patch('/conversation/:conversationId/read-all', requireAuth, async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { userId } = req.body;
+    if (!userId || String(req.auth?.userId || '') !== String(userId)) {
+      return res.status(403).json({ error: 'No autorizado para marcar mensajes de otro usuario' });
+    }
     await db.query(
       'UPDATE messages SET is_read = TRUE WHERE conversation_id = ? AND sender_id != ? AND is_read = FALSE',
       [conversationId, userId]

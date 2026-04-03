@@ -233,17 +233,12 @@ export default function TripDetailScreen() {
 
     try {
       setCreatingChat(true);
-      const convo = await messageService.createOrGetConversation({
-        userId1: session.userId,
-        userId2: trip.patron.id,
-        tripId: trip.id,
-      });
       navigation.navigate('Messages', {
         screen: 'Chat',
         params: {
-          conversationId: convo.id,
           otherUserName: trip.patron.name || 'Capitán',
           otherUserId: trip.patron.id,
+          tripId: trip.id,
         },
       });
     } catch (error) {

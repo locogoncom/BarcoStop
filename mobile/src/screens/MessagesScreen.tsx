@@ -77,12 +77,7 @@ export default function MessagesScreen({navigation}: any) {
       if (!session?.userId || !user?.id) return;
       setShowUserPicker(false);
       setQuery('');
-      const convo = await messageService.createOrGetConversation({
-        userId1: session.userId,
-        userId2: user.id,
-      });
       navigation.navigate('Chat', {
-        conversationId: convo.id,
         otherUserName: user.name,
         otherUserId: user.id,
       });
@@ -205,22 +200,24 @@ export default function MessagesScreen({navigation}: any) {
       {shouldShowUsers && (
         <View style={styles.userResultsSection}>
           <Text style={styles.userResultsTitle}>Usuarios ({filteredUsers.length})</Text>
+          <Text style={styles.userResultsHint}>Toca un usuario para abrir el chat y escribirle.</Text>
           {filteredUsers.length === 0 ? (
             <Text style={styles.noUserText}>No hay usuarios disponibles para iniciar chat</Text>
           ) : (
-            <FlatList
-              data={filteredUsers}
-              horizontal
-              keyExtractor={(item) => item.id}
-              showsHorizontalScrollIndicator={false}
-              renderItem={({item}) => (
+            <View style={styles.userList}>
+              {filteredUsers.slice(0, 12).map(item => (
                 <TouchableOpacity
-                  style={styles.userChip}
+                  key={item.id}
+                  style={styles.userCard}
                   onPress={() => handleStartChatWithUser(item)}>
-                  <Text style={styles.userChipText}>{item.name}</Text>
+                  <View>
+                    <Text style={styles.userCardName}>{item.name}</Text>
+                    <Text style={styles.userCardMeta}>{item.role === 'patron' ? 'Capitán' : 'Viajero'}</Text>
+                  </View>
+                  <Text style={styles.userCardAction}>Abrir</Text>
                 </TouchableOpacity>
-              )}
-            />
+              ))}
+            </View>
           )}
         </View>
       )}
@@ -297,18 +294,39 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
     marginBottom: spacing.sm,
   },
-  userChip: {
-    backgroundColor: '#e0f2fe',
-    borderRadius: radius.round,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: spacing.sm,
-    borderWidth: 1,
-    borderColor: '#7dd3fc',
+  userResultsHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
   },
-  userChipText: {
-    color: '#0369a1',
-    fontWeight: '600',
+  userList: {
+    gap: spacing.sm,
+  },
+  userCard: {
+    backgroundColor: colors.background,
+    borderRadius: radius.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  userCardName: {
+    color: colors.textStrong,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  userCardMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  userCardAction: {
+    color: colors.primaryAlt,
+    fontWeight: '700',
+    fontSize: 13,
   },
   noUserText: {
     fontSize: 13,

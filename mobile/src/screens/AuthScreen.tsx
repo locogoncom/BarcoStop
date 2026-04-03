@@ -7,19 +7,23 @@ import {userService} from '../services/api';
 import {colors} from '../theme/colors';
 import {feedback} from '../theme/feedback';
 import {radius, spacing} from '../theme/layout';
+import {getErrorMessage} from '../utils/errors';
+import {logger} from '../utils/logger';
 
 export default function AuthScreen({route}: any) {
   const {role} = route.params;
   const navigation = useNavigation<any>();
   const {login} = useAuth();
   const {t} = useLanguage();
-  const [isRegister, setIsRegister] = useState(true);
+  const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = async () => {
-    if (!email.trim() || (isRegister && !name.trim())) {
+    if (!email.trim() || (isRegister && !name.trim()) || !password.trim()) {
       feedback.alert(t('authRequiredTitle'), t('authRequiredMessage'));
       return;
     }
@@ -28,25 +32,20 @@ export default function AuthScreen({route}: any) {
       setLoading(true);
       const safeName = name.trim() || 'Usuario';
 
-      console.log(`[AUTH] ${isRegister ? 'Registro' : 'Login'} - Email: ${email.trim()}, Role: ${role}`);
+      logger.debug(`[AUTH] ${isRegister ? 'Registro' : 'Login'} - Email: ${email.trim()}, Role: ${role}`);
 
       const sessionData = isRegister
         ? await userService
-            .register({name: safeName, email: email.trim(), role})
-            .then((user) => {
-              console.log('[AUTH] Usuario registrado:', user);
-              return userService.login({email: email.trim(), role});
-            })
-        : await userService.login({email: email.trim(), role});
+            .register({name: safeName, email: email.trim(), password: password.trim(), role})
+            .then(() => userService.login({email: email.trim(), password: password.trim()}))
+        : await userService.login({email: email.trim(), password: password.trim()});
 
-      console.log('[AUTH] Session data recibida:', sessionData);
+      logger.debug('[AUTH] Session data recibida:', sessionData);
       await login(sessionData);
       navigation.replace('MainApp');
     } catch (err: any) {
-      console.error('[AUTH] Error:', err);
-      console.error('[AUTH] Error response:', err.response?.data);
-      const errorMsg = err.response?.data?.error || err.message || t('authErrorMessage');
-      feedback.alert(t('alertErrorTitle'), errorMsg);
+      logger.error('[AUTH] Error:', err);
+      feedback.alert(t('alertErrorTitle'), getErrorMessage(err, t('authErrorMessage')));
     } finally {
       setLoading(false);
     }
@@ -68,22 +67,47 @@ export default function AuthScreen({route}: any) {
       ) : null}
       <TextInput
         style={styles.input}
-        placeholder={t('authEmail')}
+        placeholder={t('authEmail') || 'Email'}
+        placeholderTextColor={colors.textSubtle}
         keyboardType="email-address"
         autoCapitalize="none"
         value={email}
         onChangeText={setEmail}
       />
 
+      <View style={{position: 'relative'}}>
+        <TextInput
+          style={styles.input}
+          placeholder={t('authPassword') || 'Contraseña'}
+          placeholderTextColor={colors.textSubtle}
+          secureTextEntry={!showPassword}
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TouchableOpacity
+          style={styles.showButton}
+          onPress={() => setShowPassword((v) => !v)}
+        >
+          <Text style={styles.showButtonText}>{showPassword ? 'Ocultar' : 'Mostrar'}</Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={loading}>
         <Text style={styles.buttonText}>{loading ? t('authProcessing') : t('authContinue')}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => setIsRegister(!isRegister)}>
-        <Text style={styles.link}>
+      <TouchableOpacity
+        style={[styles.secondaryButton, loading && styles.secondaryButtonDisabled]}
+        onPress={() => setIsRegister(!isRegister)}
+        disabled={loading}>
+        <Text style={styles.secondaryButtonText}>
           {isRegister ? t('authHaveAccount') : t('authNoAccount')}
         </Text>
       </TouchableOpacity>
+
+      <Text style={styles.note}>
+        {isRegister ? 'Si ya tienes cuenta, entra desde el boton de abajo.' : 'Si es tu primera vez, crea tu cuenta desde el boton de abajo.'}
+      </Text>
     </View>
   );
 }
@@ -102,6 +126,18 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   button: {backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.lg, marginTop: spacing.xs},
+  secondaryButton: {
+    marginTop: spacing.md,
+    backgroundColor: colors.surface,
+    paddingVertical: 14,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.primaryAlt,
+  },
+  secondaryButtonDisabled: {opacity: 0.7},
+  showButton: {position: 'absolute', right: 10, top: 10, padding: 4},
+  showButtonText: {color: colors.primaryAlt, fontWeight: '600'},
   buttonText: {color: colors.white, textAlign: 'center', fontWeight: '700'},
-  link: {marginTop: spacing.lg, textAlign: 'center', color: colors.primaryAlt, fontWeight: '600'},
+  secondaryButtonText: {textAlign: 'center', color: colors.primaryAlt, fontWeight: '700'},
+  note: {marginTop: spacing.lg, textAlign: 'center', color: colors.textSubtle, fontWeight: '500'},
 });

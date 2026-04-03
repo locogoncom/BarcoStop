@@ -31,7 +31,7 @@ export type MainTabParamList = {
   Bookings: undefined;
   Favorites: undefined;
   Messages: undefined;
-  Chat: {conversationId: string; otherUserName: string; otherUserId: string};
+  Chat: {conversationId?: string; otherUserName: string; otherUserId: string; tripId?: string};
   Profile: undefined;
   Reservations: undefined;
   PatronRequests: undefined;

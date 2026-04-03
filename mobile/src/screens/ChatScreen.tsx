@@ -20,7 +20,7 @@ import {colors} from '../theme/colors';
 
 export default function ChatScreen({route, navigation}: any) {
   const routeParams = route?.params?.params ?? route?.params ?? {};
-  const {conversationId, otherUserName, otherUserId} = routeParams;
+  const {conversationId, otherUserName, otherUserId, tripId} = routeParams;
   const {session} = useAuth();
   const [activeConversationId, setActiveConversationId] = useState<string>(conversationId || '');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -52,6 +52,7 @@ export default function ChatScreen({route, navigation}: any) {
         const convo = await messageService.createOrGetConversation({
           userId1: session.userId,
           userId2: otherUserId,
+          tripId,
         });
         setActiveConversationId(convo.id);
         navigation.setParams({
@@ -59,6 +60,7 @@ export default function ChatScreen({route, navigation}: any) {
           conversationId: convo.id,
           otherUserId,
           otherUserName,
+          tripId,
         });
       } catch (error) {
         console.error('Error ensuring conversation in ChatScreen:', error);
@@ -69,7 +71,7 @@ export default function ChatScreen({route, navigation}: any) {
     };
 
     ensureConversation();
-  }, [activeConversationId, session?.userId, otherUserId, otherUserName, navigation, route?.params]);
+  }, [activeConversationId, session?.userId, otherUserId, otherUserName, tripId, navigation, route?.params]);
 
   const loadMessages = async () => {
     if (!activeConversationId) {
@@ -78,7 +80,8 @@ export default function ChatScreen({route, navigation}: any) {
     }
 
     try {
-      const data = await messageService.getMessages(activeConversationId);
+      if (!session?.userId) return;
+      const data = await messageService.getMessages(activeConversationId, session.userId);
       setMessages(data);
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({animated: true});

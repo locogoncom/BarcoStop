@@ -8,6 +8,17 @@ const User = require('../models/User');
 const {createToken} = require('../utils/token');
 const requireAuth = require('../middleware/requireAuth');
 
+const normalizeRole = (role) => {
+  const value = String(role || '').trim().toLowerCase();
+  if (value === 'captain' || value === 'capitan' || value === 'patrón' || value === 'patron') {
+    return 'patron';
+  }
+  if (value === 'traveler' || value === 'traveller' || value === 'viajero' || value === 'viajera') {
+    return 'viajero';
+  }
+  return null;
+};
+
 const avatarUploadDir = path.join(__dirname, '..', 'uploads', 'avatars');
 fs.mkdirSync(avatarUploadDir, {recursive: true});
 
@@ -65,6 +76,7 @@ router.get('/', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const {email, password, role} = req.body || {};
+    const normalizedRoleHint = normalizeRole(role);
 
     if (!email || !password) {
       return res.status(400).json({error: 'Email y contraseña son requeridos'});
@@ -73,10 +85,6 @@ router.post('/login', async (req, res) => {
     const user = await User.findByEmail(email);
     if (!user) {
       return res.status(404).json({error: 'Usuario no encontrado'});
-    }
-
-    if (role && user.role !== role) {
-      return res.status(400).json({error: 'Rol no coincide con el usuario'});
     }
 
     const valid = await User.validatePassword(email, password);
@@ -95,6 +103,7 @@ router.post('/login', async (req, res) => {
         name: user.name,
         role: user.role,
       }),
+      roleHintIgnored: Boolean(normalizedRoleHint && user.role !== normalizedRoleHint),
     });
   } catch (err) {
     console.error('Login error:', err);
