@@ -1,7 +1,41 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const {randomUUID} = require('crypto');
 const Trip = require('../models/Trip');
 const requireAuth = require('../middleware/requireAuth');
+
+const tripUploadDir = path.join(__dirname, '..', 'uploads', 'trips');
+fs.mkdirSync(tripUploadDir, {recursive: true});
+
+const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, tripUploadDir),
+  filename: (_req, file, cb) => {
+    const extByMime = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+    };
+    const ext = extByMime[file.mimetype] || path.extname(file.originalname || '') || '.jpg';
+    cb(null, `${Date.now()}-${randomUUID()}${ext}`);
+  },
+});
+
+const uploadTripImage = multer({
+  storage,
+  limits: {fileSize: 7 * 1024 * 1024},
+  fileFilter: (_req, file, cb) => {
+    if (!allowedMimeTypes.has(file.mimetype)) {
+      cb(new Error('Formato de imagen no permitido. Usa JPG, PNG o WEBP.'));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 const getActorId = (req) => {
   const fromAuth = req.auth?.userId;
@@ -10,6 +44,28 @@ const getActorId = (req) => {
   const fromQuery = req.query?.actorId;
   return String(fromAuth || fromHeader || fromBody || fromQuery || '').trim();
 };
+
+router.post('/upload-image', requireAuth, uploadTripImage.single('image'), async (req, res) => {
+  try {
+    if (!req.auth?.userId) {
+      if (req.file?.path) {
+        fs.unlink(req.file.path, () => {});
+      }
+      return res.status(401).json({error: 'No autorizado para subir imagen'});
+    }
+
+    if (!req.file) {
+      return res.status(400).json({error: 'No se recibio imagen'});
+    }
+
+    return res.status(201).json({image: `/uploads/trips/${req.file.filename}`});
+  } catch (err) {
+    if (req.file?.path) {
+      fs.unlink(req.file.path, () => {});
+    }
+    return res.status(400).json({error: err.message});
+  }
+});
 
 // create trip
 router.post('/', requireAuth, async (req, res) => {
