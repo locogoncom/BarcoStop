@@ -89,7 +89,6 @@ const ratingRoutes = require('./routes/ratings');
 const favoriteRoutes = require('./routes/favorites');
 const donationRoutes = require('./routes/donations');
 const tripCheckpointRoutes = require('./routes/trip-checkpoints');
-const keepPlayingRoutes = require('./routes/keepplaying');
 const supportMessageRoutes = require('./routes/support-messages');
 
 // mount routes
@@ -103,7 +102,6 @@ app.use('/api/ratings', ratingRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/trip-checkpoints', tripCheckpointRoutes);
-app.use('/api/keepplaying', keepPlayingRoutes);
 app.use('/api/support-messages', supportMessageRoutes);
 
 // Global error handler middleware (must be after all routes)

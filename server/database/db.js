@@ -375,23 +375,6 @@ const createTables = async () => {
     await query(sql, []);
   }
 
-  // KeepPlaying usa tablas separadas kp_*; las aplicamos de forma idempotente.
-  const keepPlayingPath = path.join(__dirname, 'keepplaying_schema.sql');
-  if (fs.existsSync(keepPlayingPath)) {
-    const rawSql = fs.readFileSync(keepPlayingPath, 'utf8');
-    const keepPlayingStatements = rawSql
-      .split(/\r?\n/)
-      .filter((line) => !line.trim().startsWith('--'))
-      .join('\n')
-      .split(';')
-      .map((sql) => sql.trim())
-      .filter(Boolean);
-
-    for (const sql of keepPlayingStatements) {
-      await query(sql, []);
-    }
-  }
-
   console.log('✓ MySQL full schema ensured');
 };
 
