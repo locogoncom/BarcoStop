@@ -1,3 +1,6 @@
+// ...existing code...
+
+
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -17,6 +20,39 @@ const normalizeRole = (role) => {
     return 'viajero';
   }
   return null;
+};
+
+const toUploadPath = (value) => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return undefined;
+  if (raw.startsWith('/uploads/')) return raw;
+  if (/^uploads\//i.test(raw)) return `/${raw}`;
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      const normalizedPath = parsed.pathname.replace(/^\/api(?=\/uploads\/)/i, '');
+      if (normalizedPath.startsWith('/uploads/')) {
+        return normalizedPath;
+      }
+    } catch {
+      return undefined;
+    }
+  }
+
+  return undefined;
+};
+
+const sanitizeUserPayload = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return payload;
+  }
+
+  const normalizedAvatar = toUploadPath(payload.avatar);
+  return {
+    ...payload,
+    ...(payload.avatar !== undefined ? {avatar: normalizedAvatar || payload.avatar} : {}),
+  };
 };
 
 const avatarUploadDir = path.join(__dirname, '..', 'uploads', 'avatars');
@@ -49,19 +85,21 @@ const uploadAvatar = multer({
   },
 });
 
+// register new user
 router.post('/', async (req, res) => {
   try {
     if (!req.body.password || req.body.password.length < 4) {
-      return res.status(400).json({error: 'La contraseña es requerida y debe tener al menos 4 caracteres.'});
+      return res.status(400).json({ error: 'La contraseña es requerida y debe tener al menos 4 caracteres.' });
     }
     const user = await User.create(req.body);
     res.status(201).json(user);
   } catch (err) {
     console.error('User creation error:', err);
-    res.status(400).json({error: err.message});
+    res.status(400).json({ error: err.message });
   }
 });
 
+// list users
 router.get('/', async (req, res) => {
   try {
     const filters = {};
@@ -69,27 +107,28 @@ router.get('/', async (req, res) => {
     const users = await User.findAll(filters);
     res.json(users);
   } catch (err) {
-    res.status(500).json({error: err.message});
+    res.status(500).json({ error: err.message });
   }
 });
 
+// login user
 router.post('/login', async (req, res) => {
   try {
-    const {email, password, role} = req.body || {};
+    const { email, password, role } = req.body || {};
     const normalizedRoleHint = normalizeRole(role);
 
     if (!email || !password) {
-      return res.status(400).json({error: 'Email y contraseña son requeridos'});
+      return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
 
     const user = await User.findByEmail(email);
     if (!user) {
-      return res.status(404).json({error: 'Usuario no encontrado'});
+      return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
     const valid = await User.validatePassword(email, password);
     if (!valid) {
-      return res.status(401).json({error: 'Contraseña incorrecta'});
+      return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
 
     return res.json({
@@ -107,35 +146,37 @@ router.post('/login', async (req, res) => {
     });
   } catch (err) {
     console.error('Login error:', err);
-    return res.status(500).json({error: err.message});
+    return res.status(500).json({ error: err.message });
   }
 });
 
+// get single user
 router.get('/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.sendStatus(404);
     res.json(user);
   } catch (err) {
-    res.status(500).json({error: err.message});
+    res.status(500).json({ error: err.message });
   }
 });
 
 const updateUserHandler = async (req, res) => {
   try {
     if (String(req.auth?.userId || '') !== String(req.params.id || '')) {
-      return res.status(403).json({error: 'No autorizado para actualizar este usuario'});
+      return res.status(403).json({ error: 'No autorizado para actualizar este usuario' });
     }
-    const user = await User.update(req.params.id, req.body);
+    const user = await User.update(req.params.id, sanitizeUserPayload(req.body));
     if (!user) {
-      return res.status(404).json({error: 'Usuario no encontrado para actualizar perfil'});
+      return res.status(404).json({ error: 'Usuario no encontrado para actualizar perfil' });
     }
     res.json(user);
   } catch (err) {
-    res.status(400).json({error: err.message});
+    res.status(400).json({ error: err.message });
   }
 };
 
+// update user
 router.patch('/:id', requireAuth, updateUserHandler);
 router.put('/:id', requireAuth, updateUserHandler);
 
@@ -171,31 +212,34 @@ const handleAvatarUpload = async (req, res) => {
   }
 };
 
+// upload avatar image
 router.post('/:id/avatar', requireAuth, uploadAvatar.single('avatar'), handleAvatarUpload);
 router.post('/avatar/:id', requireAuth, uploadAvatar.single('avatar'), handleAvatarUpload);
 
+// delete user
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     if (String(req.auth?.userId || '') !== String(req.params.id || '')) {
-      return res.status(403).json({error: 'No autorizado para eliminar este usuario'});
+      return res.status(403).json({ error: 'No autorizado para eliminar este usuario' });
     }
     await User.delete(req.params.id);
     res.sendStatus(204);
   } catch (err) {
-    res.status(500).json({error: err.message});
+    res.status(500).json({ error: err.message });
   }
 });
 
+// add rating to user
 router.post('/:id/ratings', requireAuth, async (req, res) => {
   try {
     if (String(req.auth?.userId || '') !== String(req.body?.ratedBy || '')) {
-      return res.status(403).json({error: 'No autorizado para calificar en nombre de otro usuario'});
+      return res.status(403).json({ error: 'No autorizado para calificar en nombre de otro usuario' });
     }
     const user = await User.addRating(req.params.id, req.body);
     if (!user) return res.sendStatus(404);
     res.json(user);
   } catch (err) {
-    res.status(400).json({error: err.message});
+    res.status(400).json({ error: err.message });
   }
 });
 

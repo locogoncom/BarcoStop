@@ -24,6 +24,9 @@ const mysqlConfig = {
   database: process.env.DB_NAME,
 };
 
+const mysqlConnectionLimit = Number.parseInt(process.env.DB_CONNECTION_LIMIT || '20', 10);
+const mysqlQueueLimit = Number.parseInt(process.env.DB_QUEUE_LIMIT || '0', 10);
+
 const getMysqlConfigIssues = (config) => {
   const requiredEntries = [
     ['DB_HOST', config.host],
@@ -60,8 +63,8 @@ const pool = mysql.createPool({
   password: mysqlConfig.password,
   database: mysqlConfig.database,
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+  connectionLimit: Number.isFinite(mysqlConnectionLimit) && mysqlConnectionLimit > 0 ? mysqlConnectionLimit : 20,
+  queueLimit: Number.isFinite(mysqlQueueLimit) && mysqlQueueLimit >= 0 ? mysqlQueueLimit : 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0
 });
@@ -224,6 +227,17 @@ const createTables = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `,
     `
+    CREATE TABLE IF NOT EXISTS regatta_chats (
+      trip_id VARCHAR(36) PRIMARY KEY,
+      conversation_id VARCHAR(36) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+      UNIQUE KEY unique_regatta_chat_conversation (conversation_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+    `
     CREATE TABLE IF NOT EXISTS messages (
       id VARCHAR(36) PRIMARY KEY,
       conversation_id VARCHAR(36) NOT NULL,
@@ -302,6 +316,22 @@ const createTables = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `,
     `
+    CREATE TABLE IF NOT EXISTS support_messages (
+      id VARCHAR(36) PRIMARY KEY,
+      user_id VARCHAR(36) NOT NULL,
+      message TEXT NOT NULL,
+      admin_reply TEXT,
+      status ENUM('open', 'answered', 'closed') DEFAULT 'open',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      replied_at TIMESTAMP NULL DEFAULT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_support_user_id (user_id),
+      INDEX idx_support_status (status),
+      INDEX idx_support_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+    `
     CREATE TABLE IF NOT EXISTS user_blocks (
       id INT AUTO_INCREMENT PRIMARY KEY,
       blocker_id VARCHAR(36) NOT NULL,
@@ -345,6 +375,7 @@ const createTables = async () => {
     await query(sql, []);
   }
 
+  // KeepPlaying usa tablas separadas kp_*; las aplicamos de forma idempotente.
   const keepPlayingPath = path.join(__dirname, 'keepplaying_schema.sql');
   if (fs.existsSync(keepPlayingPath)) {
     const rawSql = fs.readFileSync(keepPlayingPath, 'utf8');
