@@ -52,6 +52,10 @@
     "react-test-renderer": "18.2.0",
     "typescript": "5.0.4"
   },
+  "devDependencies": {
+    "@react-native-community/cli": "latest"
+  },
+
   "engines": {
     "node": ">=18"
   }

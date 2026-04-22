@@ -407,6 +407,12 @@ export default function TripDetailScreen() {
   };
 
   useEffect(() => {
+    console.log('[TripDetail] Initializing for tripId:', tripId);
+    if (!tripId) {
+      setLoading(false);
+      setLoadError('ID de viaje no proporcionado.');
+      return;
+    }
     setLoading(true);
     setTrip(null);
     setLoadError(null);

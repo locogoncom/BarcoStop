@@ -58,8 +58,8 @@ const mapSessionData = (raw: any): SessionData => ({
 });
 
 const mapUser = (raw: any): User => ({
-  id: String(raw?.id ?? ''),
-  name: String(raw?.name ?? ''),
+  id: String(raw?.id ?? raw?.userId ?? raw?.user_id ?? ''),
+  name: String(raw?.name ?? raw?.username ?? ''),
   email: String(raw?.email ?? ''),
   role: normalizeRole(raw?.role),
   avatar: normalizeAssetUrl(raw?.avatar) ?? null,
@@ -378,13 +378,13 @@ const mapTrip = (raw: any): Trip => {
   }
 
   const patronRaw = raw.patron ?? raw.captain ?? null;
-  const hasFlatPatron = raw.patronName || raw.captainName || raw.boatName || raw.boatType || raw.patron_id;
+  const hasFlatPatron = raw.patronName || raw.captainName || raw.boatName || raw.boatType || raw.patronId || raw.patron_id;
   const patron: Patron | undefined = patronRaw
     ? {
         id: String(patronRaw.id ?? patronRaw.userId ?? raw.patronId ?? raw.patron_id ?? ''),
         name: String(patronRaw.name ?? patronRaw.username ?? 'Capitán'),
-        boatName: patronRaw.boatName || patronRaw.boat_name ? String(patronRaw.boatName || patronRaw.boat_name) : undefined,
-        boatType: patronRaw.boatType || patronRaw.boat_type ? String(patronRaw.boatType || patronRaw.boat_type) : undefined,
+        boatName: (patronRaw.boatName || patronRaw.boat_name) ? String(patronRaw.boatName || patronRaw.boat_name) : undefined,
+        boatType: (patronRaw.boatType || patronRaw.boat_type) ? String(patronRaw.boatType || patronRaw.boat_type) : undefined,
         averageRating: Number(patronRaw.averageRating ?? patronRaw.average_rating ?? patronRaw.rating ?? 0),
       }
     : hasFlatPatron
