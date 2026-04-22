@@ -92,7 +92,7 @@ const mapSessionData = (raw: any): SessionData => ({
 });
 
 const mapUser = (raw: any): User => ({
-  id: String(raw?.id ?? ''),
+  id: String(raw?.id ?? raw?.userId ?? ''),
   name: String(raw?.name ?? ''),
   email: String(raw?.email ?? ''),
   role: normalizeRole(raw?.role),
@@ -101,8 +101,8 @@ const mapUser = (raw: any): User => ({
   boatName: raw?.boatName ?? raw?.boat_name ?? null,
   boatType: raw?.boatType ?? raw?.boat_type ?? null,
   skills: Array.isArray(raw?.skills) ? raw.skills : [],
-  rating: typeof raw?.rating === 'number' ? raw.rating : undefined,
-  reviewCount: typeof raw?.reviewCount === 'number' ? raw.reviewCount : undefined,
+  rating: typeof raw?.rating === 'number' ? raw.rating : (raw?.average_rating ? Number(raw.average_rating) : undefined),
+  reviewCount: typeof raw?.reviewCount === 'number' ? raw.reviewCount : (raw?.total_ratings ? Number(raw.total_ratings) : undefined),
 });
 
 const warmUpBackend = async (): Promise<void> => {
@@ -304,24 +304,27 @@ const mapTrip = (raw: any): Trip => {
   }
 
   const patronRaw = raw.patron ?? raw.captain ?? null;
-  const hasFlatPatron = raw.patronName || raw.captainName || raw.boatName || raw.boatType;
-  const patron: Patron | undefined = patronRaw
-    ? {
-        id: String(patronRaw.id ?? patronRaw.userId ?? raw.patronId ?? raw.patron_id ?? ''),
-        name: String(patronRaw.name ?? patronRaw.username ?? 'Capitán'),
-        boatName: patronRaw.boatName ? String(patronRaw.boatName) : undefined,
-        boatType: patronRaw.boatType ? String(patronRaw.boatType) : undefined,
-        averageRating: Number(patronRaw.averageRating ?? patronRaw.rating ?? 0),
-      }
-    : hasFlatPatron
-      ? {
-          id: String(raw.patronId ?? raw.patron_id ?? ''),
-          name: String(raw.patronName ?? raw.captainName ?? 'Capitán'),
-          boatName: raw.boatName ? String(raw.boatName) : undefined,
-          boatType: raw.boatType ? String(raw.boatType) : undefined,
-          averageRating: Number(raw.averageRating ?? raw.rating ?? 0),
-        }
-      : undefined;
+  const hasFlatPatron = raw.patronName || raw.captainName || raw.boatName || raw.boatType || raw.patron_name;
+
+  let patron: Patron | undefined;
+
+  if (patronRaw) {
+    patron = {
+      id: String(patronRaw.id ?? patronRaw.userId ?? raw.patronId ?? raw.patron_id ?? ''),
+      name: String(patronRaw.name ?? patronRaw.username ?? 'Capitán'),
+      boatName: patronRaw.boatName || patronRaw.boat_name ? String(patronRaw.boatName || patronRaw.boat_name) : undefined,
+      boatType: patronRaw.boatType || patronRaw.boat_type ? String(patronRaw.boatType || patronRaw.boat_type) : undefined,
+      averageRating: Number(patronRaw.averageRating ?? patronRaw.rating ?? patronRaw.average_rating ?? 0),
+    };
+  } else if (hasFlatPatron) {
+    patron = {
+      id: String(raw.patronId ?? raw.patron_id ?? ''),
+      name: String(raw.patronName ?? raw.patron_name ?? raw.captainName ?? 'Capitán'),
+      boatName: raw.boatName || raw.boat_name ? String(raw.boatName || raw.boat_name) : undefined,
+      boatType: raw.boatType || raw.boat_type ? String(raw.boatType || raw.boat_type) : undefined,
+      averageRating: Number(raw.averageRating ?? raw.rating ?? raw.average_rating ?? 0),
+    };
+  }
 
   const parsedDescription = parseTripDescription(raw.description);
   const departureTime = String(raw.route?.departureTime || raw.departureTime || raw.departure_time || '');
@@ -342,7 +345,7 @@ const mapTrip = (raw: any): Trip => {
     price: Number(raw.cost ?? raw.price ?? 0),
     contributionType: parsedDescription.contributionType,
     contributionNote: parsedDescription.contributionNote,
-    patronId: String(raw.patronId ?? raw.patron_id ?? ''),
+    patronId: String(raw.patronId ?? raw.patron_id ?? patron?.id ?? ''),
     status: (raw.status ?? 'active') as Trip['status'],
     patron,
   };

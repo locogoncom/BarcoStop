@@ -68,23 +68,35 @@ export default function TripDetailScreen() {
   };
 
   const loadTrip = async () => {
+    if (!tripId) {
+      setLoading(false);
+      return;
+    }
     try {
       const data = await tripService.getById(tripId);
+      if (!data || !data.id) {
+        throw new Error('Viaje no encontrado');
+      }
       setTrip(data);
       
-      // Cargar ratings del capitán
-      if (data.patron?.id) {
-        const response = await ratingService.getRatings(data.patron.id);
-        // Manejar respuesta que puede ser {ratings: [], averageRating, reviewCount}
-        if (Array.isArray(response)) {
-          setRatings(response);
-        } else if (response && 'ratings' in response) {
-          setRatings(response.ratings);
+      // Cargar ratings del capitán de forma segura
+      const patronId = data.patron?.id || data.patronId;
+      if (patronId) {
+        try {
+          const response = await ratingService.getRatings(patronId);
+          if (Array.isArray(response)) {
+            setRatings(response);
+          } else if (response && typeof response === 'object' && 'ratings' in response && Array.isArray(response.ratings)) {
+            setRatings(response.ratings);
+          }
+        } catch (ratingError) {
+          console.warn('Error loading ratings, but trip will show:', ratingError);
         }
       }
     } catch (error) {
       console.error('Error loading trip:', error);
-      Alert.alert('Error', 'No pudimos cargar los detalles del viaje');
+      Alert.alert('Error', 'No pudimos cargar los detalles del viaje. Es posible que el ID sea inválido.');
+      navigation.goBack();
     } finally {
       setLoading(false);
     }
@@ -302,10 +314,15 @@ export default function TripDetailScreen() {
     );
   }
 
-  const avgRating = ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1) : 'N/A';
+  const avgRating = useMemo(() => {
+    if (!Array.isArray(ratings) || ratings.length === 0) return 'N/A';
+    const total = ratings.reduce((sum, r) => sum + (Number(r?.rating) || 0), 0);
+    return (total / ratings.length).toFixed(1);
+  }, [ratings]);
+
   const timeWindowLabel =
     trip.timeWindow === 'morning'
-      ? 'Manana'
+      ? 'Mañana'
       : trip.timeWindow === 'afternoon'
         ? 'Tarde'
         : trip.timeWindow === 'night'
