@@ -2,8 +2,8 @@ export type AppEnv = 'dev' | 'staging' | 'prod';
 
 const API_BASE_URLS: Record<AppEnv, string> = {
   dev: 'http://10.0.2.2:5000/api',
-  staging: 'https://staging-api.barcostop.com/api',
-  prod: 'https://api.barcostop.com/api',
+  staging: 'https://staging-api.barcostop.net/api',
+  prod: 'https://api.barcostop.net/api',
 };
 
 const normalizeEnv = (value: unknown): AppEnv | null => {
