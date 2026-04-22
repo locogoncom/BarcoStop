@@ -23,7 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
+# Environment v
 
 # Nested repo backup
 server/.git_backup_*/
