@@ -8,6 +8,18 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def releaseStoreFilePath = keystoreProperties.getProperty('storeFile')
+def releaseStoreFile = releaseStoreFilePath ? file(releaseStoreFilePath) : null
+def hasReleaseSigning = keystorePropertiesFile.exists() &&
+    releaseStoreFile?.exists() &&
+    keystoreProperties.getProperty('storePassword') &&
+    keystoreProperties.getProperty('keyAlias') &&
+    keystoreProperties.getProperty('keyPassword')
+
+def appPackageId = project.findProperty("BARCOSTOP_APPLICATION_ID") ?: "com.barcostop.app"
+def appVersionCode = (project.findProperty("BARCOSTOP_VERSION_CODE") ?: "1").toInteger()
+def appVersionName = project.findProperty("BARCOSTOP_VERSION_NAME") ?: "1.0.0"
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -82,11 +94,11 @@ android {
 
     namespace "com.mobile"
     defaultConfig {
-        applicationId "com.mobile"
+        applicationId appPackageId
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 51
+        versionName "1.0.51"
     }
     signingConfigs {
         debug {
@@ -96,7 +108,7 @@ android {
             keyPassword 'android'
         }
         release {
-            if (keystorePropertiesFile.exists()) {
+            if (hasReleaseSigning) {
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
@@ -109,8 +121,14 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // In production, sign with your own keystore.
-            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            if (!hasReleaseSigning) {
+                throw new RuntimeException("Release signing is not configured. Create android/keystore.properties and a valid keystore file before building release.")
+            }
+            signingConfig signingConfigs.release
+            ndk {
+                // Generate native symbols zip for Play Console crash/ANR symbolication.
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

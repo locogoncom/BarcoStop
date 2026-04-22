@@ -215,17 +215,29 @@ class Trip {
     );
   }
 
-  // Formatear viaje de snake_case a camelCase
+  // Formatear viaje de snake_case a camelCase y garantizar compatibilidad frontend
   static formatTrip(trip) {
+    const origin = trip.origin;
+    const destination = trip.destination;
+    const departureDate = trip.departure_date;
+    const departureTime = trip.departure_time;
+    const estimatedDuration = trip.estimated_duration;
+    // Garantizar que los campos estén en ambos niveles
     return {
       id: trip.id,
       patronId: trip.patron_id,
+      origin,
+      destination,
+      departureDate,
+      departureTime,
+      estimatedDuration,
+      // route anidado para compatibilidad
       route: {
-        origin: trip.origin,
-        destination: trip.destination,
-        departureDate: trip.departure_date,
-        departureTime: trip.departure_time,
-        estimatedDuration: trip.estimated_duration
+        origin,
+        destination,
+        departureDate,
+        departureTime,
+        estimatedDuration
       },
       description: trip.description,
       availableSeats: trip.available_seats,

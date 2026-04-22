@@ -3,6 +3,7 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import React, {useState} from 'react';
 import {ActivityIndicator, View, Text} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
 import AuthScreen from '../screens/AuthScreen';
@@ -17,6 +18,7 @@ import TripListScreen from '../screens/TripListScreen';
 import ReservationsScreen from '../screens/ReservationsScreen';
 import PatronRequestsScreen from '../screens/PatronRequestsScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
+import UserPublicProfileScreen from '../screens/UserPublicProfileScreen';
 import {ShareTabModal} from '../components/ShareTabModal';
 import {colors} from '../theme/colors';
 
@@ -24,6 +26,7 @@ export type RootStackParamList = {
   Home: undefined;
   Auth: {role: 'patron' | 'viajero'};
   MainApp: undefined;
+  UserPublicProfile: {userId: string};
 };
 
 export type MainTabParamList = {
@@ -50,20 +53,15 @@ function SharePlaceholderScreen() {
   return null;
 }
 
-const tabBarBaseScreenOptions = {
+const baseTabBarScreenOptions = {
   headerShown: false,
+  lazy: true,
+  freezeOnBlur: true,
   tabBarActiveTintColor: colors.primary,
   tabBarInactiveTintColor: colors.textSubtle,
   tabBarShowIcon: true,
+  tabBarHideOnKeyboard: true,
   tabBarLabelPosition: 'below-icon' as const,
-  tabBarLabelStyle: {fontSize: 11, marginTop: 4},
-  tabBarStyle: {
-    backgroundColor: colors.surface,
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    paddingVertical: 4,
-    height: 60,
-  },
 };
 
 const makeTabOptions = (label: string, icon: string) => ({
@@ -146,6 +144,22 @@ function MessagesStack_({navigation}: any) {
 function MainAppTabs() {
   const {session} = useAuth();
   const [shareVisible, setShareVisible] = useState(false);
+  const insets = useSafeAreaInsets();
+  const tabBarBottomInset = Math.max(insets.bottom, 8);
+  const tabBarScreenOptions = {
+    ...baseTabBarScreenOptions,
+    tabBarLabelStyle: {fontSize: 10, marginTop: 2, paddingBottom: 1},
+    tabBarItemStyle: {paddingTop: 4},
+    tabBarStyle: {
+      backgroundColor: colors.surface,
+      borderTopColor: colors.border,
+      borderTopWidth: 1,
+      paddingTop: 6,
+      paddingBottom: tabBarBottomInset,
+      minHeight: 66 + tabBarBottomInset,
+      height: 66 + tabBarBottomInset,
+    },
+  };
 
   const shareTabOptions = makeTabOptions('Compartir', '📤');
   const shareTabListeners = {
@@ -155,11 +169,14 @@ function MainAppTabs() {
     },
   };
 
+  // Para viajeros: Viajes y Mis Reservas
   if (session?.role === 'viajero') {
     return (
       <>
         <Tab.Navigator
-          screenOptions={tabBarBaseScreenOptions}>
+          initialRouteName="Trips"
+          detachInactiveScreens
+          screenOptions={tabBarScreenOptions}>
           <Tab.Screen
             name="Trips"
             component={TripListStack}
@@ -197,10 +214,13 @@ function MainAppTabs() {
     );
   }
 
+  // Para patrones: Mis Viajes, Solicitudes, Barcos, etc.
   return (
     <>
       <Tab.Navigator
-        screenOptions={tabBarBaseScreenOptions}>
+        initialRouteName="Trips"
+        detachInactiveScreens
+        screenOptions={tabBarScreenOptions}>
         <Tab.Screen
           name="Trips"
           component={TripListStack}
@@ -239,16 +259,8 @@ function MainAppTabs() {
 }
 
 export default function AppNavigator() {
-  const {session, isLoading} = useAuth();
+  const {session} = useAuth();
   const {t} = useLanguage();
-
-  if (isLoading) {
-    return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
 
   return (
     <NavigationContainer>
@@ -258,7 +270,7 @@ export default function AppNavigator() {
           headerTintColor: colors.white,
           headerTitleStyle: {fontWeight: '700'},
         }}
-        initialRouteName={session ? 'MainApp' : 'Home'}>
+        initialRouteName="Home">
         <Stack.Screen name="Home" component={HomeScreen} options={{title: 'BarcoStop'}} />
         <Stack.Screen
           name="Auth"
@@ -273,6 +285,11 @@ export default function AppNavigator() {
           options={{
             headerShown: false,
           }}
+        />
+        <Stack.Screen
+          name="UserPublicProfile"
+          component={UserPublicProfileScreen}
+          options={{title: 'Perfil'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

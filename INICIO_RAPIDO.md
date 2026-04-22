@@ -10,6 +10,19 @@ Tu proyecto BarcoStop ha sido configurado con:
 
 ## 🚀 Pasos para Iniciar
 
+## Reanudar BarcoStop en un comando
+
+Desde la raiz de `c:\BarcoStop`:
+
+```powershell
+npm run barcostop:activate
+```
+
+Este comando deja BarcoStop aislado y levanta todo lo necesario para continuar:
+- Backend (`server`) si no esta en puerto `5000`
+- Metro (`mobile`) si no esta en puerto `8081`
+- App Android de BarcoStop en el emulador Pixel 6
+
 ### Paso 1: Inicializar la Base de Datos
 
 ```powershell

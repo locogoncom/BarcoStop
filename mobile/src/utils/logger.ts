@@ -25,6 +25,7 @@ export const logger = {
     console.warn(...args);
   },
   error(...args: LogArgs) {
+    // En prod queremos conservar errores (ayuda a diagnóstico en logs del device).
     console.error(...args);
   },
 };

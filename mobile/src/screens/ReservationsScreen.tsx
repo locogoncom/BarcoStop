@@ -3,12 +3,14 @@ import React, {useState, useCallback} from 'react';
 import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
-import {reservationService} from '../services/api';
+import {buildPayPalMeUrl} from '../config/paypal';
+import {messageService, reservationService} from '../services/api';
 import {PayPalWebViewModal} from '../components/PayPalWebViewModal';
 import {colors} from '../theme/colors';
 import {getReservationStatusColor, getReservationStatusLabel} from '../theme/reservationStatus';
 import {feedback} from '../theme/feedback';
 import {radius, shadows, spacing} from '../theme/layout';
+import {getErrorMessage} from '../utils/errors';
 
 export default function ReservationsScreen() {
   const navigation = useNavigation<any>();
@@ -21,7 +23,7 @@ export default function ReservationsScreen() {
   const [paypalUrl, setPaypalUrl] = useState('');
 
   const openPayPalCheckout = (amount: number) => {
-    const url = `https://paypal.me/BarcoStop/${Math.max(0, amount).toFixed(2)}`;
+    const url = buildPayPalMeUrl(amount);
     setPaypalUrl(url);
     setPaypalVisible(true);
   };
@@ -39,6 +41,7 @@ export default function ReservationsScreen() {
     } catch (error) {
       console.error('Error loading reservations:', error);
       setReservations([]);
+      feedback.error(getErrorMessage(error, 'No se pudieron cargar las reservas'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -63,11 +66,43 @@ export default function ReservationsScreen() {
             feedback.success('Solicitud cancelada');
             await loadReservations();
           } catch (error) {
-            feedback.error('No pudimos cancelar la solicitud');
+            feedback.error(getErrorMessage(error, 'No pudimos cancelar la solicitud'));
           }
         },
       },
     ]);
+  };
+
+  const handleOpenChat = async (item: any) => {
+    if (!session?.userId) {
+      feedback.error('Debes estar conectado para chatear');
+      return;
+    }
+
+    const otherUserId = String(item?.trip?.patron?.id ?? item?.trip?.patronId ?? '');
+    if (!otherUserId) {
+      feedback.error('No encontramos al capitán de este viaje');
+      return;
+    }
+
+    if (otherUserId === String(session.userId)) {
+      feedback.info('No puedes abrir un chat contigo mismo');
+      return;
+    }
+
+    try {
+      navigation.navigate('Messages', {
+        screen: 'Chat',
+        params: {
+          chatSeed: `${otherUserId}-${Date.now()}`,
+          otherUserId,
+          otherUserName: item?.trip?.patron?.name || 'Capitán',
+          tripId: item?.trip?.id || undefined,
+        },
+      });
+    } catch (error) {
+      feedback.error(getErrorMessage(error, 'No pudimos abrir el chat'));
+    }
   };
 
   const formatDate = (date: string) => {
@@ -87,8 +122,10 @@ export default function ReservationsScreen() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.homeBtn} onPress={() => navigation.navigate('Home')}>
-        <Text style={styles.homeBtnText}>🏠 Inicio</Text>
+      <TouchableOpacity
+        style={styles.homeBtn}
+        onPress={() => navigation.getParent()?.getParent()?.reset({index: 0, routes: [{name: 'Home'}]})}>
+        <Text style={styles.homeBtnText}>🏠 {t('goHome')}</Text>
       </TouchableOpacity>
 
       {reservations.length === 0 ? (
@@ -135,12 +172,21 @@ export default function ReservationsScreen() {
                 )}
               </View>
 
-              {item.status === 'pending' && (
+              {item.trip?.patron && (
+                <TouchableOpacity
+                  style={styles.chatBtn}
+                  onPress={() => handleOpenChat(item)}
+                >
+                  <Text style={styles.chatBtnText}>💬 Abrir chat con el capitán</Text>
+                </TouchableOpacity>
+              )}
+
+              {(item.status === 'pending' || item.status === 'approved' || item.status === 'confirmed') && (
                 <TouchableOpacity
                   style={styles.cancelBtn}
                   onPress={() => handleCancelReservation(item.id)}
                 >
-                  <Text style={styles.cancelBtnText}>Cancelar solicitud</Text>
+                  <Text style={styles.cancelBtnText}>Cancelar reserva</Text>
                 </TouchableOpacity>
               )}
 
@@ -155,7 +201,7 @@ export default function ReservationsScreen() {
                       const amount = Number(item.trip?.price || 0) * Number(item.seats || 1);
                       feedback.confirm(
                         'PayPal',
-                        `Se abrirá el checkout de PayPal para €${amount.toFixed(2)}. Nota: esta cuenta PayPal de BarcoStop es temporal; el pago final del viaje debe coordinarse con el capitán.`,
+                        `Se abrirá el checkout de PayPal para €${amount.toFixed(2)} en la cuenta configurada de BarcoStop. El pago final del viaje debe coordinarse con el capitán.`,
                         [
                           {text: 'Cancelar', style: 'cancel'},
                           {text: 'Pagar con PayPal', onPress: () => {
@@ -165,7 +211,7 @@ export default function ReservationsScreen() {
                       );
                     }}
                   >
-                    <Text style={styles.paypalBtnText}>💳 Pagar con PayPal (temporal)</Text>
+                    <Text style={styles.paypalBtnText}>💳 Pagar con PayPal</Text>
                   </TouchableOpacity>
                   <Text style={styles.paypalNoticeText}>
                     El pago del viaje debe confirmarse con el capitán (acuerdo directo o actualización manual de datos).
@@ -224,6 +270,8 @@ const styles = StyleSheet.create({
   approvedSection: {gap: 10},
   approvedMsg: {backgroundColor: '#d1fae5', borderRadius: radius.md, paddingVertical: 10, alignItems: 'center'},
   approvedText: {color: '#047857', fontWeight: '600', fontSize: 13},
+  chatBtn: {backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 12, alignItems: 'center'},
+  chatBtnText: {color: colors.white, fontWeight: '700', fontSize: 14},
   
   paypalBtn: {backgroundColor: '#003087', borderRadius: radius.md, paddingVertical: 12, alignItems: 'center'},
   paypalBtnText: {color: colors.white, fontWeight: 'bold', fontSize: 14},

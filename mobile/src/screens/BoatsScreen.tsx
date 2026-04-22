@@ -16,6 +16,7 @@ import { boatService } from '../services/api';
 import type { Boat } from '../types';
 import {colors} from '../theme/colors';
 import {feedback} from '../theme/feedback';
+import {getErrorMessage} from '../utils/errors';
 
 const BoatsScreen: React.FC = () => {
   const { session } = useAuth();
@@ -44,7 +45,7 @@ const BoatsScreen: React.FC = () => {
       setBoats(boatList);
     } catch (error) {
       console.error('Error loading boats:', error);
-      feedback.error('No se pudieron cargar los barcos');
+      feedback.error(getErrorMessage(error, 'No se pudieron cargar los barcos'));
     } finally {
       setLoading(false);
     }
@@ -87,7 +88,7 @@ const BoatsScreen: React.FC = () => {
             feedback.success('Barco eliminado correctamente');
           } catch (error) {
             console.error('Error deleting boat:', error);
-            feedback.error('No se pudo eliminar el barco');
+            feedback.error(getErrorMessage(error, 'No se pudo eliminar el barco'));
           }
         },
       },
@@ -138,7 +139,7 @@ const BoatsScreen: React.FC = () => {
       setShowForm(false);
     } catch (error) {
       console.error('Error saving boat:', error);
-      feedback.error('No se pudo guardar el barco');
+      feedback.error(getErrorMessage(error, 'No se pudo guardar el barco'));
     }
   };
 

@@ -12,18 +12,23 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import QRCode from 'react-native-qrcode-svg';
+import {buildPayPalMeUrl} from '../config/paypal';
+import {PayPalWebViewModal} from '../components/PayPalWebViewModal';
 import {colors} from '../theme/colors';
+
+const APP_INTERNAL_TEST_URL = 'https://play.google.com/apps/testing/com.barcostop.app';
 
 const APP_SHARE_TEXT = [
   '🚤 BarcoStop: comparte travesias, conoce tripulacion y vive el mar en comunidad.',
   '',
   'Descargatela y sube tu primera experiencia hoy. ⚓',
   '',
-  'https://barcostop.app',
+  APP_INTERNAL_TEST_URL,
 ].join('\n');
 
 // URL para QR - cuando la cámara lo escanea, ofrece abrirla
-const APP_QR_URL = 'https://barcostop.app';
+const APP_QR_URL = APP_INTERNAL_TEST_URL;
+const PAYPAL_DONATION_URL = buildPayPalMeUrl(2.5, 2.5);
 
 const SHARE_COUNT_KEY = '@barcostop/shareCount';
 
@@ -31,6 +36,8 @@ export function GlobalShareButton() {
   const [visible, setVisible] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [shareCount, setShareCount] = useState(0);
+  const [paypalVisible, setPaypalVisible] = useState(false);
+  const [paypalUrl, setPaypalUrl] = useState('');
 
   // Keep the button at bottom-right, but high enough to avoid tab bar/content overlap.
   const fabBottom = Platform.OS === 'android' ? 86 : 98;
@@ -95,10 +102,21 @@ export function GlobalShareButton() {
     }
   };
 
+  const handleDonatePayPal = () => {
+    setPaypalUrl(PAYPAL_DONATION_URL);
+    setPaypalVisible(true);
+  };
+
   return (
     <>
       <TouchableOpacity style={[styles.fab, {bottom: fabBottom}]} onPress={() => setVisible(true)}>
-        <Text style={styles.fabText}>📣</Text>
+        <View style={styles.shareGlyph}>
+          <View style={[styles.shareNode, styles.nodeTop]} />
+          <View style={[styles.shareNode, styles.nodeLeft]} />
+          <View style={[styles.shareNode, styles.nodeRight]} />
+          <View style={[styles.shareLink, styles.linkLeft]} />
+          <View style={[styles.shareLink, styles.linkRight]} />
+        </View>
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
@@ -126,6 +144,15 @@ export function GlobalShareButton() {
             >
               <Text style={styles.actionText}>🔳 Ver QR</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.paypalDonateBtn} onPress={handleDonatePayPal}>
+              <Text style={styles.paypalDonateText}>💳 Donar con PayPal a BarcoStop</Text>
+            </TouchableOpacity>
+      <PayPalWebViewModal
+        visible={paypalVisible}
+        url={paypalUrl}
+        title="Donación con PayPal"
+        onClose={() => setPaypalVisible(false)}
+      />
 
             <TouchableOpacity style={styles.closeBtn} onPress={() => setVisible(false)}>
               <Text style={styles.closeText}>Cerrar</Text>
@@ -142,7 +169,7 @@ export function GlobalShareButton() {
             <View style={styles.qrWrap}>
               <QRCode value={APP_QR_URL} size={180} color={colors.primary} backgroundColor={colors.white} />
             </View>
-            <Text style={styles.helperText}>Escanéalo con la cámara de tu móvil para ir a barcostop.app</Text>
+            <Text style={styles.helperText}>Escanéalo para abrir el acceso de pruebas internas en Google Play</Text>
             <TouchableOpacity style={styles.closeBtn} onPress={() => setShowQr(false)}>
               <Text style={styles.closeText}>Cerrar</Text>
             </TouchableOpacity>
@@ -166,7 +193,41 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 8,
   },
-  fabText: {fontSize: 24},
+  shareGlyph: {
+    width: 28,
+    height: 28,
+    position: 'relative',
+    transform: [{rotate: '-90deg'}],
+  },
+  shareNode: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.white,
+    zIndex: 2,
+  },
+  nodeTop: {top: 2, left: 10},
+  nodeLeft: {bottom: 3, left: 3},
+  nodeRight: {bottom: 3, right: 3},
+  shareLink: {
+    position: 'absolute',
+    width: 2,
+    height: 13,
+    backgroundColor: colors.white,
+    borderRadius: 1,
+    zIndex: 1,
+  },
+  linkLeft: {
+    top: 7,
+    left: 10,
+    transform: [{rotate: '32deg'}],
+  },
+  linkRight: {
+    top: 7,
+    right: 10,
+    transform: [{rotate: '-32deg'}],
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.45)',
@@ -217,4 +278,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   helperText: {fontSize: 12, color: colors.textMuted, marginBottom: 8},
+  paypalDonateBtn: {
+    width: '100%',
+    borderRadius: 8,
+    backgroundColor: '#003087',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  paypalDonateText: {
+    color: colors.white,
+    fontWeight: '700',
+    textAlign: 'center',
+    fontSize: 13,
+  },
 });

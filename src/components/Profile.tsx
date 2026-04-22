@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { User, UserSkill, SkillLevel } from '../types';
 import { Button } from './ui/Button';
-import { Input } from './ui/Input';
 import { Card, CardContent, CardHeader } from './ui/Card';
 import { RatingStars } from './RatingStars';
 import { Select } from './ui/Select';
@@ -60,6 +59,15 @@ export function Profile({
     };
     onUpdate(updatedUser);
     setIsEditing(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar tu cuenta y todos tus datos? Esta acción no se puede deshacer.')) {
+      // Aquí deberías llamar al endpoint de borrado de cuenta (a implementar)
+      // Por ahora, solo mostramos un mensaje
+      alert('Funcionalidad de eliminación de cuenta próximamente.');
+      // Si ya tienes la función, aquí puedes cerrar sesión o redirigir
+    }
   };
 
   return (
@@ -144,13 +152,20 @@ export function Profile({
                 </div>
               )}
 
-              <div className="pt-4">
+              <div className="pt-4 space-y-2">
                 <Button
                   onClick={() => setIsEditing(true)}
                   variant="outline"
                   className="w-full"
                 >
                   Editar perfil
+                </Button>
+                <Button
+                  onClick={handleDeleteAccount}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  Eliminar mi cuenta y datos
                 </Button>
               </div>
             </>

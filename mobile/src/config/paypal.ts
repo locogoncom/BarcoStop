@@ -1,17 +1,10 @@
-/**
- * PayPal configuration and utilities.
- * This is a placeholder for the demo.
- */
+const PAYPAL_ME_USERNAME = 'BarcoStop';
 
-/**
- * Builds a PayPal.Me URL for donations or payments.
- * @param amount The amount to request.
- * @param fee Optional fee to add.
- * @returns A formatted PayPal.Me URL.
- */
-export const buildPayPalMeUrl = (amount: number, fee: number = 0): string => {
-  const total = amount + fee;
-  // Placeholder PayPal.Me handle for BarcoStop demo
-  const handle = 'BarcoStopApp';
-  return `https://www.paypal.com/paypalme/${handle}/${total}`;
+export const PAYPAL_PROFILE_URL = `https://paypal.me/${PAYPAL_ME_USERNAME}`;
+export const PAYPAL_CURRENCY_CODE = 'EUR';
+
+export const buildPayPalMeUrl = (amount: number, minAmount = 0): string => {
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+  const normalizedAmount = Math.max(minAmount, safeAmount);
+  return `${PAYPAL_PROFILE_URL}/${normalizedAmount.toFixed(2)}${PAYPAL_CURRENCY_CODE}`;
 };

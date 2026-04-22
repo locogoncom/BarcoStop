@@ -1,7 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const dbPath = path.join(__dirname, '../barcostop.db');
+const dbPath = path.join(__dirname, 'db.sqlite3');
 const db = new Database(dbPath);
 
 // Habilitar foreign keys
@@ -123,6 +123,17 @@ const createTables = () => {
     )
   `);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS regatta_chats (
+      trip_id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL UNIQUE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+    )
+  `);
+
   // Tabla de mensajes
   db.exec(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -148,6 +159,54 @@ const createTables = () => {
       heading INTEGER,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_blocks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      blocker_id TEXT NOT NULL,
+      blocked_user_id TEXT NOT NULL,
+      reason TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(blocker_id, blocked_user_id),
+      FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (blocked_user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS support_messages (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      message TEXT NOT NULL,
+      admin_reply TEXT,
+      status TEXT DEFAULT 'open' CHECK(status IN ('open', 'answered', 'closed')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      replied_at DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_reports (
+      id TEXT PRIMARY KEY,
+      reporter_id TEXT NOT NULL,
+      reported_user_id TEXT NOT NULL,
+      conversation_id TEXT,
+      message_id TEXT,
+      reason TEXT NOT NULL,
+      details TEXT,
+      status TEXT DEFAULT 'open' CHECK(status IN ('open', 'reviewing', 'resolved', 'dismissed')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (reported_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE SET NULL,
+      FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE SET NULL
     )
   `);
 

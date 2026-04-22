@@ -19,7 +19,13 @@ const sign = (value, secret) => {
   return base64UrlEncode(crypto.createHmac('sha256', secret).update(value).digest());
 };
 
-const getSecret = () => process.env.AUTH_TOKEN_SECRET || process.env.JWT_SECRET || 'barcostop-dev-secret-change-me';
+const getSecret = () => {
+  const secret = process.env.AUTH_TOKEN_SECRET || process.env.JWT_SECRET;
+  if (!secret || String(secret).trim().length < 24) {
+    throw new Error('AUTH_TOKEN_SECRET/JWT_SECRET no configurado o demasiado debil (min 24 chars)');
+  }
+  return secret;
+};
 
 const createToken = (payload, expiresInSeconds = 60 * 60 * 24 * 7) => {
   const header = {alg: 'HS256', typ: 'JWT'};

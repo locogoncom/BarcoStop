@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
@@ -19,7 +19,6 @@ export function Auth({ onRegister }: AuthProps) {
   const [boatName, setBoatName] = useState('');
   const [boatType, setBoatType] = useState('');
   const [bio, setBio] = useState('');
-  const [password, setPassword] = useState('');
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {

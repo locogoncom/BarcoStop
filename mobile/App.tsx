@@ -8,7 +8,7 @@ export default function App(): React.JSX.Element {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#0284c7" />
+        <StatusBar barStyle="light-content" backgroundColor="#1cc7b6" />
         <AppNavigator />
       </AuthProvider>
     </LanguageProvider>

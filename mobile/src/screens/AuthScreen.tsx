@@ -20,7 +20,9 @@ export default function AuthScreen({route}: any) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const onSubmit = async () => {
     if (!email.trim() || (isRegister && !name.trim()) || !password.trim()) {
@@ -28,10 +30,14 @@ export default function AuthScreen({route}: any) {
       return;
     }
 
+    if (isRegister && password.trim() !== confirmPassword.trim()) {
+      feedback.alert(t('authPasswordMismatchTitle'), t('authPasswordMismatchMessage'));
+      return;
+    }
+
     try {
       setLoading(true);
       const safeName = name.trim() || 'Usuario';
-
       logger.debug(`[AUTH] ${isRegister ? 'Registro' : 'Login'} - Email: ${email.trim()}, Role: ${role}`);
 
       const sessionData = isRegister
@@ -59,12 +65,14 @@ export default function AuthScreen({route}: any) {
       {isRegister ? (
         <TextInput
           style={styles.input}
-          placeholder={t('authName')}
+          placeholder={t('authName') || 'Usuario'}
+          placeholderTextColor={colors.textSubtle}
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
         />
       ) : null}
+
       <TextInput
         style={styles.input}
         placeholder={t('authEmail') || 'Email'}
@@ -78,7 +86,7 @@ export default function AuthScreen({route}: any) {
       <View style={{position: 'relative'}}>
         <TextInput
           style={styles.input}
-          placeholder={t('authPassword') || 'Contraseña'}
+          placeholder={t('authPassword')}
           placeholderTextColor={colors.textSubtle}
           secureTextEntry={!showPassword}
           value={password}
@@ -92,13 +100,36 @@ export default function AuthScreen({route}: any) {
         </TouchableOpacity>
       </View>
 
+      {isRegister ? (
+        <View style={{position: 'relative'}}>
+          <TextInput
+            style={styles.input}
+            placeholder={t('authConfirmPassword')}
+            placeholderTextColor={colors.textSubtle}
+            secureTextEntry={!showConfirmPassword}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+          <TouchableOpacity
+            style={styles.showButton}
+            onPress={() => setShowConfirmPassword((value) => !value)}
+          >
+            <Text style={styles.showButtonText}>{showConfirmPassword ? 'Ocultar' : 'Mostrar'}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={loading}>
         <Text style={styles.buttonText}>{loading ? t('authProcessing') : t('authContinue')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.secondaryButton, loading && styles.secondaryButtonDisabled]}
-        onPress={() => setIsRegister(!isRegister)}
+        onPress={() => {
+          setIsRegister(!isRegister);
+          setConfirmPassword('');
+          setShowConfirmPassword(false);
+        }}
         disabled={loading}>
         <Text style={styles.secondaryButtonText}>
           {isRegister ? t('authHaveAccount') : t('authNoAccount')}

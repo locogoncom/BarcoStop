@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Trip, User, Reservation } from '../types';
 import { TripCard } from './TripCard';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
-import { Search, Plus, MapPin } from 'lucide-react';
+import { Plus, MapPin } from 'lucide-react';
 
 interface TripListProps {
   trips: Trip[];

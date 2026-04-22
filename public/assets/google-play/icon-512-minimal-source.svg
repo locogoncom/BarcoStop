@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BarcoStop icon minimal sailboat">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#16A34A"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <g transform="translate(112 96)">
+    <path d="M146 42v182" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+    <path d="M152 56l-6 136 112-74z" fill="#FFFFFF"/>
+    <path d="M136 74l5 102-82-55z" fill="#E7F8EE"/>
+
+    <path d="M34 214c38 14 75 21 112 21 37 0 74-7 112-21-10 28-30 46-54 53-16 4-38 7-58 7s-42-3-58-7c-24-7-44-25-54-53z" fill="#0F172A"/>
+  </g>
+</svg>

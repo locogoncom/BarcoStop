@@ -10,11 +10,19 @@ interface CreateTripProps {
   patronId: string;
 }
 
+type TimeWindow = 'morning' | 'afternoon' | 'night';
+
+const WINDOW_TO_TIME: Record<TimeWindow, string> = {
+  morning: '09:00',
+  afternoon: '15:00',
+  night: '20:00',
+};
+
 export function CreateTrip({ onCreate, onCancel, patronId }: CreateTripProps) {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [departureDate, setDepartureDate] = useState('');
-  const [departureTime, setDepartureTime] = useState('');
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>('morning');
   const [description, setDescription] = useState('');
   const [availableSeats, setAvailableSeats] = useState('1');
   const [cost, setCost] = useState('0');
@@ -22,7 +30,7 @@ export function CreateTrip({ onCreate, onCancel, patronId }: CreateTripProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!origin.trim() || !destination.trim() || !departureDate || !departureTime) {
+    if (!origin.trim() || !destination.trim() || !departureDate) {
       alert('Por favor completa los campos obligatorios');
       return;
     }
@@ -33,7 +41,7 @@ export function CreateTrip({ onCreate, onCancel, patronId }: CreateTripProps) {
         origin: origin.trim(),
         destination: destination.trim(),
         departureDate,
-        departureTime,
+        departureTime: WINDOW_TO_TIME[timeWindow],
       },
       description: description.trim(),
       availableSeats: parseInt(availableSeats) || 1,
@@ -78,7 +86,7 @@ export function CreateTrip({ onCreate, onCancel, patronId }: CreateTripProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Fecha de salida *
@@ -90,17 +98,46 @@ export function CreateTrip({ onCreate, onCancel, patronId }: CreateTripProps) {
                   required
                 />
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Hora de salida *
-                </label>
-                <Input
-                  type="time"
-                  value={departureTime}
-                  onChange={(e) => setDepartureTime(e.target.value)}
-                  required
-                />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Franja horaria *
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTimeWindow('morning')}
+                  className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+                    timeWindow === 'morning'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 bg-white text-gray-700'
+                  }`}
+                >
+                  Manana
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTimeWindow('afternoon')}
+                  className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+                    timeWindow === 'afternoon'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 bg-white text-gray-700'
+                  }`}
+                >
+                  Tarde
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTimeWindow('night')}
+                  className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+                    timeWindow === 'night'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 bg-white text-gray-700'
+                  }`}
+                >
+                  Noche
+                </button>
               </div>
             </div>
 

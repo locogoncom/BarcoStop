@@ -1,0 +1,31 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BarcoStop icon velero oficial">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="55%" stop-color="#0EA5E9"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+    <linearGradient id="hull" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <circle cx="406" cy="92" r="22" fill="#FFFFFF" fill-opacity="0.18"/>
+  <circle cx="116" cy="80" r="14" fill="#FFFFFF" fill-opacity="0.12"/>
+
+  <path d="M42 356 C116 300 214 300 286 356 C346 402 406 402 470 366 L470 512 L42 512 Z" fill="#E6F7FF" fill-opacity="0.24"/>
+  <path d="M42 394 C116 346 214 346 286 394 C346 432 406 432 470 404 L470 512 L42 512 Z" fill="#BFE9FF" fill-opacity="0.3"/>
+
+  <g transform="translate(72 78)">
+    <path d="M182 74v204" stroke="#F8FDFF" stroke-width="11" stroke-linecap="round"/>
+    <path d="M186 84l-5 148 126-84z" fill="#FFFFFF"/>
+    <path d="M170 106l6 114-88-59z" fill="#ECF8FF"/>
+
+    <path d="M54 248c42 16 84 24 128 24 42 0 84-8 128-24-10 34-36 58-67 67-18 5-40 8-61 8-21 0-43-3-61-8-31-9-57-33-67-67z" fill="url(#hull)"/>
+  </g>
+
+  <text x="256" y="472" text-anchor="middle" fill="#E9F9FF" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700" letter-spacing="1.5">BARCOSTOP</text>
+</svg>

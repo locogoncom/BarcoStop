@@ -1,6 +1,11 @@
 import axios from 'axios';
-import type {Role, SessionData, Trip, User, UserSkill, Boat, Rating, Message, Conversation, Patron} from '../types';
+import {io, type Socket} from 'socket.io-client';
+import type {Role, SessionData, Trip, User, UserSkill, Boat, Rating, Message, Conversation, Patron, SupportMessage, RegattaChatState, RegattaParticipant} from '../types';
 import {API_BASE_URL, API_ORIGIN} from '../config/apiConfig';
+import {logger} from '../utils/logger';
+import {normalizeRemoteAssetUrl, toServerUploadPath} from '../utils/assets';
+
+type AuthFailureHandler = (message: string) => void | Promise<void>;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -31,49 +36,10 @@ const REQUEST_POLICIES = {
   paymentWrite: {retries: 1, delayMs: 450, timeoutMs: 12000},
 } as const satisfies Record<string, RequestPolicy>;
 
-const normalizeAssetUrl = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') return undefined;
+const SOCKET_CONNECT_TIMEOUT_MS = 5000;
 
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-
-  if (/^(https?:\/\/|content:\/\/|file:\/\/|ph:\/\/|assets-library:\/\/)/i.test(trimmed)) {
-    return trimmed;
-  }
-
-  if (trimmed.startsWith('/')) {
-    return `${API_ORIGIN}${trimmed}`;
-  }
-
-  if (/^uploads\//i.test(trimmed)) {
-    return `${API_ORIGIN}/${trimmed}`;
-  }
-
-  return trimmed;
-};
-
-const toServerAssetPath = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') return undefined;
-
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-
-  if (trimmed.startsWith('/uploads/')) return trimmed;
-  if (/^uploads\//i.test(trimmed)) return `/${trimmed}`;
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    try {
-      const parsed = new URL(trimmed);
-      if (parsed.pathname.startsWith('/uploads/')) {
-        return parsed.pathname;
-      }
-    } catch {
-      return undefined;
-    }
-  }
-
-  return undefined;
-};
+const normalizeAssetUrl = normalizeRemoteAssetUrl;
+const toServerAssetPath = toServerUploadPath;
 
 const normalizeRole = (value: unknown): Role => {
   const role = String(value || '').trim().toLowerCase();
@@ -92,7 +58,7 @@ const mapSessionData = (raw: any): SessionData => ({
 });
 
 const mapUser = (raw: any): User => ({
-  id: String(raw?.id ?? raw?.userId ?? ''),
+  id: String(raw?.id ?? ''),
   name: String(raw?.name ?? ''),
   email: String(raw?.email ?? ''),
   role: normalizeRole(raw?.role),
@@ -101,8 +67,20 @@ const mapUser = (raw: any): User => ({
   boatName: raw?.boatName ?? raw?.boat_name ?? null,
   boatType: raw?.boatType ?? raw?.boat_type ?? null,
   skills: Array.isArray(raw?.skills) ? raw.skills : [],
-  rating: typeof raw?.rating === 'number' ? raw.rating : (raw?.average_rating ? Number(raw.average_rating) : undefined),
-  reviewCount: typeof raw?.reviewCount === 'number' ? raw.reviewCount : (raw?.total_ratings ? Number(raw.total_ratings) : undefined),
+  rating:
+    typeof raw?.averageRating === 'number'
+      ? raw.averageRating
+      : typeof raw?.average_rating === 'number'
+        ? raw.average_rating
+        : typeof raw?.rating === 'number'
+          ? raw.rating
+          : undefined,
+  reviewCount:
+    typeof raw?.reviewCount === 'number'
+      ? raw.reviewCount
+      : Array.isArray(raw?.ratings)
+        ? raw.ratings.length
+        : undefined,
 });
 
 const warmUpBackend = async (): Promise<void> => {
@@ -158,10 +136,82 @@ const withPolicy = async <T>(
 
 // Token management
 let authToken: string | null = null;
+let authFailureHandler: AuthFailureHandler | null = null;
+let isHandlingAuthFailure = false;
+let realtimeSocket: Socket | null = null;
+let realtimeSocketToken: string | null = null;
+
+const resetRealtimeSocket = () => {
+  if (realtimeSocket) {
+    realtimeSocket.removeAllListeners();
+    realtimeSocket.disconnect();
+    realtimeSocket = null;
+  }
+  realtimeSocketToken = null;
+};
+
+const getRealtimeSocket = (): Socket | null => {
+  if (!authToken) {
+    resetRealtimeSocket();
+    return null;
+  }
+
+  if (realtimeSocket && realtimeSocketToken === authToken) {
+    return realtimeSocket;
+  }
+
+  resetRealtimeSocket();
+  realtimeSocket = io(API_ORIGIN, {
+    transports: ['websocket'],
+    autoConnect: true,
+    reconnection: true,
+    timeout: SOCKET_CONNECT_TIMEOUT_MS,
+    auth: {
+      token: authToken,
+    },
+  });
+  realtimeSocketToken = authToken;
+  return realtimeSocket;
+};
+
+const getAuthFailureMessage = (error: unknown): string | null => {
+  if (!axios.isAxiosError(error)) return null;
+
+  const status = error.response?.status;
+  const requestAuthHeader = error.config?.headers?.Authorization ?? error.config?.headers?.authorization;
+  if (status !== 401 || !authToken || !requestAuthHeader) {
+    return null;
+  }
+
+  const backendMessage = typeof error.response?.data?.error === 'string' ? error.response.data.error.trim() : '';
+  const normalizedMessage = backendMessage.toLowerCase();
+
+  if (
+    normalizedMessage.includes('token') ||
+    normalizedMessage.includes('firma') ||
+    normalizedMessage.includes('signature') ||
+    normalizedMessage.includes('expirado') ||
+    normalizedMessage.includes('expired') ||
+    normalizedMessage.includes('autorizado')
+  ) {
+    return backendMessage || 'Tu sesion ya no es valida. Inicia sesion de nuevo.';
+  }
+
+  return 'Tu sesion ya no es valida. Inicia sesion de nuevo.';
+};
 
 export const setAuthToken = (token: string | null) => {
   authToken = token;
-  console.log('[API] Token configurado:', token ? 'Sí' : 'No');
+  if (!token) {
+    resetRealtimeSocket();
+  } else if (realtimeSocketToken && realtimeSocketToken !== token) {
+    resetRealtimeSocket();
+  }
+  logger.debug('[API] Token configurado:', token ? 'Sí' : 'No');
+};
+
+export const registerAuthFailureHandler = (handler: AuthFailureHandler | null) => {
+  authFailureHandler = handler;
 };
 
 // Interceptor para agregar el token a todas las peticiones
@@ -170,14 +220,14 @@ api.interceptors.request.use(
     if (authToken) {
       config.headers.Authorization = `Bearer ${authToken}`;
     }
-    console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, {
+    logger.debug(`[API] ${config.method?.toUpperCase()} ${config.url}`, {
       baseURL: config.baseURL,
       headers: config.headers.Authorization ? '✓ Token' : '✗ Sin token',
     });
     return config;
   },
   (error) => {
-    console.error('[API] Error en request interceptor:', error);
+    logger.error('[API] Error en request interceptor:', error);
     return Promise.reject(error);
   },
 );
@@ -185,16 +235,25 @@ api.interceptors.request.use(
 // Interceptor para loguear respuestas
 api.interceptors.response.use(
   (response) => {
-    console.log(`[API] ✅ ${response.status} ${response.config.url}`);
+    logger.debug(`[API] ✅ ${response.status} ${response.config.url}`);
     return response;
   },
   (error) => {
+    const authFailureMessage = getAuthFailureMessage(error);
+    if (authFailureMessage && authFailureHandler && !isHandlingAuthFailure) {
+      isHandlingAuthFailure = true;
+      setAuthToken(null);
+      Promise.resolve(authFailureHandler(authFailureMessage)).finally(() => {
+        isHandlingAuthFailure = false;
+      });
+    }
+
     if (error.response) {
-      console.error(`[API] ❌ ${error.response.status} ${error.config?.url}`, error.response.data);
+      logger.error(`[API] ❌ ${error.response.status} ${error.config?.url}`, error.response.data);
     } else if (error.request) {
-      console.error('[API] ❌ No response:', error.message);
+      logger.error('[API] ❌ No response:', error.message);
     } else {
-      console.error('[API] ❌ Request error:', error.message);
+      logger.error('[API] ❌ Request error:', error.message);
     }
     return Promise.reject(error);
   },
@@ -202,7 +261,7 @@ api.interceptors.response.use(
 
 const mapBoat = (raw: any): Boat => {
   if (!raw || typeof raw !== 'object') {
-    console.warn('Invalid boat data:', raw);
+    logger.warn('Invalid boat data:', raw);
     return {
       id: '',
       patronId: '',
@@ -240,6 +299,9 @@ const parseTripDescription = (
   description: unknown,
 ): {
   title: string;
+  tripKind?: Trip['tripKind'];
+  captainNote?: string;
+  boatImageUrl?: string;
   timeWindow?: Trip['timeWindow'];
   contributionType?: string;
   contributionNote?: string;
@@ -261,6 +323,7 @@ const parseTripDescription = (
       parsed?.timeWindow === 'morning' || parsed?.timeWindow === 'afternoon' || parsed?.timeWindow === 'night'
         ? parsed.timeWindow
         : undefined;
+    const tripKind = parsed?.tripKind === 'regatta' ? 'regatta' : 'trip';
     const contributionType =
       typeof parsed?.contributionType === 'string' && parsed.contributionType.trim()
         ? parsed.contributionType.trim()
@@ -269,8 +332,13 @@ const parseTripDescription = (
       typeof parsed?.contributionNote === 'string' && parsed.contributionNote.trim()
         ? parsed.contributionNote.trim()
         : undefined;
+    const captainNote =
+      typeof parsed?.captainNote === 'string' && parsed.captainNote.trim()
+        ? parsed.captainNote.trim()
+        : undefined;
+    const boatImageUrl = normalizeAssetUrl(parsed?.boatImageUrl);
 
-    return {title, timeWindow, contributionType, contributionNote};
+    return {title, tripKind, captainNote, boatImageUrl, timeWindow, contributionType, contributionNote};
   } catch {
     return {title: text.trim()};
   }
@@ -288,7 +356,7 @@ const inferTimeWindow = (departureTime: unknown): Trip['timeWindow'] | undefined
 const mapTrip = (raw: any): Trip => {
   // Validar que raw existe y tiene datos mínimos
   if (!raw || typeof raw !== 'object') {
-    console.warn('Invalid trip data:', raw);
+    logger.warn('Invalid trip data:', raw);
     return {
       id: '',
       title: 'Viaje',
@@ -304,48 +372,50 @@ const mapTrip = (raw: any): Trip => {
   }
 
   const patronRaw = raw.patron ?? raw.captain ?? null;
-  const hasFlatPatron = raw.patronName || raw.captainName || raw.boatName || raw.boatType || raw.patron_name;
-
-  let patron: Patron | undefined;
-
-  if (patronRaw) {
-    patron = {
-      id: String(patronRaw.id ?? patronRaw.userId ?? raw.patronId ?? raw.patron_id ?? ''),
-      name: String(patronRaw.name ?? patronRaw.username ?? 'Capitán'),
-      boatName: patronRaw.boatName || patronRaw.boat_name ? String(patronRaw.boatName || patronRaw.boat_name) : undefined,
-      boatType: patronRaw.boatType || patronRaw.boat_type ? String(patronRaw.boatType || patronRaw.boat_type) : undefined,
-      averageRating: Number(patronRaw.averageRating ?? patronRaw.rating ?? patronRaw.average_rating ?? 0),
-    };
-  } else if (hasFlatPatron) {
-    patron = {
-      id: String(raw.patronId ?? raw.patron_id ?? ''),
-      name: String(raw.patronName ?? raw.patron_name ?? raw.captainName ?? 'Capitán'),
-      boatName: raw.boatName || raw.boat_name ? String(raw.boatName || raw.boat_name) : undefined,
-      boatType: raw.boatType || raw.boat_type ? String(raw.boatType || raw.boat_type) : undefined,
-      averageRating: Number(raw.averageRating ?? raw.rating ?? raw.average_rating ?? 0),
-    };
-  }
+  const hasFlatPatron = raw.patronName || raw.captainName || raw.boatName || raw.boatType;
+  const patron: Patron | undefined = patronRaw
+    ? {
+        id: String(patronRaw.id ?? patronRaw.userId ?? raw.patronId ?? raw.patron_id ?? ''),
+        name: String(patronRaw.name ?? patronRaw.username ?? 'Capitán'),
+        boatName: patronRaw.boatName ? String(patronRaw.boatName) : undefined,
+        boatType: patronRaw.boatType ? String(patronRaw.boatType) : undefined,
+        averageRating: Number(patronRaw.averageRating ?? patronRaw.rating ?? 0),
+      }
+    : hasFlatPatron
+      ? {
+          id: String(raw.patronId ?? raw.patron_id ?? ''),
+          name: String(raw.patronName ?? raw.captainName ?? 'Capitán'),
+          boatName: raw.boatName ? String(raw.boatName) : undefined,
+          boatType: raw.boatType ? String(raw.boatType) : undefined,
+          averageRating: Number(raw.averageRating ?? raw.rating ?? 0),
+        }
+      : undefined;
 
   const parsedDescription = parseTripDescription(raw.description);
   const departureTime = String(raw.route?.departureTime || raw.departureTime || raw.departure_time || '');
+  const departureDateRaw = String(raw.route?.departureDate || raw.departureDate || raw.departure_date || '');
+  const departureDate = departureDateRaw ? departureDateRaw.split('T')[0].split(' ')[0] : '';
 
   return {
     id: String(raw.id ?? ''),
+    tripKind: parsedDescription.tripKind ?? 'trip',
     title: String(
       parsedDescription.title ||
         `${raw.route?.origin || raw.origin || ''} → ${raw.route?.destination || raw.destination || ''}` ||
         'Viaje',
     ),
+    captainNote: parsedDescription.captainNote,
+    boatImageUrl: parsedDescription.boatImageUrl,
     origin: String(raw.route?.origin || raw.origin || ''),
     destination: String(raw.route?.destination || raw.destination || ''),
-    departureDate: String(raw.route?.departureDate || raw.departureDate || raw.departure_date || ''),
+    departureDate,
     departureTime,
     timeWindow: parsedDescription.timeWindow ?? inferTimeWindow(departureTime),
     availableSeats: Number(raw.availableSeats ?? raw.available_seats ?? 0),
     price: Number(raw.cost ?? raw.price ?? 0),
     contributionType: parsedDescription.contributionType,
     contributionNote: parsedDescription.contributionNote,
-    patronId: String(raw.patronId ?? raw.patron_id ?? patron?.id ?? ''),
+    patronId: String(raw.patronId ?? raw.patron_id ?? ''),
     status: (raw.status ?? 'active') as Trip['status'],
     patron,
   };
@@ -353,6 +423,9 @@ const mapTrip = (raw: any): Trip => {
 
 const encodeTripDescription = (payload: {
   title: string;
+  tripKind?: Trip['tripKind'];
+  captainNote?: string;
+  boatImageUrl?: string;
   timeWindow?: Trip['timeWindow'];
   contributionType?: string;
   contributionNote?: string;
@@ -360,6 +433,9 @@ const encodeTripDescription = (payload: {
   const title = payload.title.trim();
   const metadata: Record<string, string> = {};
 
+  if (payload.tripKind) metadata.tripKind = payload.tripKind;
+  if (payload.captainNote) metadata.captainNote = payload.captainNote.trim();
+  if (payload.boatImageUrl) metadata.boatImageUrl = payload.boatImageUrl.trim();
   if (payload.timeWindow) metadata.timeWindow = payload.timeWindow;
   if (payload.contributionType) metadata.contributionType = payload.contributionType.trim();
   if (payload.contributionNote) metadata.contributionNote = payload.contributionNote.trim();
@@ -392,6 +468,31 @@ const mapMessage = (raw: any): Message => ({
   content: String(raw?.content ?? ''),
   isRead: Boolean(raw?.isRead ?? raw?.is_read ?? false),
   createdAt: String(raw?.createdAt ?? raw?.created_at ?? ''),
+});
+
+const mapSupportMessage = (raw: any): SupportMessage => ({
+  id: String(raw?.id ?? ''),
+  userId: String(raw?.userId ?? raw?.user_id ?? ''),
+  message: String(raw?.message ?? ''),
+  adminReply:
+    typeof raw?.adminReply === 'string' && raw.adminReply.trim()
+      ? raw.adminReply.trim()
+      : typeof raw?.admin_reply === 'string' && raw.admin_reply.trim()
+        ? raw.admin_reply.trim()
+        : undefined,
+  status: raw?.status === 'answered' || raw?.status === 'closed' ? raw.status : 'open',
+  createdAt: Number(raw?.createdAt ?? raw?.created_at ?? Date.now()),
+  updatedAt: Number(raw?.updatedAt ?? raw?.updated_at ?? raw?.createdAt ?? raw?.created_at ?? Date.now()),
+  repliedAt: raw?.repliedAt ?? raw?.replied_at ? Number(raw?.repliedAt ?? raw?.replied_at) : undefined,
+});
+
+const mapRegattaParticipant = (raw: any): RegattaParticipant => ({
+  reservationId: raw?.reservationId ?? raw?.reservation_id ? String(raw?.reservationId ?? raw?.reservation_id) : undefined,
+  userId: String(raw?.userId ?? raw?.user_id ?? ''),
+  userName: String(raw?.userName ?? raw?.user_name ?? 'Capitán'),
+  userAvatar: normalizeAssetUrl(raw?.userAvatar ?? raw?.user_avatar),
+  status: String(raw?.status ?? 'pending'),
+  joinedAt: raw?.joinedAt ?? raw?.joined_at ? String(raw?.joinedAt ?? raw?.joined_at) : undefined,
 });
 
 export const userService = {
@@ -528,7 +629,10 @@ export const tripService = {
     return mapTrip(data);
   },
   async create(payload: {
+    tripKind?: Trip['tripKind'];
     title: string;
+    captainNote?: string;
+    boatImageUrl?: string;
     origin: string;
     destination: string;
     departureDate: string;
@@ -553,6 +657,9 @@ export const tripService = {
       },
       description: encodeTripDescription({
         title: payload.title,
+        tripKind: payload.tripKind,
+        captainNote: payload.captainNote,
+        boatImageUrl: toServerAssetPath(payload.boatImageUrl) ?? payload.boatImageUrl,
         timeWindow: payload.timeWindow,
         contributionType: payload.contributionType,
         contributionNote: payload.contributionNote,
@@ -570,6 +677,9 @@ export const tripService = {
   async update(tripId: string, payload: Partial<{
     actorId: string;
     title: string;
+    tripKind: Trip['tripKind'];
+    captainNote: string;
+    boatImageUrl: string;
     origin: string;
     destination: string;
     departureDate: string;
@@ -584,9 +694,20 @@ export const tripService = {
 
     if (payload.actorId !== undefined) requestBody.actorId = payload.actorId;
 
-    if (payload.title !== undefined) {
+    if (
+      payload.title !== undefined ||
+      payload.tripKind !== undefined ||
+      payload.captainNote !== undefined ||
+      payload.boatImageUrl !== undefined ||
+      payload.timeWindow !== undefined ||
+      payload.contributionType !== undefined ||
+      payload.contributionNote !== undefined
+    ) {
       requestBody.description = encodeTripDescription({
-        title: payload.title,
+        title: payload.title ?? '',
+        tripKind: payload.tripKind,
+        captainNote: payload.captainNote,
+        boatImageUrl: toServerAssetPath(payload.boatImageUrl) ?? payload.boatImageUrl,
         timeWindow: payload.timeWindow,
         contributionType: payload.contributionType,
         contributionNote: payload.contributionNote,
@@ -618,7 +739,66 @@ export const tripService = {
     throw new Error('actorId es requerido para cancelar viaje');
   },
   async cancelWithActor(tripId: string, actorId: string): Promise<void> {
-    await api.patch(`/trips/${tripId}`, { status: 'cancelled', actorId });
+    await withPolicy(
+      timeout => api.patch(`/trips/${tripId}`, { status: 'cancelled', actorId }, {timeout}),
+      REQUEST_POLICIES.tripWrite,
+    );
+  },
+  async deleteWithActor(tripId: string, actorId: string): Promise<void> {
+    await withPolicy(
+      timeout => api.delete(`/trips/${tripId}`, {params: {actorId}, timeout}),
+      REQUEST_POLICIES.tripWrite,
+    );
+  },
+  async uploadImage(
+    ownerId: string,
+    imageUri: string,
+    options?: {filename?: string; mimeType?: string; imageKind?: 'trip' | 'regatta'},
+  ): Promise<string> {
+    const normalizedUri = imageUri.trim();
+    if (!normalizedUri) {
+      throw new Error('La imagen es requerida');
+    }
+
+    const fallbackFilename = normalizedUri.split('/').pop() || `trip-${Date.now()}.jpg`;
+    const normalizedFilename = options?.filename?.trim() || fallbackFilename;
+    const mimeType =
+      options?.mimeType?.trim() ||
+      (normalizedFilename.toLowerCase().endsWith('.png')
+        ? 'image/png'
+        : normalizedFilename.toLowerCase().endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg');
+
+    const formData = new FormData();
+    formData.append('image', {
+      uri: normalizedUri,
+      name: normalizedFilename,
+      type: mimeType,
+    } as any);
+
+    let data: any;
+    try {
+      ({data} = await withPolicy(
+        timeout =>
+          api.post('/trips/upload-image', formData, {
+            timeout,
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              'x-user-id': ownerId,
+              'x-image-kind': options?.imageKind === 'regatta' ? 'regatta' : 'trip',
+            },
+          }),
+        REQUEST_POLICIES.tripWrite,
+      ));
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new Error('La API activa no tiene disponible la subida de imagen todavía.');
+      }
+      throw error;
+    }
+
+    return toServerAssetPath(data?.image) || '';
   },
 };
 
@@ -845,6 +1025,7 @@ export const messageService = {
       throw error;
     }
   },
+
   async markMessageAsRead(messageId: string): Promise<void> {
     await withPolicy(
       timeout => api.patch(`/messages/${messageId}/read`, undefined, {timeout}),
@@ -857,27 +1038,151 @@ export const messageService = {
       REQUEST_POLICIES.chatRead,
     );
   },
+  async getBlockStatus(userId: string, otherUserId: string): Promise<{blocked: boolean; blockedByMe: boolean; blockedByOther: boolean}> {
+    const {data} = await withPolicy(
+      timeout => api.get('/messages/block/status', {params: {userId, otherUserId}, timeout}),
+      REQUEST_POLICIES.chatRead,
+    );
+    return {
+      blocked: Boolean(data?.blocked),
+      blockedByMe: Boolean(data?.blockedByMe),
+      blockedByOther: Boolean(data?.blockedByOther),
+    };
+  },
+  async blockUser(payload: {blockerId: string; blockedUserId: string; reason?: string}): Promise<void> {
+    await withPolicy(
+      timeout => api.post('/messages/block', payload, {timeout}),
+      REQUEST_POLICIES.chatWrite,
+    );
+  },
+  async unblockUser(payload: {blockerId: string; blockedUserId: string}): Promise<void> {
+    await withPolicy(
+      timeout => api.delete('/messages/block', {data: payload, timeout}),
+      REQUEST_POLICIES.chatWrite,
+    );
+  },
+  async reportUser(payload: {
+    reporterId: string;
+    reportedUserId: string;
+    conversationId?: string;
+    messageId?: string;
+    reason: string;
+    details?: string;
+  }): Promise<{id: string; status: string}> {
+    const {data} = await withPolicy(
+      timeout => api.post('/messages/report', payload, {timeout}),
+      REQUEST_POLICIES.chatWrite,
+    );
+    return {
+      id: String(data?.id ?? ''),
+      status: String(data?.status ?? ''),
+    };
+  },
+  async getRegattaChatState(tripId: string, userId: string): Promise<RegattaChatState> {
+    const {data} = await withPolicy(
+      timeout => api.get(`/messages/regatta/${tripId}/chat`, {params: {userId}, timeout}),
+      REQUEST_POLICIES.chatRead,
+    );
+    return {
+      conversationId: String(data?.conversationId ?? ''),
+      participants: Array.isArray(data?.participants) ? data.participants.map(mapRegattaParticipant) : [],
+    };
+  },
+  async getRegattaMessages(tripId: string, userId: string, limit = 100, offset = 0): Promise<Message[]> {
+    const {data} = await withPolicy(
+      timeout => api.get(`/messages/regatta/${tripId}/chat/messages`, {params: {userId, limit, offset}, timeout}),
+      REQUEST_POLICIES.chatRead,
+    );
+    return Array.isArray(data) ? data.map(mapMessage).filter(m => m.id) : [];
+  },
+  async sendRegattaMessage(tripId: string, payload: {userId: string; content: string}): Promise<Message> {
+    const {data} = await withPolicy(
+      timeout => api.post(`/messages/regatta/${tripId}/chat/messages`, payload, {timeout}),
+      REQUEST_POLICIES.chatWrite,
+    );
+    return mapMessage(data);
+  },
+  async subscribeToConversationMessages(
+    conversationId: string,
+    listener: (message: Message) => void,
+  ): Promise<() => void> {
+    const normalizedConversationId = String(conversationId || '').trim();
+    const socket = getRealtimeSocket();
+
+    if (!normalizedConversationId || !socket) {
+      return () => {};
+    }
+
+    const eventName = 'conversation:message';
+    const handleMessage = (payload: any) => {
+      if (String(payload?.conversationId ?? '') !== normalizedConversationId) {
+        return;
+      }
+      const mapped = mapMessage(payload);
+      if (mapped.id) {
+        listener(mapped);
+      }
+    };
+
+    const joinConversation = () => new Promise<boolean>((resolve) => {
+      socket.emit('conversation:join', {conversationId: normalizedConversationId}, (response: any) => {
+        resolve(Boolean(response?.ok));
+      });
+    });
+
+    if (!socket.connected) {
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => resolve(), SOCKET_CONNECT_TIMEOUT_MS);
+        socket.once('connect', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+        socket.once('connect_error', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+        socket.connect();
+      });
+    }
+
+    const joined = socket.connected ? await joinConversation() : false;
+    if (!joined) {
+      return () => {};
+    }
+
+    socket.on(eventName, handleMessage);
+
+    return () => {
+      socket.off(eventName, handleMessage);
+      socket.emit('conversation:leave', {conversationId: normalizedConversationId});
+    };
+  },
 };
 
 export const favoriteService = {
   async getUserFavorites(userId: string): Promise<any[]> {
-    const {data} = await api.get(`/favorites/${userId}`);
+    const {data} = await withPolicy(
+      timeout => api.get(`/favorites/${userId}`, {timeout}),
+      REQUEST_POLICIES.miscRead,
+    );
     return Array.isArray(data) ? data : [];
   },
+  async isFavorite(userId: string, favoriteUserId: string): Promise<boolean> {
+    const favorites = await favoriteService.getUserFavorites(userId);
+    return favorites.some(item => String(item?.id ?? item?.favoriteUserId ?? item?.favorite_user_id ?? '') === String(favoriteUserId));
+  },
   async addFavorite(userId: string, favoriteUserId: string): Promise<any> {
-    const {data} = await api.post('/favorites', {userId, favoriteUserId});
+    const {data} = await withPolicy(
+      timeout => api.post('/favorites', {userId, favoriteUserId}, {timeout}),
+      REQUEST_POLICIES.miscWrite,
+    );
     return data;
   },
   async removeFavorite(userId: string, favoriteUserId: string): Promise<void> {
-    await api.delete(`/favorites/${userId}/${favoriteUserId}`);
-  },
-  async isFavorite(userId: string, favoriteUserId: string): Promise<boolean> {
-    try {
-      const {data} = await api.get(`/favorites/${userId}/${favoriteUserId}/check`);
-      return data.isFavorite || false;
-    } catch {
-      return false;
-    }
+    await withPolicy(
+      timeout => api.delete(`/favorites/${userId}/${favoriteUserId}`, {timeout}),
+      REQUEST_POLICIES.miscWrite,
+    );
   },
 };
 
@@ -898,13 +1203,63 @@ export const donationService = {
   },
 };
 
+export const supportMessageService = {
+  async getUserMessages(userId: string): Promise<SupportMessage[]> {
+    try {
+      const {data} = await withPolicy(
+        timeout => api.get(`/support-messages/user/${userId}`, {timeout}),
+        REQUEST_POLICIES.miscRead,
+      );
+      return Array.isArray(data) ? data.map(mapSupportMessage).filter(item => item.id) : [];
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+  async createMessage(payload: {userId: string; message: string}): Promise<SupportMessage> {
+    try {
+      const {data} = await withPolicy(
+        timeout => api.post('/support-messages', payload, {timeout}),
+        REQUEST_POLICIES.miscWrite,
+      );
+      return mapSupportMessage(data);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new Error('El buzon de mejora todavia no esta disponible en la API publicada.');
+      }
+      throw error;
+    }
+  },
+  async deleteMessage(id: string): Promise<void> {
+    try {
+      await withPolicy(
+        timeout => api.delete(`/support-messages/${id}`, {timeout}),
+        REQUEST_POLICIES.miscWrite,
+      );
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new Error('El buzon de mejora todavia no esta disponible en la API publicada.');
+      }
+      throw error;
+    }
+  },
+};
+
 export const tripCheckpointService = {
   async listByTrip(tripId: string, limit = 100): Promise<any[]> {
-    const {data} = await api.get(`/trip-checkpoints?tripId=${tripId}&limit=${limit}`);
+    const {data} = await withPolicy(
+      timeout => api.get(`/trip-checkpoints?tripId=${tripId}&limit=${limit}`, {timeout}),
+      REQUEST_POLICIES.miscRead,
+    );
     return Array.isArray(data) ? data : [];
   },
   async create(payload: {tripId: string; userId: string; checkpointType: 'start' | 'mid' | 'arrival' | 'event'; note?: string}): Promise<any> {
-    const {data} = await api.post('/trip-checkpoints', payload);
+    const {data} = await withPolicy(
+      timeout => api.post('/trip-checkpoints', payload, {timeout}),
+      REQUEST_POLICIES.miscWrite,
+    );
     return data;
   },
 };

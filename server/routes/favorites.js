@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const Favorite = require('../models/Favorite');
+const requireAuth = require('../middleware/requireAuth');
 
 // Obtener favoritos de un usuario
-router.get('/:userId', async (req, res) => {
+router.get('/:userId', requireAuth, async (req, res) => {
   try {
     const {userId} = req.params;
+    if (String(req.auth?.userId || '') !== String(userId)) {
+      return res.status(403).json({error: 'No autorizado'});
+    }
+
     if (!userId) {
       return res.status(400).json({error: 'userId is required'});
     }
@@ -19,9 +24,13 @@ router.get('/:userId', async (req, res) => {
 });
 
 // Agregar a favoritos
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const {userId, favoriteUserId} = req.body;
+    if (String(req.auth?.userId || '') !== String(userId)) {
+      return res.status(403).json({error: 'No autorizado'});
+    }
+
 
     if (!userId || !favoriteUserId) {
       return res.status(400).json({error: 'userId and favoriteUserId are required'});
@@ -46,9 +55,13 @@ router.post('/', async (req, res) => {
 });
 
 // Eliminar de favoritos
-router.delete('/:userId/:favoriteUserId', async (req, res) => {
+router.delete('/:userId/:favoriteUserId', requireAuth, async (req, res) => {
   try {
     const {userId, favoriteUserId} = req.params;
+    if (String(req.auth?.userId || '') !== String(userId)) {
+      return res.status(403).json({error: 'No autorizado'});
+    }
+
 
     if (!userId || !favoriteUserId) {
       return res.status(400).json({error: 'userId and favoriteUserId are required'});
@@ -67,9 +80,13 @@ router.delete('/:userId/:favoriteUserId', async (req, res) => {
 });
 
 // Verificar si es favorito
-router.get('/:userId/:favoriteUserId/check', async (req, res) => {
+router.get('/:userId/:favoriteUserId/check', requireAuth, async (req, res) => {
   try {
     const {userId, favoriteUserId} = req.params;
+    if (String(req.auth?.userId || '') !== String(userId)) {
+      return res.status(403).json({error: 'No autorizado'});
+    }
+
 
     if (!userId || !favoriteUserId) {
       return res.status(400).json({error: 'userId and favoriteUserId are required'});

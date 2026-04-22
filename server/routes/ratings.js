@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const Rating = require('../models/Rating');
 const User = require('../models/User');
+const requireAuth = require('../middleware/requireAuth');
 
 // Create rating
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   console.log('Creating rating with body:', req.body);
   try {
     // Validate input
@@ -18,6 +19,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({
         error: 'No puedes calificarte a ti mismo'
       });
+    }
+    if (String(req.auth?.userId || '') !== String(req.body.ratedBy || '')) {
+      return res.status(403).json({error: 'No autorizado'});
     }
 
     if (req.body.rating < 1 || req.body.rating > 5) {
@@ -75,8 +79,11 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Get ratings given by user
-router.get('/from/:userId', async (req, res) => {
+router.get('/from/:userId', requireAuth, async (req, res) => {
   try {
+    if (String(req.auth?.userId || '') !== String(req.params.userId || '')) {
+      return res.status(403).json({error: 'No autorizado'});
+    }
     const ratings = await Rating.findByRatedBy(req.params.userId);
     res.json(Array.isArray(ratings) ? ratings : []);
   } catch (err) {
@@ -101,10 +108,15 @@ router.get('/:id', async (req, res) => {
 });
 
 // Delete rating
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
     if (!req.params.id) {
       return res.status(400).json({ error: 'Rating ID is required' });
+    }
+    const rating = await Rating.findById(req.params.id);
+    if (!rating) return res.status(404).json({ error: 'Rating not found' });
+    if (String(req.auth?.userId || '') !== String(rating.ratedBy || '')) {
+      return res.status(403).json({ error: 'No autorizado' });
     }
     const deleted = await Rating.delete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Rating not found' });
