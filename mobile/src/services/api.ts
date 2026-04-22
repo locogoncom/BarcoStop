@@ -22,18 +22,18 @@ type RequestPolicy = {
 
 const REQUEST_POLICIES = {
   authWrite: {retries: 2, delayMs: 1200, timeoutMs: 25000},
-  chatRead: {retries: 2, delayMs: 300, timeoutMs: 6000},
-  chatWrite: {retries: 2, delayMs: 500, timeoutMs: 15000},
-  reservationRead: {retries: 1, delayMs: 350, timeoutMs: 7000},
-  reservationWrite: {retries: 2, delayMs: 400, timeoutMs: 9000},
-  userRead: {retries: 1, delayMs: 350, timeoutMs: 8000},
-  userWrite: {retries: 1, delayMs: 400, timeoutMs: 10000},
-  tripRead: {retries: 1, delayMs: 350, timeoutMs: 9000},
-  tripWrite: {retries: 1, delayMs: 450, timeoutMs: 12000},
-  miscRead: {retries: 1, delayMs: 350, timeoutMs: 9000},
-  miscWrite: {retries: 1, delayMs: 450, timeoutMs: 12000},
-  paymentRead: {retries: 1, delayMs: 400, timeoutMs: 9000},
-  paymentWrite: {retries: 1, delayMs: 450, timeoutMs: 12000},
+  chatRead: {retries: 2, delayMs: 300, timeoutMs: 15000},
+  chatWrite: {retries: 2, delayMs: 500, timeoutMs: 20000},
+  reservationRead: {retries: 1, delayMs: 350, timeoutMs: 15000},
+  reservationWrite: {retries: 2, delayMs: 400, timeoutMs: 15000},
+  userRead: {retries: 1, delayMs: 350, timeoutMs: 15000},
+  userWrite: {retries: 1, delayMs: 400, timeoutMs: 20000},
+  tripRead: {retries: 2, delayMs: 500, timeoutMs: 20000},
+  tripWrite: {retries: 1, delayMs: 450, timeoutMs: 25000},
+  miscRead: {retries: 1, delayMs: 350, timeoutMs: 15000},
+  miscWrite: {retries: 1, delayMs: 450, timeoutMs: 20000},
+  paymentRead: {retries: 1, delayMs: 400, timeoutMs: 15000},
+  paymentWrite: {retries: 1, delayMs: 450, timeoutMs: 20000},
 } as const satisfies Record<string, RequestPolicy>;
 
 const SOCKET_CONNECT_TIMEOUT_MS = 5000;
