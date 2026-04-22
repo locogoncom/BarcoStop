@@ -74,13 +74,19 @@ const mapUser = (raw: any): User => ({
         ? raw.average_rating
         : typeof raw?.rating === 'number'
           ? raw.rating
-          : undefined,
+          : typeof raw?.averageRating === 'string'
+            ? parseFloat(raw.averageRating)
+            : typeof raw?.average_rating === 'string'
+              ? parseFloat(raw.average_rating)
+              : undefined,
   reviewCount:
     typeof raw?.reviewCount === 'number'
       ? raw.reviewCount
-      : Array.isArray(raw?.ratings)
-        ? raw.ratings.length
-        : undefined,
+      : typeof raw?.review_count === 'number'
+        ? raw.review_count
+        : Array.isArray(raw?.ratings)
+          ? raw.ratings.length
+          : undefined,
 });
 
 const warmUpBackend = async (): Promise<void> => {
@@ -372,22 +378,22 @@ const mapTrip = (raw: any): Trip => {
   }
 
   const patronRaw = raw.patron ?? raw.captain ?? null;
-  const hasFlatPatron = raw.patronName || raw.captainName || raw.boatName || raw.boatType;
+  const hasFlatPatron = raw.patronName || raw.captainName || raw.boatName || raw.boatType || raw.patron_id;
   const patron: Patron | undefined = patronRaw
     ? {
         id: String(patronRaw.id ?? patronRaw.userId ?? raw.patronId ?? raw.patron_id ?? ''),
         name: String(patronRaw.name ?? patronRaw.username ?? 'Capitán'),
-        boatName: patronRaw.boatName ? String(patronRaw.boatName) : undefined,
-        boatType: patronRaw.boatType ? String(patronRaw.boatType) : undefined,
-        averageRating: Number(patronRaw.averageRating ?? patronRaw.rating ?? 0),
+        boatName: patronRaw.boatName || patronRaw.boat_name ? String(patronRaw.boatName || patronRaw.boat_name) : undefined,
+        boatType: patronRaw.boatType || patronRaw.boat_type ? String(patronRaw.boatType || patronRaw.boat_type) : undefined,
+        averageRating: Number(patronRaw.averageRating ?? patronRaw.average_rating ?? patronRaw.rating ?? 0),
       }
     : hasFlatPatron
       ? {
           id: String(raw.patronId ?? raw.patron_id ?? ''),
           name: String(raw.patronName ?? raw.captainName ?? 'Capitán'),
-          boatName: raw.boatName ? String(raw.boatName) : undefined,
-          boatType: raw.boatType ? String(raw.boatType) : undefined,
-          averageRating: Number(raw.averageRating ?? raw.rating ?? 0),
+          boatName: (raw.boatName || raw.boat_name) ? String(raw.boatName || raw.boat_name) : undefined,
+          boatType: (raw.boatType || raw.boat_type) ? String(raw.boatType || raw.boat_type) : undefined,
+          averageRating: Number(raw.averageRating ?? raw.average_rating ?? raw.rating ?? 0),
         }
       : undefined;
 

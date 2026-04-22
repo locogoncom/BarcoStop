@@ -54,11 +54,23 @@ export default function TripDetailScreen() {
   const [paypalUrl, setPaypalUrl] = useState('');
   const favoriteTargetUserId = String(trip?.patron?.id ?? trip?.patronId ?? '');
 
-  // Estado de error explícito
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Refuerzo: Definir isTripOwner basado en la sesión
+  const isTripOwner = useMemo(() => {
+    if (!session?.userId || !trip) return false;
+    const ownerId = String(trip.patron?.id ?? trip.patronId ?? '');
+    return ownerId === String(session.userId);
+  }, [session?.userId, trip]);
+
   // Chequeo defensivo principal para evitar crash si trip es null
-  if (loading) return <ActivityIndicator />;
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
   if (!trip || loadError) {
     return (
       <View style={{flex:1,justifyContent:'center',alignItems:'center', padding: 24}}>
@@ -268,14 +280,20 @@ export default function TripDetailScreen() {
     try {
       setLoadError(null);
       const data = await tripService.getById(tripId);
+      console.log('[TripDetail] Loaded trip:', data?.id, 'Patron:', data?.patronId);
       setTrip(data);
       // Cargar ratings del capitán
-      if (data?.patron?.id) {
-        const response = await ratingService.getRatings(data.patron.id);
-        if (Array.isArray(response)) {
-          setRatings(response);
-        } else if (response && 'ratings' in response) {
-          setRatings(response.ratings);
+      const patronId = data?.patron?.id || data?.patronId;
+      if (patronId) {
+        try {
+          const response = await ratingService.getRatings(patronId);
+          if (Array.isArray(response)) {
+            setRatings(response);
+          } else if (response && 'ratings' in response) {
+            setRatings(response.ratings);
+          }
+        } catch (ratingErr) {
+          console.warn('Could not load ratings:', ratingErr);
         }
       }
     } catch (error) {
