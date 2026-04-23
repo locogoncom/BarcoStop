@@ -60,6 +60,13 @@ php bin/socket-server.php
 
 - Health: `GET /`
 - API v1: `GET /api/v1/...`
+- Compatibilidad: también acepta `GET /v1/...` y `GET /api/...` (redirigido internamente a `/api/v1/...`).
+- Base recomendada en app móvil: `https://api.barcostop.net/api/v1`
+
+## Apache (shared hosting)
+
+- Este proyecto incluye `public_html/api/.htaccess` para enrutar todo a `public/index.php`.
+- Permite desplegar en `public_html/api` sin necesidad de cambiar docroot a `public/`.
 
 Incluye módulos: users, trips, reservations, messages, ratings, favorites, donations, support-messages, trip-checkpoints, tracking y boats.
 
@@ -71,6 +78,13 @@ Implementado con Socket.IO compatible con eventos actuales:
 - `conversation:leave`
 - `conversation:message` (push)
 
+## Cleanup de viajes caducados
+
+- Script manual: `php bin/trip-cleanup.php`
+- También se ejecuta automáticamente desde `bin/socket-server.php` cada hora (configurable):
+  - `TRIP_CLEANUP_HOURS=8`
+  - `TRIP_CLEANUP_INTERVAL_MS=3600000`
+
 ## Nota importante
 
-Este directorio es completamente independiente. La app actual no se ha modificado para usarlo.
+Este directorio es el backend activo de BarcoStop y sustituye al backend legacy en Node.

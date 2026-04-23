@@ -36,7 +36,7 @@ final class Helpers
 
         if (preg_match('#^https?://#i', $raw) === 1) {
             $path = parse_url($raw, PHP_URL_PATH) ?: '';
-            $normalized = preg_replace('#^/api(?=/uploads/)#i', '', (string) $path);
+            $normalized = preg_replace('#^/api(?:/v1)?(?=/uploads/)#i', '', (string) $path);
             if (is_string($normalized) && str_starts_with($normalized, '/uploads/')) {
                 return $normalized;
             }

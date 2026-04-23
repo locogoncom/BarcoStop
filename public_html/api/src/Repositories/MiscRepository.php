@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace BarcoStop\ServerPhp\Repositories;
 
+use BarcoStop\ServerPhp\Support\Helpers;
+
 final class MiscRepository extends BaseRepository
 {
     public function createDonation(array $payload): array
@@ -15,17 +17,21 @@ final class MiscRepository extends BaseRepository
         );
 
         $row = $this->fetchOne('SELECT * FROM donations WHERE id = ?', [$id]);
-        return $row ?? ['id' => $id];
+        return $row ? $this->hydrateDonation($row) : ['id' => $id];
     }
 
     public function getDonationsByUser(string $userId): array
     {
-        return $this->fetchAll('SELECT * FROM donations WHERE user_id = ? ORDER BY created_at DESC', [$userId]);
+        $rows = $this->fetchAll('SELECT * FROM donations WHERE user_id = ? ORDER BY created_at DESC', [$userId]);
+        return array_map([$this, 'hydrateDonation'], $rows);
     }
 
     public function getDonationTotal(string $userId): float
     {
-        $row = $this->fetchOne('SELECT COALESCE(SUM(amount), 0) AS total FROM donations WHERE user_id = ?', [$userId]);
+        $row = $this->fetchOne(
+            'SELECT COALESCE(SUM(amount), 0) AS total FROM donations WHERE user_id = ? AND status = "completed"',
+            [$userId]
+        );
         return (float) ($row['total'] ?? 0);
     }
 
@@ -87,17 +93,22 @@ final class MiscRepository extends BaseRepository
         );
 
         $row = $this->fetchOne('SELECT * FROM trip_checkpoints WHERE id = ?', [$id]);
-        return $row ?? ['id' => $id];
+        return $row ? $this->hydrateTripCheckpoint($row) : ['id' => $id];
     }
 
     public function listTripCheckpoints(string $tripId, int $limit = 100): array
     {
-        return $this->fetchAll('SELECT * FROM trip_checkpoints WHERE trip_id = ? ORDER BY created_at DESC LIMIT ?', [$tripId, $limit]);
+        $rows = $this->fetchAll(
+            'SELECT * FROM trip_checkpoints WHERE trip_id = ? ORDER BY created_at DESC LIMIT ?',
+            [$tripId, $limit]
+        );
+        return array_map([$this, 'hydrateTripCheckpoint'], $rows);
     }
 
     public function createTracking(array $payload): array
     {
         $id = \Ramsey\Uuid\Uuid::uuid4()->toString();
+        $timestamp = $this->normalizeSqlTimestamp($payload['timestamp'] ?? null);
         $this->execute(
             'INSERT INTO trip_tracking (id, trip_id, latitude, longitude, speed, heading, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [
@@ -107,22 +118,27 @@ final class MiscRepository extends BaseRepository
                 $payload['longitude'],
                 $payload['speed'] ?? null,
                 $payload['heading'] ?? null,
-                $payload['timestamp'] ?? date('Y-m-d H:i:s'),
+                $timestamp,
             ]
         );
 
         $row = $this->fetchOne('SELECT * FROM trip_tracking WHERE id = ?', [$id]);
-        return $row ?? ['id' => $id];
+        return $row ? $this->hydrateTracking($row) : ['id' => $id];
     }
 
     public function listTracking(string $tripId, int $limit = 100): array
     {
-        return $this->fetchAll('SELECT * FROM trip_tracking WHERE trip_id = ? ORDER BY timestamp DESC LIMIT ?', [$tripId, $limit]);
+        $rows = $this->fetchAll(
+            'SELECT * FROM trip_tracking WHERE trip_id = ? ORDER BY timestamp DESC LIMIT ?',
+            [$tripId, $limit]
+        );
+        return array_map([$this, 'hydrateTracking'], $rows);
     }
 
     public function lastTracking(string $tripId): ?array
     {
-        return $this->fetchOne('SELECT * FROM trip_tracking WHERE trip_id = ? ORDER BY timestamp DESC LIMIT 1', [$tripId]);
+        $row = $this->fetchOne('SELECT * FROM trip_tracking WHERE trip_id = ? ORDER BY timestamp DESC LIMIT 1', [$tripId]);
+        return $row ? $this->hydrateTracking($row) : null;
     }
 
     public function createBoat(array $payload): array
@@ -256,5 +272,61 @@ final class MiscRepository extends BaseRepository
             'createdAt' => isset($boat['created_at']) ? strtotime((string) $boat['created_at']) * 1000 : (int) round(microtime(true) * 1000),
             'updatedAt' => isset($boat['updated_at']) ? strtotime((string) $boat['updated_at']) * 1000 : (int) round(microtime(true) * 1000),
         ];
+    }
+
+    private function hydrateDonation(array $row): array
+    {
+        return [
+            'id' => (string) ($row['id'] ?? ''),
+            'userId' => (string) ($row['user_id'] ?? ''),
+            'amount' => (float) ($row['amount'] ?? 0),
+            'currency' => (string) ($row['currency'] ?? 'EUR'),
+            'paypalTransactionId' => $row['paypal_transaction_id'] ?? null,
+            'status' => (string) ($row['status'] ?? 'pending'),
+            'createdAt' => Helpers::nowMillis($row['created_at'] ?? null),
+            'updatedAt' => Helpers::nowMillis($row['updated_at'] ?? ($row['created_at'] ?? null)),
+        ];
+    }
+
+    private function hydrateTripCheckpoint(array $row): array
+    {
+        return [
+            'id' => (string) ($row['id'] ?? ''),
+            'tripId' => (string) ($row['trip_id'] ?? ''),
+            'userId' => (string) ($row['user_id'] ?? ''),
+            'checkpointType' => (string) ($row['checkpoint_type'] ?? ''),
+            'note' => (string) ($row['note'] ?? ''),
+            'createdAt' => Helpers::nowMillis($row['created_at'] ?? null),
+        ];
+    }
+
+    private function hydrateTracking(array $row): array
+    {
+        return [
+            'id' => (string) ($row['id'] ?? ''),
+            'tripId' => (string) ($row['trip_id'] ?? ''),
+            'latitude' => (float) ($row['latitude'] ?? 0),
+            'longitude' => (float) ($row['longitude'] ?? 0),
+            'speed' => isset($row['speed']) && $row['speed'] !== null ? (float) $row['speed'] : null,
+            'heading' => isset($row['heading']) && $row['heading'] !== null ? (int) $row['heading'] : null,
+            'timestamp' => Helpers::nowMillis($row['timestamp'] ?? null),
+        ];
+    }
+
+    private function normalizeSqlTimestamp(mixed $value): string
+    {
+        if (is_numeric($value)) {
+            $seconds = ((float) $value) > 9999999999 ? ((float) $value) / 1000 : (float) $value;
+            return date('Y-m-d H:i:s', (int) round($seconds));
+        }
+
+        if (is_string($value) && trim($value) !== '') {
+            $timestamp = strtotime($value);
+            if ($timestamp !== false) {
+                return date('Y-m-d H:i:s', $timestamp);
+            }
+        }
+
+        return date('Y-m-d H:i:s');
     }
 }

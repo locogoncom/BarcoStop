@@ -32,54 +32,21 @@ function siteRenderHeader(string $title, string $activePage): void
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            circular: [
-              '"Plus Jakarta Sans"',
-              '"Avenir Next"',
-              'Avenir',
-              'Inter',
-              'ui-sans-serif',
-              'system-ui',
-              'sans-serif'
-            ]
-          },
-          colors: {
-            bstop: {
-              950: '#080a0c',
-              900: '#0f1216',
-              800: '#151a20',
-              700: '#202833',
-              600: '#2d3a48',
-              aqua: '#38bdf8',
-              mint: '#6ee7b7'
-            }
-          },
-          boxShadow: {
-            glow: '0 18px 60px rgba(56, 189, 248, 0.18)'
-          }
-        }
-      }
-    };
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css">
 </head>
-<body class="bg-bstop-950 text-white font-circular antialiased">
-  <header class="sticky top-0 z-40 border-b border-white/10 bg-bstop-900/80 backdrop-blur-md">
-    <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-      <a class="flex items-center gap-3" href="index.php">
-        <img class="h-9 w-9 rounded-xl border border-white/10 bg-white/5 object-cover p-1" src="assets/logo-barcostop.png" alt="Logo BarcoStop">
-        <span class="text-lg font-bold tracking-tight">BarcoStop</span>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-row">
+      <a class="brand" href="index.php">
+        <img class="brand-logo" src="assets/logo-barcostop.png" alt="Logo BarcoStop">
+        <span>BarcoStop</span>
       </a>
-      <nav class="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1">
+      <nav class="nav">
         <?php foreach ($navigation as $key => $item): ?>
           <?php $isActive = $activeValue === $key; ?>
           <a
-            class="rounded-full px-3 py-1.5 text-sm font-medium transition <?= $isActive ? 'bg-white text-bstop-950' : 'text-white/75 hover:bg-white/10 hover:text-white' ?>"
+            class="nav-link <?= $isActive ? 'is-active' : '' ?>"
             href="<?= h($item['href']) ?>"
           >
             <?= h($item['label']) ?>
@@ -88,23 +55,63 @@ function siteRenderHeader(string $title, string $activePage): void
       </nav>
     </div>
   </header>
-  <main class="mx-auto w-full max-w-6xl px-4 pb-16 pt-10 sm:px-6">
+  <main class="shell page">
 <?php
 }
 
 function siteRenderFooter(): void
 {
+    $documents = array_values(siteMarkdownDocuments());
 ?>
   </main>
-  <footer class="border-t border-white/10 bg-bstop-900/70">
-    <div class="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-white/60 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <p>BarcoStop © <?= date('Y') ?> · Hecho para gente que quiere salir al mar</p>
-      <a class="text-white/80 hover:text-white" href="https://play.google.com/store/apps/details?id=com.barcostop.app" target="_blank" rel="noopener noreferrer">
-        Descargar en Google Play
-      </a>
+  <footer class="footer">
+    <div class="shell footer-doc-links">
+      <?php foreach ($documents as $doc): ?>
+        <a href="<?= h($doc['url']) ?>"><?= h($doc['label']) ?></a>
+      <?php endforeach; ?>
+    </div>
+    <div class="shell footer-row">
+      <p>Copyright Barco Stop AYESA DIGITAL, SLU. B01732791 Paseo de los tilos 25-27, Bajos A. 08034 Barcelona, Spain. Idea Original y v1 por Gonzalo Cordero</p>
+      <a href="https://play.google.com/store/apps/details?id=com.barcostop.app" target="_blank" rel="noopener noreferrer">Descargar en Google Play</a>
     </div>
   </footer>
 </body>
 </html>
 <?php
+}
+
+function siteRenderMarkdownDocumentPage(string $slug): void
+{
+    $document = siteMarkdownDocument($slug);
+
+    if ($document === null) {
+        http_response_code(404);
+        siteRenderHeader('Documento no encontrado | BarcoStop', '');
+        ?>
+        <section class="doc-section">
+          <h1 class="section-title">Documento no encontrado</h1>
+          <p class="alert">No existe el documento solicitado.</p>
+          <p><a href="index.php">Volver a inicio</a></p>
+        </section>
+        <?php
+        siteRenderFooter();
+        return;
+    }
+
+    siteRenderHeader($document['title'] . ' | BarcoStop', '');
+    $rawMarkdown = @file_get_contents($document['source']);
+    ?>
+    <section class="doc-section reveal">
+      <h1 class="doc-title"><?= h($document['title']) ?></h1>
+      <p class="muted doc-source">Origen: <?= h(str_replace(dirname(__DIR__, 2) . '/', '', $document['source'])) ?></p>
+      <?php if ($rawMarkdown === false): ?>
+        <p class="alert">No se pudo leer el archivo fuente Markdown.</p>
+      <?php else: ?>
+        <article class="markdown-body">
+          <?= siteMarkdownToHtml($rawMarkdown) ?>
+        </article>
+      <?php endif; ?>
+    </section>
+    <?php
+    siteRenderFooter();
 }

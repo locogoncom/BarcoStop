@@ -44,10 +44,18 @@ final class ApiKernel
         header('Referrer-Policy: no-referrer');
         header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
 
-        // Alias de compatibilidad para pruebas manuales: /api/* -> /api/v1/*
+        // Alias de compatibilidad:
+        // - /api/* -> /api/v1/*
+        // - /v1/*  -> /api/v1/*
         $requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
         $requestPath = (string) (parse_url($requestUri, PHP_URL_PATH) ?: '/');
-        if (str_starts_with($requestPath, '/api/') && !str_starts_with($requestPath, '/api/v1/')) {
+        if (str_starts_with($requestPath, '/api/uploads/')) {
+            $_SERVER['REQUEST_URI'] = preg_replace('#^/api/uploads/#', '/uploads/', $requestUri, 1) ?? $requestUri;
+        } elseif ($requestPath === '/api/uploads') {
+            $_SERVER['REQUEST_URI'] = preg_replace('#^/api/uploads(?=/|$)#', '/uploads', $requestUri, 1) ?? $requestUri;
+        } elseif ($requestPath === '/v1' || str_starts_with($requestPath, '/v1/')) {
+            $_SERVER['REQUEST_URI'] = preg_replace('#^/v1(?=/|$)#', '/api/v1', $requestUri, 1) ?? $requestUri;
+        } elseif (str_starts_with($requestPath, '/api/') && !str_starts_with($requestPath, '/api/v1/')) {
             $_SERVER['REQUEST_URI'] = preg_replace('#^/api/#', '/api/v1/', $requestUri, 1) ?? $requestUri;
         }
 

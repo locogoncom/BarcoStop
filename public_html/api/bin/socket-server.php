@@ -6,6 +6,7 @@ declare(strict_types=1);
 use BarcoStop\ServerPhp\Config\AppConfig;
 use BarcoStop\ServerPhp\Config\Database;
 use BarcoStop\ServerPhp\Services\JwtService;
+use BarcoStop\ServerPhp\Services\TripCleanupService;
 use PHPSocketIO\SocketIO;
 use Workerman\Lib\Timer;
 
@@ -17,6 +18,8 @@ if (class_exists(\Dotenv\Dotenv::class) && file_exists(dirname(__DIR__) . '/.env
 
 $host = AppConfig::env('WS_HOST', '0.0.0.0') ?? '0.0.0.0';
 $port = AppConfig::int('WS_PORT', 8081);
+$cleanupHours = AppConfig::int('TRIP_CLEANUP_HOURS', 8);
+$cleanupIntervalMs = max(60_000, AppConfig::int('TRIP_CLEANUP_INTERVAL_MS', 60 * 60 * 1000));
 $io = new SocketIO($port);
 $jwt = new JwtService();
 
@@ -198,6 +201,17 @@ Timer::add(1.0, static function () use (&$conversationState, $io, $roomPrefix): 
         ];
     }
 });
+
+// Mantiene el mismo comportamiento del backend Node legado para viajes caducados.
+$cleanupTick = static function () use ($cleanupHours): void {
+    try {
+        TripCleanupService::run($cleanupHours);
+    } catch (Throwable $e) {
+        fwrite(STDERR, '[tripCleanup] failed: ' . ($e->getMessage() ?: 'unknown') . PHP_EOL);
+    }
+};
+$cleanupTick();
+Timer::add(((float) $cleanupIntervalMs) / 1000, $cleanupTick);
 
 echo "Socket.IO server running on {$host}:{$port}\n";
 Workerman\Worker::runAll();

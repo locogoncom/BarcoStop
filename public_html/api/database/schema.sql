@@ -178,9 +178,11 @@ CREATE TABLE IF NOT EXISTS donations (
   id VARCHAR(36) PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(3) DEFAULT 'EUR',
   paypal_transaction_id VARCHAR(255),
   status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_user_id (user_id),
   INDEX idx_status (status)
