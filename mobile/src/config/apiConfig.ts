@@ -1,16 +1,16 @@
 export type AppEnv = 'dev' | 'staging' | 'prod';
 
+const DEFAULT_API_BASE_URL = 'https://api.barcostop.net/v1';
+
 // Quick deployment override:
 // Set this to your backend URL to force all mobile API calls to that endpoint.
-// Example: 'https://api.tudominio.com/api'
+// Example: 'https://api.tudominio.com/v1'
 const MANUAL_API_BASE_URL: string | null = null;
 
 const API_BASE_URLS: Record<AppEnv, string> = {
-  // Use 10.0.2.2 for Android emulator to access host machine; localhost for iOS simulator
-  dev: 'http://10.0.2.2:5000/api',
-  staging: 'https://staging-api.barcostop.com/api',
-  // Public backend used by Android release builds distributed via Play.
-  prod: 'https://barcostop-api-2.onrender.com/api',
+  dev: DEFAULT_API_BASE_URL,
+  staging: DEFAULT_API_BASE_URL,
+  prod: DEFAULT_API_BASE_URL,
 };
 
 const normalizeEnv = (value: unknown): AppEnv | null => {
@@ -25,10 +25,20 @@ const normalizeApiUrl = (value: unknown): string | null => {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const withoutTrailingSlash = trimmed.replace(/\/+$/, '');
-  return withoutTrailingSlash.endsWith('/api')
-    ? withoutTrailingSlash
-    : `${withoutTrailingSlash}/api`;
+  if (/\/api\/v1$/i.test(withoutTrailingSlash) || /\/v1$/i.test(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
+  }
+  if (/\/api$/i.test(withoutTrailingSlash)) {
+    return `${withoutTrailingSlash}/v1`;
+  }
+  return `${withoutTrailingSlash}/v1`;
 };
+
+const deriveApiOrigin = (apiBaseUrl: string): string =>
+  apiBaseUrl
+    .replace(/\/api\/v1\/?$/i, '')
+    .replace(/\/v1\/?$/i, '')
+    .replace(/\/api\/?$/i, '');
 
 const detectEnv = (): AppEnv => {
   const fromProcess =
@@ -51,5 +61,5 @@ const apiUrlFromEnv =
 const apiUrlFromManualConfig = normalizeApiUrl(MANUAL_API_BASE_URL);
 
 export const API_BASE_URL = apiUrlFromManualConfig ?? apiUrlFromEnv ?? API_BASE_URLS[APP_ENV];
-export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
+export const API_ORIGIN = deriveApiOrigin(API_BASE_URL);
 export const API_BASE_URLS_BY_ENV = API_BASE_URLS;

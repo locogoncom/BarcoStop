@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+**/node_modules/
 dist
 dist-ssr
 *.local
@@ -15,7 +16,10 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
 .idea
+**/.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -23,7 +27,20 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment v
+# Android / Gradle
+**/.gradle/
+**/.cxx/
+**/*.hprof
+**/file-system.probe
+**/checksums.lock
+**/buildOutputCleanup/
+**/dependencies-accessors/
+**/fileChanges/
+**/fileHashes/
 
+# Environment variables
+.env
+.env.local
+.env.*.local
 # Nested repo backup
 server/.git_backup_*/

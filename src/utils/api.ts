@@ -6,13 +6,17 @@ const normalizeApiUrl = (value: unknown): string | null => {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const withoutTrailingSlash = trimmed.replace(/\/+$/, '');
-  return withoutTrailingSlash.endsWith('/api')
-    ? withoutTrailingSlash
-    : `${withoutTrailingSlash}/api`;
+  if (/\/api\/v1$/i.test(withoutTrailingSlash) || /\/v1$/i.test(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
+  }
+  if (/\/api$/i.test(withoutTrailingSlash)) {
+    return `${withoutTrailingSlash}/v1`;
+  }
+  return `${withoutTrailingSlash}/v1`;
 };
 
 const envApiUrl = normalizeApiUrl((import.meta as any)?.env?.VITE_API_URL);
-const API_URL = envApiUrl ?? 'http://localhost:5000/api';
+const API_URL = envApiUrl ?? 'https://api.barcostop.net/v1';
 
 const api = axios.create({
   baseURL: API_URL,
