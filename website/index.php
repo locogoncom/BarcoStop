@@ -12,13 +12,42 @@ $latestTrips = is_array($metrics['latestTrips']) ? $metrics['latestTrips'] : [];
 siteRenderHeader('BarcoStop | Home', 'home');
 ?>
 
-<section class="hero">
-  <span class="badge <?= $metrics['dbConnected'] ? 'badge-ok' : 'badge-warn' ?>">
-    <?= $metrics['dbConnected'] ? 'Datos en vivo' : 'Datos no disponibles' ?>
-  </span>
-  <h1>Conecta capitanes y tripulacion en minutos.</h1>
-  <p>
-    Esta home se alimenta desde MySQL (server_php): mostramos total de usuarios, total de viajes y los ultimos 6 viajes creados.
+<section class="hero hero-legacy">
+  <h1 class="hero-title">Conecta marineros <br> con capitanes</h1>
+  <p class="hero-subtitle">
+    Encuentra barco o tripulacion en segundos.
+    La forma mas facil de salir al mar.
+  </p>
+  <a
+    href="https://play.google.com/store/apps/details?id=com.barcostop.app"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="play-cta"
+  >
+    <span class="play-logo" aria-hidden="true">
+      <svg viewBox="0 0 512 512" role="img">
+        <path fill="#00d95f" d="M20 20l260 236L20 492z" />
+        <path fill="#00a4ff" d="M20 20l188 168 62 68L20 492z" opacity=".8" />
+        <path fill="#ffd400" d="M280 256l72 65 120-65-120-65z" />
+        <path fill="#ff4b4b" d="M20 492l188-168 62-68L20 20z" opacity=".7" />
+      </svg>
+    </span>
+    <span class="play-text">
+      <span class="play-text-mini">Descargar en</span>
+      <span class="play-text-main">Google Play</span>
+    </span>
+  </a>
+  <p class="hero-note">Gratis · Rapido · Sin complicaciones</p>
+</section>
+
+<section class="hero-metrics">
+  <p class="muted">
+    Esta home se alimenta desde MySQL (server_php): total de usuarios, total de viajes y ultimos 6 viajes creados.
+  </p>
+  <p class="metrics-badge-wrap">
+    <span class="badge <?= $metrics['dbConnected'] ? 'badge-ok' : 'badge-warn' ?>">
+      <?= $metrics['dbConnected'] ? 'Datos en vivo' : 'Datos no disponibles' ?>
+    </span>
   </p>
   <div class="stats">
     <article class="stat-card">

@@ -28,7 +28,10 @@ function siteRenderHeader(string $title, string $activePage): void
 <body>
   <header class="topbar">
     <div class="shell topbar-row">
-      <a class="brand" href="index.php">BarcoStop</a>
+      <a class="brand" href="index.php">
+        <img class="brand-logo" src="assets/logo-barcostop.png" alt="Logo BarcoStop">
+        <span>BarcoStop</span>
+      </a>
       <nav class="nav">
         <?php foreach ($navigation as $key => $item): ?>
           <a class="nav-link <?= $activePage === $key ? 'is-active' : '' ?>" href="<?= h($item['href']) ?>">
