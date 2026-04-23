@@ -1,3 +1,20 @@
+## Comandos rápidos Android
+
+Ejecuta desde `mobile/`:
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+# Generar AAB (Google Play)
+npm run build:aab:release
+
+# Generar APK firmado
+npm run build:apk:release
+
+# Debug en telefono Android por USB
+npm run android:usb
+```
+
 # BarcoStop 🚤
 
 Una plataforma moderna para compartir viajes en barco, conectar navegantes y construir comunidad en el mar.

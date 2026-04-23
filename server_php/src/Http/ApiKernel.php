@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BarcoStop\ServerPhp\Http;
 
 use BarcoStop\ServerPhp\Config\AppConfig;
+use BarcoStop\ServerPhp\Http\Controllers\AppVersionController;
 use BarcoStop\ServerPhp\Http\Controllers\BoatsController;
 use BarcoStop\ServerPhp\Http\Controllers\DonationsController;
 use BarcoStop\ServerPhp\Http\Controllers\FavoritesController;
@@ -147,10 +148,14 @@ final class ApiKernel
         $checkpoints = new TripCheckpointsController($miscRepo, $tripsRepo, $auth);
         $tracking = new TrackingController($miscRepo, $tripsRepo, $auth);
         $boats = new BoatsController($miscRepo, $auth);
+        $appVersion = new AppVersionController();
 
         $router->add('GET', '/', static fn() => JsonResponse::send(['status' => 'ok', 'message' => 'BarcoStop API PHP running']));
 
         $v1 = '/api/v1';
+
+        // app info
+        $router->add('GET', "$v1/app/version", fn(Request $r) => $appVersion($r));
 
         // users
         $router->add('POST', "$v1/users", fn(Request $r) => $users->register($r));

@@ -65,4 +65,35 @@ final class AppConfig
     {
         return self::int('JWT_EXP_SECONDS', 60 * 60 * 24 * 7);
     }
+
+    public static function appLatestVersion(): string
+    {
+        return self::env('APP_LATEST_VERSION', '0.0.0') ?? '0.0.0';
+    }
+
+    public static function appMinSupportedVersion(): string
+    {
+        return self::env('APP_MIN_SUPPORTED_VERSION', self::appLatestVersion()) ?? self::appLatestVersion();
+    }
+
+    public static function appForceUpdate(): bool
+    {
+        return self::bool('APP_FORCE_UPDATE', false);
+    }
+
+    public static function appAndroidStoreUrl(): string
+    {
+        return self::env('APP_ANDROID_STORE_URL', 'https://play.google.com/store/apps/details?id=com.barcostop.app') ?? 'https://play.google.com/store/apps/details?id=com.barcostop.app';
+    }
+
+    public static function appIosStoreUrl(): string
+    {
+        return self::env('APP_IOS_STORE_URL', '') ?? '';
+    }
+
+    public static function appVersionMessage(): ?string
+    {
+        $message = trim((string) (self::env('APP_VERSION_MESSAGE', '') ?? ''));
+        return $message !== '' ? $message : null;
+    }
 }
