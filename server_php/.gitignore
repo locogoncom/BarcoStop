@@ -1,5 +1,6 @@
 /vendor/
 /.env
+!/.env
 /.phpunit.result.cache
 /storage/uploads/avatars/*
 /storage/uploads/trips/*
