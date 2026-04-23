@@ -105,7 +105,7 @@ siteRenderHeader('BarcoStop | Home', 'home');
   <div class="sea-gallery reveal-list">
     <article class="sea-main">
       <img
-        src="https://source.unsplash.com/1600x1000/?sailboat,sea"
+        src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80"
         alt="Velero navegando en mar abierto"
         loading="eager"
       >
@@ -116,7 +116,7 @@ siteRenderHeader('BarcoStop | Home', 'home');
     </article>
     <article class="sea-card">
       <img
-        src="https://source.unsplash.com/1200x900/?boat,sunset"
+        src="https://images.unsplash.com/photo-1473116763249-2faaef81ccda?auto=format&fit=crop&w=1200&q=80"
         alt="Barco al atardecer"
         loading="lazy"
       >
@@ -124,7 +124,7 @@ siteRenderHeader('BarcoStop | Home', 'home');
     </article>
     <article class="sea-card">
       <img
-        src="https://source.unsplash.com/1200x900/?sailor,crew"
+        src="https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1200&q=80"
         alt="Marineros preparando una salida"
         loading="lazy"
       >
@@ -132,7 +132,7 @@ siteRenderHeader('BarcoStop | Home', 'home');
     </article>
     <article class="sea-card">
       <img
-        src="https://source.unsplash.com/1200x900/?yacht,harbor"
+        src="https://images.unsplash.com/photo-1493558103817-58b2924bce98?auto=format&fit=crop&w=1200&q=80"
         alt="Barcos en puerto deportivo"
         loading="lazy"
       >
