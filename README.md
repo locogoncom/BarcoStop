@@ -214,18 +214,19 @@ Web (Vite) usa `VITE_API_URL` y mobile usa `BARCOSTOP_API_URL`.
 1. En la raíz del proyecto crea/edita `.env`:
 
 ```env
-VITE_API_URL=https://tu-backend-publico.com/api
+VITE_API_URL=https://api.barcostop.net/v1
 ```
 
 2. En `mobile/` crea/edita `.env`:
 
 ```env
 APP_ENV=prod
-BARCOSTOP_API_URL=https://tu-backend-publico.com/api
+BARCOSTOP_API_URL=https://api.barcostop.net/v1
 ```
 
 Notas:
-- Si omites `/api`, la app lo agrega automáticamente.
+- Si usas una URL acabada en `/api`, la app la normaliza a `/api/v1`.
+- Si no incluyes sufijo, la app agrega `/v1`.
 - En mobile también puedes usar solo `APP_ENV=dev|staging|prod` y tomar URLs por entorno desde `mobile/src/config/apiConfig.ts`.
 
 ### Paso 4: Iniciar la App Móvil
@@ -274,7 +275,7 @@ npm run web        # Abrir en navegador
 
 ## 📊 Endpoints del API
 
-Backend corriendo en `http://localhost:5000/api`:
+Backend en produccion: `https://api.barcostop.net/v1` (local antiguo: `http://localhost:5000/api`).
 
 - `GET /users` - Listar usuarios
 - `POST /users` - Crear usuario
