@@ -17,8 +17,10 @@ def hasReleaseSigning = keystorePropertiesFile.exists() &&
     keystoreProperties.getProperty('keyPassword')
 
 def appPackageId = project.findProperty("BARCOSTOP_APPLICATION_ID") ?: "com.barcostop.app"
-def appVersionCode = (project.findProperty("BARCOSTOP_VERSION_CODE") ?: "52").toInteger()
-def appVersionName = project.findProperty("BARCOSTOP_VERSION_NAME") ?: "1.0.52"
+def buildTimestamp = new Date().format("yyyyMMdd-HHmmss")
+def generatedVersionCode = (System.currentTimeMillis() / 1000L) as int
+def appVersionCode = (project.findProperty("BARCOSTOP_VERSION_CODE") ?: generatedVersionCode.toString()).toInteger()
+def appVersionName = project.findProperty("BARCOSTOP_VERSION_NAME") ?: buildTimestamp
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -162,15 +164,22 @@ def releaseArtifactsDir = new File(rootProject.projectDir.parentFile, "release")
 tasks.register("copyReleaseApk", Copy) {
     dependsOn("assembleRelease")
     from(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
-    rename { "app-release-v${appVersionCode}.apk" }
+    rename { "app-release-${buildTimestamp}.apk" }
     into(releaseArtifactsDir)
 }
 
 tasks.register("copyReleaseAab", Copy) {
     dependsOn("bundleRelease")
     from(layout.buildDirectory.file("outputs/bundle/release/app-release.aab"))
-    rename { "app-release-v${appVersionCode}.aab" }
+    rename { "app-release-${buildTimestamp}.aab" }
     into(releaseArtifactsDir)
+}
+
+tasks.register("copyReleaseNativeSymbols", Zip) {
+    dependsOn("mergeReleaseNativeLibs")
+    from(layout.buildDirectory.dir("intermediates/merged_native_libs/release/out/lib"))
+    archiveFileName = "native-debug-symbols-${buildTimestamp}-play.zip"
+    destinationDirectory = releaseArtifactsDir
 }
 
 afterEvaluate {
@@ -179,6 +188,6 @@ afterEvaluate {
     }
 
     tasks.named("bundleRelease").configure {
-        finalizedBy("copyReleaseAab")
+        finalizedBy("copyReleaseAab", "copyReleaseNativeSymbols")
     }
 }

@@ -5,6 +5,79 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${MOBILE_ROOT}/.." && pwd)"
 SERVER_ROOT="${REPO_ROOT}/server"
+AVD_NAME="${AVD_NAME:-Pixel_6_2}"
+
+resolve_sdk_dir() {
+  if [[ -n "${ANDROID_SDK_ROOT:-}" && -d "${ANDROID_SDK_ROOT}" ]]; then
+    echo "${ANDROID_SDK_ROOT}"
+    return 0
+  fi
+  if [[ -n "${ANDROID_HOME:-}" && -d "${ANDROID_HOME}" ]]; then
+    echo "${ANDROID_HOME}"
+    return 0
+  fi
+  if [[ -d "${HOME}/Android/Sdk" ]]; then
+    echo "${HOME}/Android/Sdk"
+    return 0
+  fi
+  if [[ -d "${HOME}/Android/sdk" ]]; then
+    echo "${HOME}/Android/sdk"
+    return 0
+  fi
+  return 1
+}
+
+test_backend_ready() {
+  curl -fsS "http://127.0.0.1:5000/" >/dev/null 2>&1
+}
+
+wait_backend_ready() {
+  local timeout="${1:-30}"
+  local elapsed=0
+  until test_backend_ready; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+    if (( elapsed >= timeout )); then
+      return 1
+    fi
+  done
+  return 0
+}
+
+test_metro_ready() {
+  curl -fsS "http://127.0.0.1:8081/status" >/dev/null 2>&1
+}
+
+wait_metro_ready() {
+  local timeout="${1:-120}"
+  local elapsed=0
+  until test_metro_ready; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+    if (( elapsed >= timeout )); then
+      return 1
+    fi
+  done
+  return 0
+}
+
+resolve_java_home() {
+  if [[ -n "${JAVA_HOME:-}" && -x "${JAVA_HOME}/bin/jlink" ]]; then
+    echo "${JAVA_HOME}"
+    return 0
+  fi
+  for candidate in \
+    "/usr/lib/jvm/java-17-openjdk-amd64" \
+    "/usr/lib/jvm/java-21-openjdk-amd64" \
+    "/usr/lib/jvm/default-java"; do
+    if [[ -x "${candidate}/bin/jlink" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 SDK_DIR="$(resolve_sdk_dir || true)"
 if [[ -z "${SDK_DIR}" ]]; then
   echo "No se encontro Android SDK. Define ANDROID_SDK_ROOT o ANDROID_HOME." >&2
@@ -79,16 +152,29 @@ cleanup() {
 }
 trap cleanup EXIT
 
+GRADLE_JAVA_HOME="$(resolve_java_home || true)"
+if [[ -n "${GRADLE_JAVA_HOME}" ]]; then
+  echo "[barcostop] Usando JAVA_HOME=${GRADLE_JAVA_HOME}"
+fi
+
 (
   cd "${MOBILE_ROOT}/android"
-  ./gradlew installDebug >"${INSTALL_LOG}" 2>&1
+  if [[ -n "${GRADLE_JAVA_HOME}" ]]; then
+    JAVA_HOME="${GRADLE_JAVA_HOME}" ./gradlew installDebug >"${INSTALL_LOG}" 2>&1
+  else
+    ./gradlew installDebug >"${INSTALL_LOG}" 2>&1
+  fi
 ) || {
   if grep -q 'INSTALL_FAILED_UPDATE_INCOMPATIBLE' "${INSTALL_LOG}"; then
     echo "[barcostop] Firma incompatible para ${APP_ID}. Desinstalando y reintentando..."
     "${ADB}" -s "${DEVICE_ID}" uninstall "${APP_ID}" >/dev/null 2>&1 || true
     (
       cd "${MOBILE_ROOT}/android"
-      ./gradlew installDebug >"${INSTALL_LOG}" 2>&1
+      if [[ -n "${GRADLE_JAVA_HOME}" ]]; then
+        JAVA_HOME="${GRADLE_JAVA_HOME}" ./gradlew installDebug >"${INSTALL_LOG}" 2>&1
+      else
+        ./gradlew installDebug >"${INSTALL_LOG}" 2>&1
+      fi
     ) || {
       cat "${INSTALL_LOG}" >&2
       echo "installDebug fallo incluso despues de desinstalar la app previa." >&2
