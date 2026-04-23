@@ -5,64 +5,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${MOBILE_ROOT}/.." && pwd)"
 SERVER_ROOT="${REPO_ROOT}/server"
-AVD_NAME="${1:-Pixel_6_2}"
-
-"${SCRIPT_DIR}/start-pixel6.sh" "${AVD_NAME}"
-
-test_metro_ready() {
-  local body
-  body="$(curl -fsS --max-time 2 http://127.0.0.1:8081/status 2>/dev/null || true)"
-  [[ "${body}" == *"packager-status:running"* ]]
-}
-
-wait_metro_ready() {
-  local timeout_seconds="${1:-120}"
-  local deadline=$((SECONDS + timeout_seconds))
-  while (( SECONDS < deadline )); do
-    if test_metro_ready; then
-      return 0
-    fi
-    sleep 1
-  done
-  return 1
-}
-
-test_backend_ready() {
-  curl -fsS --max-time 2 http://127.0.0.1:5000/ >/dev/null 2>&1
-}
-
-wait_backend_ready() {
-  local timeout_seconds="${1:-30}"
-  local deadline=$((SECONDS + timeout_seconds))
-  while (( SECONDS < deadline )); do
-    if test_backend_ready; then
-      return 0
-    fi
-    sleep 1
-  done
-  return 1
-}
-
-resolve_sdk_dir() {
-  if [[ -n "${ANDROID_SDK_ROOT:-}" && -d "${ANDROID_SDK_ROOT}" ]]; then
-    echo "${ANDROID_SDK_ROOT}"
-    return 0
-  fi
-  if [[ -n "${ANDROID_HOME:-}" && -d "${ANDROID_HOME}" ]]; then
-    echo "${ANDROID_HOME}"
-    return 0
-  fi
-  if [[ -d "${HOME}/Android/Sdk" ]]; then
-    echo "${HOME}/Android/Sdk"
-    return 0
-  fi
-  if [[ -d "${HOME}/Android/sdk" ]]; then
-    echo "${HOME}/Android/sdk"
-    return 0
-  fi
-  return 1
-}
-
 SDK_DIR="$(resolve_sdk_dir || true)"
 if [[ -z "${SDK_DIR}" ]]; then
   echo "No se encontro Android SDK. Define ANDROID_SDK_ROOT o ANDROID_HOME." >&2
@@ -75,11 +17,20 @@ if [[ ! -x "${ADB}" ]]; then
   exit 1
 fi
 
+# Check if any device is already connected
 DEVICE_ID="$("${ADB}" devices | awk '/\sdevice$/{print $1; exit}')"
+
+if [[ -z "${DEVICE_ID}" ]]; then
+  echo "[barcostop] No hay dispositivos conectados, intentando iniciar emulador..."
+  "${SCRIPT_DIR}/start-pixel6.sh" "${AVD_NAME}"
+  DEVICE_ID="$("${ADB}" devices | awk '/\sdevice$/{print $1; exit}')"
+fi
+
 if [[ -z "${DEVICE_ID}" ]]; then
   echo "No hay dispositivo Android conectado (USB o emulador)." >&2
   exit 1
 fi
+echo "[barcostop] Usando dispositivo: ${DEVICE_ID}"
 
 if ! test_backend_ready; then
   if [[ ! -d "${SERVER_ROOT}" ]]; then
