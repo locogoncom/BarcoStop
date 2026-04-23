@@ -39,7 +39,7 @@
     "text-encoding": "^0.7.0"
   },
   "devDependencies": {
-    "@react-native-community/cli": "latest"
+    "@react-native-community/cli": "^12.3.0"
   },
   "engines": {
     "node": ">=18"
