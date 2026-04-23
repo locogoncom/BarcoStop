@@ -6,9 +6,8 @@ export type AppEnv = 'dev' | 'staging' | 'prod';
 const MANUAL_API_BASE_URL: string | null = null;
 
 const API_BASE_URLS: Record<AppEnv, string> = {
-  // Use localhost in dev; scripts configure `adb reverse tcp:5000 tcp:5000`
-  // so this works on both emulator and physical USB devices.
-  dev: 'http://127.0.0.1:5000/api',
+  // Use 10.0.2.2 for Android emulator to access host machine; localhost for iOS simulator
+  dev: 'http://10.0.2.2:5000/api',
   staging: 'https://staging-api.barcostop.com/api',
   // Public backend used by Android release builds distributed via Play.
   prod: 'https://barcostop-api-2.onrender.com/api',
