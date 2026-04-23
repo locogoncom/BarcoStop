@@ -1,6 +1,6 @@
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useRoute, useNavigation, useIsFocused} from '@react-navigation/native';
-import React, {useEffect, useState, useMemo} from 'react';
+import React, {useEffect, useState, useMemo, useCallback} from 'react';
 import {ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking, Alert, Image, TextInput, AppState, Share} from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import {RemoteImage} from '../components/RemoteImage';
@@ -62,40 +62,6 @@ export default function TripDetailScreen() {
     const ownerId = String(trip.patron?.id ?? trip.patronId ?? '');
     return ownerId === String(session.userId);
   }, [session?.userId, trip]);
-
-  // Chequeo defensivo principal para evitar crash si trip es null
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-  if (!trip || loadError) {
-    return (
-      <View style={{flex:1,justifyContent:'center',alignItems:'center', padding: 24}}>
-        <Text style={{fontSize:48, color:'#e67e22', marginBottom: 12}}>⚠️</Text>
-        <Text style={{fontSize:20, color:'#e67e22', fontWeight:'bold', marginBottom: 8}}>No se pudo cargar el viaje.</Text>
-        <Text style={{fontSize:16, color:'#888', marginBottom: 24, textAlign:'center'}}>{loadError || 'Puede que el viaje haya sido eliminado, o hubo un error de red.'}</Text>
-        <TouchableOpacity
-          style={{backgroundColor:'#3498db', paddingHorizontal:24, paddingVertical:12, borderRadius:8, marginBottom:12}}
-          onPress={() => {
-            setLoading(true);
-            setLoadError(null);
-            setTimeout(() => loadTrip(), 100);
-          }}
-        >
-          <Text style={{color:'#fff', fontSize:16}}>Reintentar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={{backgroundColor:'#aaa', paddingHorizontal:24, paddingVertical:12, borderRadius:8}}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={{color:'#fff', fontSize:16}}>Volver</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   // Refuerzo quirúrgico: asegurar que los campos clave nunca quedan vacíos
   const tripOrigin = trip?.origin || trip?.route?.origin || '';
@@ -807,11 +773,33 @@ export default function TripDetailScreen() {
     );
   }
 
-  if (!trip) {
+  if (!trip || loadError) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>{t('tripDetailLoadError')}</Text>
+      <View style={{flex:1,justifyContent:'center',alignItems:'center', padding: 24}}>
+        <Text style={{fontSize:48, color:'#e67e22', marginBottom: 12}}>⚠️</Text>
+        <Text style={{fontSize:20, color:'#e67e22', fontWeight:'bold', marginBottom: 8}}>
+          {t('tripDetailLoadError')}
+        </Text>
+        <Text style={{fontSize:16, color:'#888', marginBottom: 24, textAlign:'center'}}>
+          {loadError || t('tripDetailConnectionHelp')}
+        </Text>
+        <TouchableOpacity
+          style={{backgroundColor:'#3498db', paddingHorizontal:24, paddingVertical:12, borderRadius:8, marginBottom:12}}
+          onPress={() => {
+            setLoading(true);
+            setLoadError(null);
+            loadTrip();
+            loadCheckpoints();
+          }}
+        >
+          <Text style={{color:'#fff', fontSize:16}}>{t('tripDetailRetry')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{backgroundColor:'#aaa', paddingHorizontal:24, paddingVertical:12, borderRadius:8}}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={{color:'#fff', fontSize:16}}>Volver</Text>
+        </TouchableOpacity>
       </View>
     );
   }
