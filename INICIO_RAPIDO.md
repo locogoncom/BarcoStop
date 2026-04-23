@@ -25,14 +25,14 @@ Este comando deja BarcoStop aislado y levanta todo lo necesario para continuar:
 
 ### Paso 1: Inicializar la Base de Datos
 
-```powershell
+```bash
 # Opción A: Desde línea de comandos
-mysql -h localhost -u locogon_0 -p'e2@LK@Lsy6X5' locogon_db0 < c:\BarcoStop\server\database\init.sql
+mysql -h localhost -u locogon_0 -p'e2@LK@Lsy6X5' locogon_db0 < server/database/init.sql
 
 # Opción B: Desde MySQL Workbench
 # 1. Abrir MySQL Workbench
 # 2. Conectar con los datos: host=localhost, user=locogon_0, password=e2@LK@Lsy6X5
-# 3. Abrir el archivo c:\BarcoStop\server\database\init.sql
+# 3. Abrir el archivo server/database/init.sql
 # 4. Ejecutar el script
 ```
 

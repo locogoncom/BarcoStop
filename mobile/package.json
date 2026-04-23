@@ -6,13 +6,16 @@
     "android": "react-native run-android",
     "android:barcostop": "powershell -ExecutionPolicy Bypass -File ./scripts/run-android-pixel6.ps1",
     "android:activate": "powershell -ExecutionPolicy Bypass -File ./scripts/activate-barcostop.ps1",
+    "android:barcostop:linux": "bash ./scripts/run-android-pixel6.sh",
+    "android:activate:linux": "bash ./scripts/activate-barcostop.sh",
+    "android:start-emulator:linux": "bash ./scripts/start-pixel6.sh",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
     "postinstall": "patch-package",
-    "build:apk:release": "cd android && gradlew.bat assembleRelease",
-    "build:aab:release": "cd android && gradlew.bat bundleRelease"
+    "build:apk:release": "cd android && ./gradlew assembleRelease",
+    "build:aab:release": "cd android && ./gradlew bundleRelease"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.23.1",
