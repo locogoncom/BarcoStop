@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const Donation = require('../models/Donation');
+const requireAuth = require('../middleware/requireAuth');
 
 // Crear donación
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const { userId, amount, paypalTransactionId } = req.body;
+    if (String(req.auth?.userId || '') !== String(userId)) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
 
     if (!userId || !amount || amount < 2.50) {
       return res.status(400).json({ error: 'Monto mínimo €2.50 requerido' });
@@ -25,8 +30,11 @@ router.post('/', async (req, res) => {
 });
 
 // Obtener donaciones del usuario
-router.get('/user/:userId', async (req, res) => {
+router.get('/user/:userId', requireAuth, async (req, res) => {
   try {
+    if (String(req.auth?.userId || '') !== String(req.params.userId || '')) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
     const donations = await Donation.findByUserId(req.params.userId);
     const total = await Donation.getTotalByUser(req.params.userId);
     
@@ -41,8 +49,11 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Obtener total donado por usuario
-router.get('/total/:userId', async (req, res) => {
+router.get('/total/:userId', requireAuth, async (req, res) => {
   try {
+    if (String(req.auth?.userId || '') !== String(req.params.userId || '')) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
     const total = await Donation.getTotalByUser(req.params.userId);
     res.json({ total: parseFloat(total) });
   } catch (err) {

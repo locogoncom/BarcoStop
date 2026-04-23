@@ -8,6 +8,18 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def releaseStoreFilePath = keystoreProperties.getProperty('storeFile')
+def releaseStoreFile = releaseStoreFilePath ? rootProject.file(releaseStoreFilePath) : null
+def hasReleaseSigning = keystorePropertiesFile.exists() &&
+    releaseStoreFile?.exists() &&
+    keystoreProperties.getProperty('storePassword') &&
+    keystoreProperties.getProperty('keyAlias') &&
+    keystoreProperties.getProperty('keyPassword')
+
+def appPackageId = project.findProperty("BARCOSTOP_APPLICATION_ID") ?: "com.barcostop.app"
+def appVersionCode = (project.findProperty("BARCOSTOP_VERSION_CODE") ?: "52").toInteger()
+def appVersionName = project.findProperty("BARCOSTOP_VERSION_NAME") ?: "1.0.52"
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -82,11 +94,11 @@ android {
 
     namespace "com.mobile"
     defaultConfig {
-        applicationId "com.mobile"
+        applicationId appPackageId
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
     }
     signingConfigs {
         debug {
@@ -96,8 +108,8 @@ android {
             keyPassword 'android'
         }
         release {
-            if (keystorePropertiesFile.exists()) {
-                storeFile file(keystoreProperties['storeFile'])
+            if (hasReleaseSigning) {
+                storeFile releaseStoreFile
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
@@ -109,11 +121,25 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // In production, sign with your own keystore.
-            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+            ndk {
+                // Generate native symbols zip for Play Console crash/ANR symbolication.
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
@@ -130,3 +156,29 @@ dependencies {
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+
+def releaseArtifactsDir = new File(rootProject.projectDir.parentFile, "release")
+
+tasks.register("copyReleaseApk", Copy) {
+    dependsOn("assembleRelease")
+    from(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
+    rename { "app-release-v${appVersionCode}.apk" }
+    into(releaseArtifactsDir)
+}
+
+tasks.register("copyReleaseAab", Copy) {
+    dependsOn("bundleRelease")
+    from(layout.buildDirectory.file("outputs/bundle/release/app-release.aab"))
+    rename { "app-release-v${appVersionCode}.aab" }
+    into(releaseArtifactsDir)
+}
+
+afterEvaluate {
+    tasks.named("assembleRelease").configure {
+        finalizedBy("copyReleaseApk")
+    }
+
+    tasks.named("bundleRelease").configure {
+        finalizedBy("copyReleaseAab")
+    }
+}

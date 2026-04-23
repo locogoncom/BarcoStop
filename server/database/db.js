@@ -47,12 +47,15 @@ const getMysqlConfigIssues = (config) => {
   });
 };
 
-const mysqlConfigIssues = getMysqlConfigIssues(mysqlConfig);
 
-if (mysqlConfigIssues.length > 0) {
-  throw new Error(
-    `Configuración MySQL inválida: ${mysqlConfigIssues.join(', ')}. Corrige las variables en Render antes de desplegar.`
-  );
+// Solo validar MySQL si realmente se va a usar MySQL
+if ((process.env.DB_TYPE || '').toLowerCase() === 'mysql') {
+  const mysqlConfigIssues = getMysqlConfigIssues(mysqlConfig);
+  if (mysqlConfigIssues.length > 0) {
+    throw new Error(
+      `Configuración MySQL inválida: ${mysqlConfigIssues.join(', ')}. Corrige las variables en Render antes de desplegar.`
+    );
+  }
 }
 
 // Configuración del pool de conexiones

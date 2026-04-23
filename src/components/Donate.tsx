@@ -1,7 +1,8 @@
-import React from 'react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Heart } from 'lucide-react';
+
+const PAYPAL_DONATION_URL = 'https://paypal.me/BarcoStop/2.50EUR';
 
 interface DonateProps {
   onClose: () => void;
@@ -9,8 +10,7 @@ interface DonateProps {
 
 export function Donate({ onClose }: DonateProps) {
   const handlePayPalClick = () => {
-    // Link directo a tu PayPal.me
-    window.open('https://paypal.me/BarcoStop', '_blank');
+    window.open(PAYPAL_DONATION_URL, '_blank');
   };
 
   return (

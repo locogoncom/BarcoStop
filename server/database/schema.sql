@@ -115,6 +115,16 @@ CREATE TABLE IF NOT EXISTS conversation_participants (
   INDEX idx_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS regatta_chats (
+  trip_id VARCHAR(36) PRIMARY KEY,
+  conversation_id VARCHAR(36) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_regatta_chat_conversation (conversation_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Tabla de mensajes
 CREATE TABLE IF NOT EXISTS messages (
   id VARCHAR(36) PRIMARY KEY,
@@ -142,6 +152,44 @@ CREATE TABLE IF NOT EXISTS trip_tracking (
   FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
   INDEX idx_trip_id (trip_id),
   INDEX idx_timestamp (timestamp)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de bloqueos entre usuarios (antiabuso en chat)
+CREATE TABLE IF NOT EXISTS user_blocks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  blocker_id VARCHAR(36) NOT NULL,
+  blocked_user_id VARCHAR(36) NOT NULL,
+  reason VARCHAR(255),
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (blocked_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_user_block_pair (blocker_id, blocked_user_id),
+  INDEX idx_blocker_id (blocker_id),
+  INDEX idx_blocked_user_id (blocked_user_id),
+  INDEX idx_user_block_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de reportes de abuso/moderacion
+CREATE TABLE IF NOT EXISTS user_reports (
+  id VARCHAR(36) PRIMARY KEY,
+  reporter_id VARCHAR(36) NOT NULL,
+  reported_user_id VARCHAR(36) NOT NULL,
+  conversation_id VARCHAR(36),
+  message_id VARCHAR(36),
+  reason VARCHAR(120) NOT NULL,
+  details TEXT,
+  status ENUM('open', 'reviewing', 'resolved', 'dismissed') DEFAULT 'open',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (reported_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE SET NULL,
+  FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE SET NULL,
+  INDEX idx_reporter_id (reporter_id),
+  INDEX idx_reported_user_id (reported_user_id),
+  INDEX idx_report_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Vista para obtener información completa de usuarios con ratings

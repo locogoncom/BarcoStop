@@ -1,6 +1,18 @@
 const mysql = require('mysql2/promise');
 const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
+
+function extractStatements(sql) {
+  return sql
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('--'))
+    .join('\n')
+    .split(';')
+    .map((stmt) => stmt.trim())
+    .filter(Boolean);
+}
 
 (async () => {
   let conn = null;
@@ -17,28 +29,14 @@ require('dotenv').config();
 
     console.log('✅ Conectado a base de datos remota:', process.env.DB_HOST);
 
-    // Leer el archivo SQL
-    const sql = fs.readFileSync('./database/init.sql', 'utf8');
-    
-    // Remover la línea USE database
-    let cleanSql = sql.replace(/USE locogon_db0;/g, '');
-    
-    // Dividir en sentencias individuales
-    const statementArray = [];
-    let current = '';
-    
-    for (const line of cleanSql.split('\n')) {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('--')) {
-        current += ' ' + trimmed;
-        if (trimmed.endsWith(';')) {
-          statementArray.push(current.trim());
-          current = '';
-        }
-      }
-    }
+    const initSqlPath = path.join(__dirname, 'database', 'init.sql');
+    const initSql = fs.readFileSync(initSqlPath, 'utf8').replace(/USE\s+locogon_db0;/gi, '');
 
-    console.log(`📋 Ejecutando ${statementArray.length} sentencias SQL...`);
+    const statementArray = [
+      ...extractStatements(initSql),
+    ];
+
+    console.log(`📋 Ejecutando ${statementArray.length} sentencias SQL del core de BarcoStop...`);
     
     let created = 0;
     let skipped = 0;
@@ -51,7 +49,7 @@ require('dotenv').config();
             const tableName = stmt.match(/CREATE TABLE IF NOT EXISTS (\w+)/i)?.[1];
             console.log(`  ✓ Tabla creada: ${tableName}`);
             created++;
-          } else if (stmt.toUpperCase().includes('INSERT INTO')) {
+          } else if (stmt.toUpperCase().includes('INSERT INTO') || stmt.toUpperCase().includes('INSERT IGNORE INTO')) {
             console.log(`  ✓ Datos insertados`);
           }
         } catch (err) {
@@ -59,6 +57,8 @@ require('dotenv').config();
             skipped++;
           } else if (err.code === 'ER_DUP_ENTRY') {
             // Ignorar duplicados en inserts
+          } else if (err.code === 'ER_DUP_FIELDNAME' || err.code === 'ER_MULTIPLE_PRI_KEY') {
+            // Idempotencia para ALTER TABLE en servidores con esquema previo.
           } else {
             console.error(`  ⚠️  Error: ${err.code} - ${err.message.substring(0, 80)}`);
           }

@@ -1,7 +1,8 @@
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
-import React, {useEffect, useState, useCallback} from 'react';
-import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View, Alert, TextInput} from 'react-native';
+import React, {useState, useCallback} from 'react';
+import {ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View, Alert, TextInput, Image} from 'react-native';
 import {tripService, ratingService, reservationService, favoriteService} from '../services/api';
+import {RemoteImage} from '../components/RemoteImage';
 import type {Trip} from '../types';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
@@ -12,7 +13,7 @@ type TripListNavigationProp = any;
 
 export default function TripListScreen() {
   const navigation = useNavigation<any>();
-  const {session} = useAuth();
+  const {session, logout} = useAuth();
   const {t, language} = useLanguage();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,9 +27,36 @@ export default function TripListScreen() {
   const [searchOrigin, setSearchOrigin] = useState('');
   const [searchDestination, setSearchDestination] = useState('');
   const [searchDate, setSearchDate] = useState('');
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const [favoriteUserIds, setFavoriteUserIds] = useState<string[]>([]);
   const [savingFavoriteUserId, setSavingFavoriteUserId] = useState<string | null>(null);
   const [ratedUserIds, setRatedUserIds] = useState<Set<string>>(new Set());
+
+  const goToHome = () => {
+    const rootNav = navigation.getParent()?.getParent?.() || navigation.getParent?.() || navigation;
+    rootNav.reset({
+      index: 0,
+      routes: [{name: 'MainApp', state: {index: 0, routes: [{name: 'Trips'}]}}],
+    });
+  };
+
+  const onLogout = () => {
+    Alert.alert(t('profileLogoutTitle'), t('profileLogoutMessage'), [
+      {text: t('profileCancel'), style: 'cancel'},
+      {
+        text: t('profileConfirm'),
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          const rootNav = navigation.getParent()?.getParent?.() || navigation.getParent?.() || navigation;
+          rootNav.reset({
+            index: 0,
+            routes: [{name: 'Home'}],
+          });
+        },
+      },
+    ]);
+  };
 
   const toIsoDate = (date: Date) => {
     const y = date.getFullYear();
@@ -40,10 +68,12 @@ export default function TripListScreen() {
   const loadTrips = async () => {
     try {
       const data = await tripService.getAll();
-      // Asegurar que data es un array válido
       if (Array.isArray(data)) {
         setTrips(data);
-        setError(null);
+        // Solo limpiar el error si realmente hay viajes
+        if (data.length > 0) {
+          setError(null);
+        }
       } else {
         console.warn('Invalid trips data:', data);
         setTrips([]);
@@ -141,6 +171,32 @@ export default function TripListScreen() {
     return Boolean(id && ratedUserIds.has(id));
   };
 
+  const canCancelReservation = (status?: string) => {
+    const normalized = String(status || '').toLowerCase();
+    return normalized === 'pending' || normalized === 'approved' || normalized === 'confirmed';
+  };
+
+  const handleCancelReservation = async (reservationId: string) => {
+    Alert.alert('Cancelar reserva', '¿Seguro que quieres cancelar esta reserva?', [
+      {text: 'No', style: 'cancel'},
+      {
+        text: 'Sí, cancelar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await reservationService.updateReservation(reservationId, 'cancelled');
+            Alert.alert('Éxito', 'Reserva cancelada correctamente');
+            await loadUserReservations();
+            await loadTrips();
+          } catch (error: any) {
+            const errorMsg = error.response?.data?.error || 'No se pudo cancelar la reserva';
+            Alert.alert('Error', errorMsg);
+          }
+        },
+      },
+    ]);
+  };
+
   const handleCreateReservation = async (tripId: string) => {
     if (!session?.userId) {
       Alert.alert('Error', 'Debes estar conectado');
@@ -184,10 +240,10 @@ export default function TripListScreen() {
     });
   };
 
-  const handleCancelTrip = (trip: Trip) => {
+  const handleDeleteTrip = (trip: Trip) => {
     Alert.alert(
       'Eliminar viaje',
-      '¿Seguro que quieres cancelar este viaje? Esta acción lo dejará inactivo para reservas.',
+      '¿Seguro que quieres eliminar este viaje? Esta acción no se puede deshacer.',
       [
         {text: 'No', style: 'cancel'},
         {
@@ -195,12 +251,12 @@ export default function TripListScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await tripService.cancelWithActor(trip.id, session?.userId || '');
-              Alert.alert('Éxito', 'Viaje cancelado correctamente');
+              await tripService.deleteWithActor(trip.id, session?.userId || '');
+              Alert.alert('Éxito', 'Viaje eliminado correctamente');
               await loadTrips();
             } catch (error) {
-              console.error('Error canceling trip from list:', error);
-              Alert.alert('Error', 'No se pudo cancelar el viaje');
+              console.error('Error deleting trip from list:', error);
+              Alert.alert('Error', 'No se pudo eliminar el viaje');
             }
           },
         },
@@ -233,17 +289,21 @@ export default function TripListScreen() {
     }
   };
 
-  useEffect(() => {
-    loadTrips();
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
-      loadTrips();
-      loadUserReservations();
-      loadFavorites();
-      loadGivenRatings();
-    }, [])
+      setLoading(true);
+
+      const loadScreenData = async () => {
+        await Promise.all([
+          loadTrips(),
+          session?.userId ? loadUserReservations() : Promise.resolve(),
+          session?.userId ? loadFavorites() : Promise.resolve(),
+          session?.role === 'viajero' ? loadGivenRatings() : Promise.resolve(),
+        ]);
+      };
+
+      loadScreenData();
+    }, [session?.role, session?.userId])
   );
 
   const filteredTrips = trips.filter(trip => {
@@ -267,59 +327,104 @@ export default function TripListScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topActions}>
+        <TouchableOpacity style={[styles.actionBtn, styles.homeBtn]} onPress={goToHome}>
+          <Text style={styles.actionText}>🏠 {t('goHome')}</Text>
+        </TouchableOpacity>
         {session?.role === 'patron' ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('CreateTrip', {patronId: session.userId} as any)}>
-            <Text style={styles.actionText}>{t('tripListCreate')}</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('CreateTrip', {patronId: session.userId, tripKind: 'trip'} as any)}>
+              <Text style={styles.actionText}>{t('tripListCreate')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBtn, styles.regattaBtn]} onPress={() => navigation.navigate('CreateTrip', {patronId: session.userId, tripKind: 'regatta'} as any)}>
+              <Text style={styles.actionText}>{t('tripListCreateRegatta')}</Text>
+            </TouchableOpacity>
+          </>
         ) : null}
         <TouchableOpacity style={[styles.actionBtn, styles.profileBtn]} onPress={() => navigation.getParent()?.navigate('Profile')}>
           <Text style={styles.actionText}>{t('tripListProfile')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.actionBtn, styles.exitBtn]} onPress={onLogout}>
+          <Text style={styles.actionText}>🚪 {t('profileLogout')}</Text>
         </TouchableOpacity>
       </View>
 
       {session?.role === 'viajero' && (
         <View style={styles.searchCard}>
-          <Text style={styles.searchTitle}>🔎 Buscar viaje</Text>
-          <TextInput
-            value={searchOrigin}
-            onChangeText={setSearchOrigin}
-            placeholder="Origen"
-            placeholderTextColor={colors.textSubtle}
-            style={styles.searchInput}
-          />
-          <TextInput
-            value={searchDestination}
-            onChangeText={setSearchDestination}
-            placeholder="Destino"
-            placeholderTextColor={colors.textSubtle}
-            style={styles.searchInput}
-          />
-          <TextInput
-            value={searchDate}
-            onChangeText={setSearchDate}
-            placeholder="Fecha (ej: 2026-03-06)"
-            placeholderTextColor={colors.textSubtle}
-            keyboardType="numbers-and-punctuation"
-            style={styles.searchInput}
-          />
-          <View style={styles.quickDateRow}>
-            <TouchableOpacity
-              style={styles.quickDateBtn}
-              onPress={() => setSearchDate(toIsoDate(new Date()))}
-            >
-              <Text style={styles.quickDateText}>Hoy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickDateBtn}
-              onPress={() => {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                setSearchDate(toIsoDate(tomorrow));
-              }}
-            >
-              <Text style={styles.quickDateText}>Mañana</Text>
-            </TouchableOpacity>
+          <View style={styles.searchHeaderRow}>
+            <Text style={styles.searchTitle}>🔎 Buscar viaje</Text>
+            {searchExpanded ? (
+              <TouchableOpacity
+                style={styles.searchCollapseBtn}
+                onPress={() => {
+                  if (!searchOrigin.trim() && !searchDestination.trim() && !searchDate.trim()) {
+                    setSearchExpanded(false);
+                  }
+                }}
+              >
+                <Text style={styles.searchCollapseBtnText}>Ocultar</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.originCompactWrap, searchExpanded && styles.originCompactWrapExpanded]}
+            onPress={() => setSearchExpanded(true)}
+          >
+            <Text style={styles.originCompactLabel}>⚓ {t('tripListSearchPortButton')}</Text>
+            <TextInput
+              value={searchOrigin}
+              onFocus={() => setSearchExpanded(true)}
+              onChangeText={(value) => {
+                setSearchOrigin(value);
+                if (value.trim().length > 0) {
+                  setSearchExpanded(true);
+                } else if (!searchDestination.trim() && !searchDate.trim()) {
+                  setSearchExpanded(false);
+                }
+              }}
+              placeholder={t('tripListSearchOriginPlaceholder')}
+              placeholderTextColor={colors.textSubtle}
+              style={styles.originCompactInput}
+            />
+          </TouchableOpacity>
+          {!searchExpanded ? <Text style={styles.searchHint}>{t('tripListSearchHint')}</Text> : null}
+          {searchExpanded ? (
+            <>
+              <TextInput
+                value={searchDestination}
+                onChangeText={setSearchDestination}
+                placeholder={t('tripListSearchDestinationPlaceholder')}
+                placeholderTextColor={colors.textSubtle}
+                style={styles.searchInput}
+              />
+              <TextInput
+                value={searchDate}
+                onChangeText={setSearchDate}
+                placeholder={t('tripListSearchDatePlaceholder')}
+                placeholderTextColor={colors.textSubtle}
+                keyboardType="numbers-and-punctuation"
+                style={styles.searchInput}
+              />
+              <View style={styles.quickDateRow}>
+                <TouchableOpacity
+                  style={styles.quickDateBtn}
+                  onPress={() => setSearchDate(toIsoDate(new Date()))}
+                >
+                  <Text style={styles.quickDateText}>Hoy</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.quickDateBtn}
+                  onPress={() => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    setSearchDate(toIsoDate(tomorrow));
+                  }}
+                >
+                  <Text style={styles.quickDateText}>Mañana</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : null}
           {(searchOrigin || searchDestination || searchDate) ? (
             <TouchableOpacity
               style={styles.clearSearchBtn}
@@ -327,6 +432,7 @@ export default function TripListScreen() {
                 setSearchOrigin('');
                 setSearchDestination('');
                 setSearchDate('');
+                setSearchExpanded(false);
               }}
             >
               <Text style={styles.clearSearchText}>Limpiar búsqueda</Text>
@@ -340,7 +446,8 @@ export default function TripListScreen() {
         <Text style={styles.summaryCount}>{filteredTrips.length}</Text>
       </View>
 
-      {error ? (
+      {/* Solo mostrar error si no hay viajes cargados y la carga falló */}
+      {error && (!trips || trips.length === 0) ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={loadTrips}>
@@ -362,7 +469,7 @@ export default function TripListScreen() {
         }
         renderItem={({item}) => {
           const timeWindowLabel = (windowValue?: string) => {
-            if (windowValue === 'morning') return 'Manana';
+            if (windowValue === 'morning') return 'Mañana';
             if (windowValue === 'afternoon') return 'Tarde';
             if (windowValue === 'night') return 'Noche';
             return '';
@@ -375,11 +482,25 @@ export default function TripListScreen() {
             const dateStr = d.toLocaleDateString(locale, {day: '2-digit', month: 'short'});
             const windowText = timeWindowLabel(item.timeWindow);
             if (windowText) return `${dateStr} · ${windowText}`;
-            return time ? `${dateStr} · ${time.slice(0,5)}` : dateStr;
+            return dateStr;
           };
           return (
             <View style={styles.cardWrap}>
             <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('TripDetail', {tripId: item.id, role: session?.role} as any)}>
+              {item.tripKind === 'regatta' ? (
+                <View style={styles.tripKindBadge}>
+                  <Text style={styles.tripKindBadgeText}>🏁 {t('tripKindRegatta')}</Text>
+                </View>
+              ) : null}
+              {item.boatImageUrl ? (
+                <RemoteImage
+                  uri={item.boatImageUrl}
+                  style={styles.cardBoatImage}
+                  fallbackText="⛵"
+                  fallbackStyle={styles.cardBoatImageFallback}
+                  fallbackTextStyle={styles.cardBoatImageFallbackText}
+                />
+              ) : null}
               <View style={styles.cardHeaderRow}>
                 <Text style={styles.title}>{item.title}</Text>
                 {session?.role === 'viajero' && item.patronId ? (
@@ -398,7 +519,8 @@ export default function TripListScreen() {
                 ) : null}
               </View>
               <Text style={styles.meta}>📍 {item.origin} → {item.destination}</Text>
-              <Text style={styles.meta}>🕒 {formatDate(item.departureDate, item.departureTime)}</Text>
+              <Text style={styles.meta}>🕒 {formatDate(item.departureDate)}</Text>
+              {item.captainNote ? <Text style={styles.captainNote}>{item.captainNote}</Text> : null}
               
               {/* Información del Patrón */}
               {item.patron && (
@@ -474,29 +596,49 @@ export default function TripListScreen() {
                     </>
                   )}
                 </View>
-                {session?.role === 'viajero' && (
+                {!isTripOwner(item) && (
                   <>
-                    {item.availableSeats > 0 ? (
-                      <TouchableOpacity 
-                        style={[styles.reserveBtn, getUserReservationForTrip(item.id) && styles.reservedBtn]}
-                        onPress={() => {
-                          const res = getUserReservationForTrip(item.id);
-                          if (res) {
-                            Alert.alert('Estado', `Tu solicitud está: ${res.status}`);
-                          } else {
-                            handleCreateReservation(item.id);
+                    {item.tripKind === 'regatta' ? (
+                      <View style={styles.fullBtn}>
+                        <Text style={styles.fullBtnText}>🏁 Regata sin plazas de marinería</Text>
+                      </View>
+                    ) : item.availableSeats > 0 ? (
+                      <View style={styles.reservationActions}>
+                        <TouchableOpacity 
+                          style={[styles.reserveBtn, getUserReservationForTrip(item.id) && styles.reservedBtn]}
+                          onPress={() => {
+                            const res = getUserReservationForTrip(item.id);
+                            if (res) {
+                              Alert.alert('Estado', `Tu solicitud está: ${res.status}`);
+                            } else {
+                              handleCreateReservation(item.id);
+                            }
+                          }}
+                          disabled={reservingTripId === item.id}
+                        >
+                          <Text style={styles.reserveBtnText}>
+                            {reservingTripId === item.id 
+                              ? '⏳ Enviando...'
+                              : getUserReservationForTrip(item.id) 
+                              ? `📋 ${getUserReservationForTrip(item.id).status}` 
+                              : '✋ Reservar'}
+                          </Text>
+                        </TouchableOpacity>
+                        {(() => {
+                          const reservation = getUserReservationForTrip(item.id);
+                          if (!reservation || !canCancelReservation(reservation.status)) {
+                            return null;
                           }
-                        }}
-                        disabled={reservingTripId === item.id}
-                      >
-                        <Text style={styles.reserveBtnText}>
-                          {reservingTripId === item.id 
-                            ? '⏳ Enviando...'
-                            : getUserReservationForTrip(item.id) 
-                            ? `📋 ${getUserReservationForTrip(item.id).status}` 
-                            : '✋ Reservar'}
-                        </Text>
-                      </TouchableOpacity>
+                          return (
+                            <TouchableOpacity
+                              style={styles.cancelReservationBtn}
+                              onPress={() => handleCancelReservation(String(reservation.id))}
+                            >
+                              <Text style={styles.cancelReservationBtnText}>Cancelar</Text>
+                            </TouchableOpacity>
+                          );
+                        })()}
+                      </View>
                     ) : (
                       <View style={styles.fullBtn}>
                         <Text style={styles.fullBtnText}>⛔ Completo</Text>
@@ -517,7 +659,7 @@ export default function TripListScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.ownerBtn, styles.deleteOwnerBtn]}
-                  onPress={() => handleCancelTrip(item)}
+                  onPress={() => handleDeleteTrip(item)}
                 >
                   <Text style={styles.ownerBtnText}>🗑️ Eliminar</Text>
                 </TouchableOpacity>
@@ -547,9 +689,12 @@ export default function TripListScreen() {
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: colors.background, padding: 16},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center'},
-  topActions: {flexDirection: 'row', gap: 10, marginBottom: 12},
+  topActions: {flexDirection: 'row', gap: 10, marginBottom: 12, flexWrap: 'wrap'},
   actionBtn: {backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8},
+  homeBtn: {backgroundColor: colors.textStrong},
+  regattaBtn: {backgroundColor: colors.accent},
   profileBtn: {backgroundColor: colors.primaryAlt},
+  exitBtn: {backgroundColor: colors.danger},
   actionText: {color: colors.white, fontWeight: '700'},
   summaryCard: {
     backgroundColor: colors.surface,
@@ -570,10 +715,41 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     marginBottom: 10,
   },
-  searchTitle: {color: colors.text, fontWeight: '700', marginBottom: 8},
+  searchHeaderRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
+  searchTitle: {color: colors.text, fontWeight: '700', fontSize: 14},
+  searchCollapseBtn: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  searchCollapseBtnText: {color: colors.textStrong, fontWeight: '700', fontSize: 11},
+  originCompactWrap: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 6,
+    marginBottom: 4,
+  },
+  originCompactWrapExpanded: {
+    marginBottom: 8,
+  },
+  originCompactLabel: {color: colors.textSubtle, fontSize: 11, fontWeight: '700', marginBottom: 2},
+  originCompactInput: {
+    color: colors.text,
+    fontSize: 15,
+    paddingVertical: 0,
+  },
+  searchHint: {color: colors.textSubtle, fontSize: 11, marginBottom: 2},
   searchInput: {
     borderWidth: 1,
     borderColor: colors.borderStrong,
@@ -618,6 +794,18 @@ const styles = StyleSheet.create({
   errorAction: {color: '#b91c1c', fontWeight: '700'},
   cardWrap: {marginBottom: 10},
   card: {backgroundColor: colors.surface, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border},
+  tripKindBadge: {
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+    backgroundColor: '#dcfce7',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  tripKindBadgeText: {color: '#166534', fontWeight: '700', fontSize: 12},
+  cardBoatImage: {width: '100%', height: 170, borderRadius: 10, marginBottom: 12, backgroundColor: colors.border},
+  cardBoatImageFallback: {backgroundColor: '#e0f2fe'},
+  cardBoatImageFallbackText: {fontSize: 40},
   ownerActions: {
     flexDirection: 'row',
     gap: 8,
@@ -646,6 +834,7 @@ const styles = StyleSheet.create({
   },
   favoriteIconText: {fontSize: 18},
   meta: {marginTop: 3, color: colors.textMuted, fontSize: 14},
+  captainNote: {marginTop: 8, color: colors.textStrong, fontSize: 13, lineHeight: 18},
   patronInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -681,6 +870,9 @@ const styles = StyleSheet.create({
   reserveBtn: {backgroundColor: colors.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
   reserveBtnText: {color: colors.white, fontWeight: '600', fontSize: 13},
   reservedBtn: {backgroundColor: colors.success},
+  reservationActions: {alignItems: 'flex-end', gap: 6},
+  cancelReservationBtn: {backgroundColor: colors.danger, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
+  cancelReservationBtnText: {color: colors.white, fontWeight: '700', fontSize: 12},
   fullBtn: {backgroundColor: '#e5e7eb', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6},
   fullBtnText: {color: '#6b7280', fontWeight: '600', fontSize: 13},
   emptyContainer: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60},

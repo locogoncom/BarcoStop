@@ -29,7 +29,10 @@ export type Patron = {
 
 export type Trip = {
   id: string;
+  tripKind?: 'trip' | 'regatta';
   title: string;
+  captainNote?: string;
+  boatImageUrl?: string;
   origin: string;
   destination: string;
   departureDate: string;
@@ -97,4 +100,29 @@ export type Conversation = {
   lastMessageTime?: string;
   unreadCount: number;
   updatedAt: string;
+};
+
+export type RegattaParticipant = {
+  reservationId?: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  status: string;
+  joinedAt?: string;
+};
+
+export type RegattaChatState = {
+  conversationId: string;
+  participants: RegattaParticipant[];
+};
+
+export type SupportMessage = {
+  id: string;
+  userId: string;
+  message: string;
+  adminReply?: string;
+  status: 'open' | 'answered' | 'closed';
+  createdAt: number;
+  updatedAt: number;
+  repliedAt?: number;
 };

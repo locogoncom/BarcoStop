@@ -1,0 +1,38 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BarcoStop feature graphic source">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#072F5F"/>
+      <stop offset="50%" stop-color="#0A5E9C"/>
+      <stop offset="100%" stop-color="#11A8C9"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#92E4F4" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FFBA08"/>
+      <stop offset="100%" stop-color="#FF7B00"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="500" fill="url(#bg)"/>
+
+  <path d="M0 356c90-42 180-64 270-64 94 0 188 22 282 64 94 42 188 64 282 64 64 0 127-10 190-30v110H0z" fill="url(#wave)"/>
+  <path d="M0 390c84-30 168-45 252-45 88 0 176 15 264 45 88 30 176 45 264 45 81 0 162-13 244-39v104H0z" fill="#8BE1F0" fill-opacity="0.18"/>
+
+  <g transform="translate(92 80)">
+    <text x="0" y="70" fill="#FFFFFF" font-size="88" font-family="Segoe UI, Arial, sans-serif" font-weight="800" letter-spacing="1.5">BarcoStop</text>
+    <rect x="0" y="88" width="392" height="8" rx="4" fill="url(#accent)"/>
+    <text x="0" y="150" fill="#DFF6FF" font-size="34" font-family="Segoe UI, Arial, sans-serif" font-weight="600">Comparte viajes en barco</text>
+    <text x="0" y="194" fill="#D0ECF8" font-size="26" font-family="Segoe UI, Arial, sans-serif">Conecta con la comunidad nautica</text>
+  </g>
+
+  <g transform="translate(674 62)">
+    <rect width="250" height="250" rx="42" fill="#FFFFFF" fill-opacity="0.1" stroke="#FFFFFF" stroke-opacity="0.18"/>
+    <path d="M125 54v136" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M127 66l-4 92 70-47z" fill="#FFFFFF"/>
+    <path d="M117 79l3 73-57-38z" fill="#E9F7FF"/>
+    <path d="M44 171c26 11 52 16 81 16 27 0 53-5 81-16-6 22-21 38-41 43-12 3-26 5-40 5-14 0-28-2-40-5-20-5-35-21-41-43z" fill="url(#accent)"/>
+    <path d="M24 225c37-21 71-31 102-31 32 0 66 10 102 31" fill="none" stroke="#C9F0FA" stroke-width="8" stroke-linecap="round" stroke-opacity="0.75"/>
+  </g>
+</svg>

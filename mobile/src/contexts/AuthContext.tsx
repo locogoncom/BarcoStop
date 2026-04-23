@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
 import type {SessionData} from '../types';
-import {setAuthToken} from '../services/api';
+import {API_ORIGIN} from '../config/apiConfig';
+import {registerAuthFailureHandler, setAuthToken} from '../services/api';
+import {feedback} from '../theme/feedback';
 
 type AuthContextType = {
   session: SessionData | null;
@@ -11,12 +13,61 @@ type AuthContextType = {
 };
 
 const SESSION_KEY = 'barcostop_session';
+const SESSION_STORAGE_VERSION = 2;
+
+type PersistedSession = {
+  version: number;
+  apiOrigin: string;
+  session: SessionData;
+};
+
+const isValidSessionData = (value: any): value is SessionData => {
+  return Boolean(
+    value &&
+      value.userId &&
+      value.email &&
+      value.name &&
+      value.role &&
+      typeof value.token === 'string' &&
+      value.token.trim(),
+  );
+};
+
+const readPersistedSession = (raw: any): SessionData | null => {
+  if (
+    raw &&
+    raw.version === SESSION_STORAGE_VERSION &&
+    raw.apiOrigin === API_ORIGIN &&
+    isValidSessionData(raw.session)
+  ) {
+    return raw.session;
+  }
+
+  return null;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({children}: {children: React.ReactNode}) {
   const [session, setSession] = useState<SessionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const clearSession = async () => {
+    await AsyncStorage.removeItem(SESSION_KEY);
+    setSession(null);
+    setAuthToken(null);
+  };
+
+  useEffect(() => {
+    registerAuthFailureHandler(async (message) => {
+      await clearSession();
+      feedback.alert('Sesion expirada', message || 'Tu sesion ya no es valida. Inicia sesion de nuevo.');
+    });
+
+    return () => {
+      registerAuthFailureHandler(null);
+    };
+  }, []);
 
   useEffect(() => {
     const restorePersistedSession = async () => {
@@ -28,18 +79,18 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
         }
 
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.userId && parsed.email && parsed.name && parsed.role && parsed.token) {
-          setSession(parsed);
-          setAuthToken(parsed.token || null);
+        const restoredSession = readPersistedSession(parsed);
+
+        if (restoredSession) {
+          setSession(restoredSession);
+          setAuthToken(restoredSession.token || null);
           return;
         }
 
-        await AsyncStorage.removeItem(SESSION_KEY);
-        setAuthToken(null);
+        await clearSession();
       } catch (error) {
         console.error('Error restoring session:', error);
-        await AsyncStorage.removeItem(SESSION_KEY);
-        setAuthToken(null);
+        await clearSession();
       } finally {
         setIsLoading(false);
       }
@@ -48,15 +99,19 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   }, []);
 
   const login = async (sessionData: SessionData) => {
-    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+    const persisted: PersistedSession = {
+      version: SESSION_STORAGE_VERSION,
+      apiOrigin: API_ORIGIN,
+      session: sessionData,
+    };
+
+    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(persisted));
     setSession(sessionData);
     setAuthToken(sessionData.token || null);
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem(SESSION_KEY);
-    setSession(null);
-    setAuthToken(null);
+    await clearSession();
   };
 
   const value = useMemo(

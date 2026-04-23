@@ -1,0 +1,23 @@
+<svg width="1920" height="1200" viewBox="0 0 1920 1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1200" fill="url(#bg)"/>
+  <text x="100" y="132" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="82" font-weight="800">Chat y reservas</text>
+
+  <rect x="80" y="200" width="1760" height="900" rx="34" fill="#FFFFFF" fill-opacity="0.16"/>
+
+  <rect x="130" y="260" width="620" height="760" rx="22" fill="#FFFFFF"/>
+  <text x="174" y="340" fill="#0F172A" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700">Conversaciones</text>
+  <rect x="174" y="380" width="532" height="120" rx="16" fill="#E2E8F0"/>
+  <rect x="174" y="530" width="532" height="120" rx="16" fill="#E2E8F0"/>
+  <rect x="174" y="680" width="532" height="120" rx="16" fill="#E2E8F0"/>
+
+  <rect x="790" y="260" width="1000" height="760" rx="22" fill="#FFFFFF"/>
+  <text x="836" y="340" fill="#0F172A" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700">Reserva confirmada</text>
+  <rect x="836" y="390" width="908" height="200" rx="20" fill="#DCFCE7"/>
+  <rect x="836" y="630" width="908" height="320" rx="20" fill="#DBEAFE"/>
+</svg>

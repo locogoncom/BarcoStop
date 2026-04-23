@@ -140,14 +140,6 @@ const startServer = async () => {
 
     if (dbType === 'sqlite' || dbType === 'mysql') {
       await db.createTables();
-         // Limpieza de datos antiguos conflictivos (IDs no UUID)
-      try {
-        console.log('🧹 Limpiando IDs antiguos conflictivos...');
-        await db.query('DELETE FROM trips WHERE LENGTH(id) < 30');
-        console.log('✅ Limpieza completada.');
-      } catch (e) {
-        console.warn('⚠️ No se pudo realizar la limpieza de IDs:', e.message);
-      }
     }
 
     // Cleanup automático de viajes caducados (libera espacio).

@@ -17,7 +17,8 @@ import type {Conversation, User} from '../types';
 import {colors} from '../theme/colors';
 import {feedback} from '../theme/feedback';
 import {radius, spacing} from '../theme/layout';
-import {getErrorMessage} from '../utils/errors';
+import {getErrorMessage, isAuthorizationError, isNotFoundError} from '../utils/errors';
+import {RemoteImage} from '../components/RemoteImage';
 
 export default function MessagesScreen({navigation}: any) {
   const {session} = useAuth();
@@ -36,7 +37,10 @@ export default function MessagesScreen({navigation}: any) {
       setConversations(data);
     } catch (error) {
       console.error('Error loading conversations:', error);
-      feedback.error(getErrorMessage(error, 'No pudimos cargar las conversaciones'));
+      setConversations([]);
+      if (!isAuthorizationError(error) && !isNotFoundError(error)) {
+        feedback.error(getErrorMessage(error, 'No pudimos cargar las conversaciones'));
+      }
     } finally {
       setLoading(false);
     }
@@ -48,21 +52,24 @@ export default function MessagesScreen({navigation}: any) {
       setUsers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading users:', error);
-      feedback.error(getErrorMessage(error, 'No pudimos cargar los usuarios'));
+      if (!isNotFoundError(error)) {
+        feedback.error(getErrorMessage(error, 'No pudimos cargar los usuarios'));
+      }
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
     await loadConversations();
-    await loadUsers();
+    if (shouldShowUsers) {
+      await loadUsers();
+    }
     setRefreshing(false);
   };
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadConversations();
-      loadUsers();
     });
     return unsubscribe;
   }, [navigation, session?.userId]);
@@ -81,6 +88,7 @@ export default function MessagesScreen({navigation}: any) {
       setShowUserPicker(false);
       setQuery('');
       navigation.navigate('Chat', {
+        chatSeed: `${user.id}-${Date.now()}`,
         otherUserName: user.name,
         otherUserId: user.id,
       });
@@ -107,6 +115,12 @@ export default function MessagesScreen({navigation}: any) {
   );
   const shouldShowUsers = showUserPicker || normalizedQuery.length > 0;
 
+  useEffect(() => {
+    if (shouldShowUsers && users.length === 0) {
+      loadUsers();
+    }
+  }, [shouldShowUsers, users.length]);
+
   const renderConversation = ({item}: {item: Conversation}) => {
     const lastMessagePreview = item.lastMessage ? 
       (item.lastMessage.length > 50 ? item.lastMessage.substring(0, 50) + '...' : item.lastMessage) 
@@ -128,9 +142,12 @@ export default function MessagesScreen({navigation}: any) {
       >
         <View style={styles.avatarContainer}>
           {item.otherUserAvatar ? (
-            <Image
-              source={{uri: item.otherUserAvatar}}
+            <RemoteImage
+              uri={item.otherUserAvatar}
               style={styles.avatar}
+              fallbackText={item.otherUserName?.[0]?.toUpperCase() || '?'}
+              fallbackStyle={styles.avatarPlaceholder}
+              fallbackTextStyle={styles.avatarInitial}
             />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>

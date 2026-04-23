@@ -1,21 +1,21 @@
 export const colors = {
-  primary: '#0284c7',
-  primaryAlt: '#0ea5e9',
-  accent: '#f59e0b',
+  primary: '#1cc7b6',        // Verde turquesa principal
+  primaryAlt: '#4fd1c5',     // Turquesa claro
+  accent: '#38bdf8',         // Azul claro de acento
   success: '#10b981',
   danger: '#ef4444',
 
-  background: '#f8fafc',
-  backgroundSoft: '#f0f9ff',
+  background: '#e0f7fa',     // Celeste muy suave
+  backgroundSoft: '#b2f5ea', // Celeste pastel
   surface: '#ffffff',
 
-  text: '#0f172a',
-  textStrong: '#1e293b',
+  text: '#134e4a',           // Texto fuerte, verde oscuro
+  textStrong: '#0f172a',
   textMuted: '#64748b',
   textSubtle: '#94a3b8',
 
-  border: '#e2e8f0',
-  borderStrong: '#cbd5e1',
+  border: '#b2f5ea',         // Borde celeste pastel
+  borderStrong: '#4fd1c5',   // Borde turquesa
 
   white: '#ffffff',
 } as const;

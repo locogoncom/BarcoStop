@@ -4,11 +4,23 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-     "start": "npm --prefix server start",
-     "postinstall": "npm --prefix server install",
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "npm --prefix server start",
+    "postinstall": "npm --prefix server install",
+    "barcostop:activate": "powershell -ExecutionPolicy Bypass -File ./scripts/continuar-barcostop.ps1",
+    "keep:continue": "powershell -ExecutionPolicy Bypass -File ./scripts/continuar-keep.ps1",
+    "keeplay:continue": "npm run keep:continue",
+    "app:barcostop": "powershell -ExecutionPolicy Bypass -File ./apps/BarcoStop/open.ps1",
+    "app:keep": "powershell -ExecutionPolicy Bypass -File ./apps/Keep/open.ps1",
+    "app:keeplay": "npm run app:keep",
+    "app:keepplaying": "npm run app:keep",
+    "keep:backend": "npm --prefix ./apps/Keep/server start",
+    "keep:metro": "npm --prefix ./apps/Keep/mobile run dev:metro",
+    "keep:activate": "npm --prefix ./apps/Keep/mobile run dev:activate",
+    "keep:stable": "npm --prefix ./apps/Keep/mobile run dev:stable",
+    "keep:launch": "npm --prefix ./apps/Keep/mobile run dev:launch"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.0.1",
@@ -23,6 +35,7 @@
     "react-native-screens": "^4.24.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@vitejs/plugin-react": "^4.1.0",

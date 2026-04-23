@@ -1,26 +1,31 @@
 import {useNavigation} from '@react-navigation/native';
 import React, {useEffect, useState} from 'react';
-import {ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, Image} from 'react-native';
+import {ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {launchImageLibrary, type ImageLibraryOptions} from 'react-native-image-picker';
 import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
-import {userService, ratingService, donationService} from '../services/api';
+import {buildPayPalMeUrl} from '../config/paypal';
+import {userService, ratingService, donationService, supportMessageService} from '../services/api';
+import {RemoteImage} from '../components/RemoteImage';
 import {RatingStars} from '../components/RatingStars';
 import {PayPalWebViewModal} from '../components/PayPalWebViewModal';
-import type {UserSkill, Rating} from '../types';
+import type {UserSkill, Rating, SupportMessage} from '../types';
 import {colors} from '../theme/colors';
 import {feedback} from '../theme/feedback';
 import {radius, shadows, spacing} from '../theme/layout';
+import {getErrorMessage, isNotFoundError} from '../utils/errors';
+import {normalizeRemoteAssetUrl} from '../utils/assets';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const {session, logout} = useAuth();
-  const {t} = useLanguage();
+  const {t, language} = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarLocalMeta, setAvatarLocalMeta] = useState<{uri: string; fileName?: string; type?: string} | null>(null);
   const [bio, setBio] = useState('');
 
   const [boatName, setBoatName] = useState('');
@@ -37,6 +42,23 @@ export default function ProfileScreen() {
   const [paypalVisible, setPaypalVisible] = useState(false);
   const [paypalUrl, setPaypalUrl] = useState('');
   const [pendingDonationAmount, setPendingDonationAmount] = useState<number | null>(null);
+  const [supportExpanded, setSupportExpanded] = useState(false);
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [supportDraft, setSupportDraft] = useState('');
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportLoaded, setSupportLoaded] = useState(false);
+  const [supportSending, setSupportSending] = useState(false);
+  const [deletingSupportId, setDeletingSupportId] = useState<string | null>(null);
+
+  const goToHome = () => {
+    const rootNav = navigation.getParent()?.getParent?.() || navigation.getParent?.() || navigation;
+    rootNav.reset({
+      index: 0,
+      routes: [{name: 'MainApp', state: {index: 0, routes: [{name: 'Trips'}]}}],
+    });
+  };
+
+  const locale = language === 'fr' ? 'fr-FR' : language === 'pt' ? 'pt-PT' : language === 'es' ? 'es-ES' : 'en-GB';
 
   const safeAverageRating = (() => {
     const parsed = Number(averageRating);
@@ -51,22 +73,36 @@ export default function ProfileScreen() {
       const candidate = (value as any).name ?? (value as any).email ?? (value as any).id;
       if (typeof candidate === 'string' && candidate.trim()) return candidate;
     }
-    return 'Usuario anonimo';
+    return t('profileAnonymousUser');
   };
 
   const formatReviewDate = (value: unknown) => {
     const date = typeof value === 'string' || typeof value === 'number' ? new Date(value) : null;
     if (!date || Number.isNaN(date.getTime())) {
-      return 'Fecha no disponible';
+      return t('profileDateUnavailable');
     }
-    return date.toLocaleDateString('es-ES');
+    return date.toLocaleDateString(locale);
+  };
+
+  const formatSupportDate = (value: number | undefined) => {
+    if (!value || !Number.isFinite(value)) return t('profileDateUnavailable');
+    return new Date(value).toLocaleString(locale, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getSupportStatusLabel = (status: SupportMessage['status']) => {
+    if (status === 'answered') return t('profileImproveStatusAnswered');
+    if (status === 'closed') return t('profileImproveStatusClosed');
+    return t('profileImproveStatusOpen');
   };
 
   const sanitizeAvatarUrl = (value: string): string => {
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-    if (/^(https?:\/\/|content:\/\/|file:\/\/|ph:\/\/|assets-library:\/\/)/i.test(trimmed)) return trimmed;
-    return '';
+    return normalizeRemoteAssetUrl(value) || '';
   };
 
   const isLocalAvatarUri = (value: string): boolean => /^(content:\/\/|file:\/\/|ph:\/\/|assets-library:\/\/)/i.test(value.trim());
@@ -86,26 +122,43 @@ export default function ProfileScreen() {
       }
 
       if (response.errorCode) {
-        feedback.info('No se pudo abrir la galeria', 'Aviso');
+        feedback.info(t('profileAvatarOpenError'), t('alertErrorTitle'));
         return;
       }
 
-      const selectedUri = response.assets?.[0]?.uri?.trim();
+      const asset = response.assets?.[0];
+      const selectedUri = asset?.uri?.trim();
       if (!selectedUri) {
-        feedback.info('No se pudo obtener la foto seleccionada', 'Aviso');
+        feedback.info(t('profileAvatarReadError'), t('alertErrorTitle'));
+        return;
+      }
+
+      const selectedType = typeof asset?.type === 'string' ? asset.type : undefined;
+      const selectedFileName = typeof asset?.fileName === 'string' ? asset.fileName : undefined;
+      const selectedFileSize = typeof asset?.fileSize === 'number' ? asset.fileSize : undefined;
+
+      if (selectedType && /image\/hei(c|f)/i.test(selectedType)) {
+        feedback.error(t('profileAvatarFormatError'));
+        return;
+      }
+
+      // Backend limita avatar a 5MB
+      if (selectedFileSize && selectedFileSize > 5 * 1024 * 1024) {
+        feedback.error(t('profileAvatarTooLarge'));
         return;
       }
 
       setAvatarUrl(selectedUri);
+      setAvatarLocalMeta({uri: selectedUri, fileName: selectedFileName, type: selectedType});
     } catch (_error) {
-      feedback.info('No se pudo seleccionar la foto', 'Aviso');
+      feedback.info(t('profileAvatarSelectError'), t('alertErrorTitle'));
     }
   };
 
   const openPayPalDonation = (amount: number) => {
     const fixedAmount = Math.max(2.5, amount);
     setPendingDonationAmount(fixedAmount);
-    setPaypalUrl(`https://paypal.me/BarcoStop/${fixedAmount.toFixed(2)}`);
+    setPaypalUrl(buildPayPalMeUrl(fixedAmount, 2.5));
     setPaypalVisible(true);
   };
 
@@ -117,21 +170,24 @@ export default function ProfileScreen() {
     }
 
     feedback.confirm(
-      'Confirmar donación',
-      `¿Completaste la donación de €${pendingDonationAmount.toFixed(2)} en PayPal?`,
+      t('profileDonationConfirmTitle'),
+      t('profileDonationConfirmMessage').replace('{{amount}}', pendingDonationAmount.toFixed(2)),
       [
-        {text: 'No todavía', style: 'cancel'},
+        {text: t('profileCancel'), style: 'cancel'},
         {
-          text: 'Sí, confirmar',
+          text: t('profileConfirm'),
           onPress: async () => {
             try {
               await donationService.createDonation({
                 userId: session.userId,
                 amount: pendingDonationAmount,
               });
-              feedback.success(`Donacion de €${pendingDonationAmount.toFixed(2)} registrada`, 'Gracias');
+              feedback.success(
+                t('profileDonationRecorded').replace('{{amount}}', pendingDonationAmount.toFixed(2)),
+                t('alertOkTitle'),
+              );
             } catch (error) {
-              feedback.info('No pudimos registrar la donacion automaticamente', 'Aviso');
+              feedback.info(t('profileDonationRecordFailed'), t('alertErrorTitle'));
             } finally {
               setPendingDonationAmount(null);
             }
@@ -139,6 +195,22 @@ export default function ProfileScreen() {
         },
       ]
     );
+  };
+
+  const loadSupportMessages = async () => {
+    if (!session?.userId) return;
+    try {
+      setSupportLoading(true);
+      const data = await supportMessageService.getUserMessages(session.userId);
+      setSupportMessages(data);
+    } catch (error) {
+      if (!isNotFoundError(error)) {
+        feedback.error(getErrorMessage(error, t('profileImproveLoadError')));
+      }
+    } finally {
+      setSupportLoaded(true);
+      setSupportLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -200,14 +272,20 @@ export default function ProfileScreen() {
         }
       } catch (error) {
         console.error('Error loading profile:', error);
-        feedback.alert(t('alertErrorTitle'), t('profileLoadError'));
+        feedback.alert(t('alertErrorTitle'), getErrorMessage(error, t('profileLoadError')));
       } finally {
         setLoading(false);
       }
     };
 
     loadProfile();
-  }, [session?.userId, t]);
+  }, [session?.userId, t, locale]);
+
+  useEffect(() => {
+    if (supportExpanded && session?.userId && !supportLoaded && !supportLoading) {
+      loadSupportMessages();
+    }
+  }, [supportExpanded, session?.userId, supportLoaded, supportLoading]);
 
   const splitCsv = (text: string) =>
     text
@@ -229,9 +307,13 @@ export default function ProfileScreen() {
       let resolvedAvatar = sanitizeAvatarUrl(avatarUrl);
 
       if (resolvedAvatar && isLocalAvatarUri(resolvedAvatar)) {
-        const uploadedUrl = await userService.uploadAvatar(session.userId, resolvedAvatar);
+        const meta = avatarLocalMeta?.uri === resolvedAvatar ? avatarLocalMeta : null;
+        const uploadedUrl = await userService.uploadAvatar(session.userId, resolvedAvatar, {
+          filename: meta?.fileName,
+          mimeType: meta?.type,
+        });
         if (!uploadedUrl) {
-          throw new Error('No se pudo subir el avatar');
+          throw new Error(t('profileAvatarUploadError'));
         }
         resolvedAvatar = uploadedUrl;
         setAvatarUrl(uploadedUrl);
@@ -246,8 +328,9 @@ export default function ProfileScreen() {
         skills,
       });
       feedback.alert(t('alertOkTitle'), t('profileSaved'));
-    } catch (_e) {
-      feedback.alert(t('alertErrorTitle'), t('profileLoadError'));
+      setAvatarLocalMeta(null);
+    } catch (_e: any) {
+      feedback.alert(t('alertErrorTitle'), getErrorMessage(_e, t('profileSaveError')));
     } finally {
       setSaving(false);
     }
@@ -261,6 +344,58 @@ export default function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           await logout();
+          // Volver siempre a la pantalla de inicio tras cerrar sesión
+          const rootNav = navigation.getParent()?.getParent?.() || navigation.getParent?.() || navigation;
+          rootNav.reset({
+            index: 0,
+            routes: [{name: 'Home'}],
+          });
+        },
+      },
+    ]);
+  };
+
+  const handleSendSupportMessage = async () => {
+    if (!session?.userId) return;
+
+    const message = supportDraft.trim();
+    if (!message) {
+      feedback.info(t('profileImproveInputPlaceholder'), t('alertMissingTitle'));
+      return;
+    }
+
+    try {
+      setSupportSending(true);
+      const created = await supportMessageService.createMessage({userId: session.userId, message});
+      setSupportMessages(prev => [created, ...prev]);
+      setSupportDraft('');
+      setSupportLoaded(true);
+      setSupportExpanded(true);
+      feedback.success(t('profileImproveSent'), t('alertOkTitle'));
+    } catch (error) {
+      feedback.error(getErrorMessage(error, t('profileImproveSendError')));
+    } finally {
+      setSupportSending(false);
+    }
+  };
+
+  const handleDeleteSupportMessage = (id: string) => {
+    feedback.confirm(t('profileImproveDeleteTitle'), t('profileImproveDeleteMessage'), [
+      {text: t('profileCancel'), style: 'cancel'},
+      {
+        text: t('profileImproveDelete'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setDeletingSupportId(id);
+            await supportMessageService.deleteMessage(id);
+            setSupportMessages(prev => prev.filter(item => item.id !== id));
+            feedback.success(t('profileImproveDeleted'), t('alertOkTitle'));
+          } catch (error) {
+            feedback.error(getErrorMessage(error, t('profileImproveDeleteError')));
+          } finally {
+            setDeletingSupportId(null);
+          }
         },
       },
     ]);
@@ -276,9 +411,14 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity style={styles.homeBtn} onPress={() => navigation.navigate('Home')}>
-        <Text style={styles.homeBtnText}>🏠 {t('goHome')}</Text>
-      </TouchableOpacity>
+      <View style={styles.topActionsRow}>
+        <TouchableOpacity style={styles.homeBtn} onPress={goToHome}>
+          <Text style={styles.homeBtnText}>🏠 {t('goHome')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.exitBtn} onPress={onLogout}>
+          <Text style={styles.exitBtnText}>🚪 {t('profileLogout')}</Text>
+        </TouchableOpacity>
+      </View>
 
       <Text style={styles.title}>{t('profileTitle')}</Text>
       <Text style={styles.line}>{t('profileEmail')}: {session?.email}</Text>
@@ -287,39 +427,35 @@ export default function ProfileScreen() {
       </Text>
 
       <View style={styles.avatarSection}>
-        <Text style={styles.avatarTitle}>Foto de perfil</Text>
+        <Text style={styles.avatarTitle}>{t('profilePhotoTitle')}</Text>
         <View style={styles.avatarMediaWrap}>
           {sanitizeAvatarUrl(avatarUrl) ? (
-            <Image source={{uri: sanitizeAvatarUrl(avatarUrl)}} style={styles.avatarPreview} />
+            <RemoteImage
+              uri={avatarUrl}
+              style={styles.avatarPreview}
+              fallbackText="📷"
+              fallbackStyle={styles.avatarFallback}
+              fallbackTextStyle={styles.avatarFallbackText}
+            />
           ) : (
             <View style={styles.avatarFallback}>
               <Text style={styles.avatarFallbackText}>📷</Text>
             </View>
           )}
         </View>
-        <TextInput
-          style={[styles.input, styles.avatarInput]}
-          placeholder="URL de foto (https://...)"
-          value={avatarUrl}
-          onChangeText={setAvatarUrl}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
         <TouchableOpacity style={styles.galleryBtn} onPress={pickAvatarFromGallery}>
-          <Text style={styles.galleryBtnText}>Elegir de galeria</Text>
+          <Text style={styles.galleryBtnText}>{t('profileChooseGallery')}</Text>
         </TouchableOpacity>
-        <Text style={styles.avatarHint}>
-          Puedes pegar URL publica o elegir una foto desde tu galeria.
-        </Text>
+        <Text style={styles.avatarHint}>{t('profileAvatarHint')}</Text>
       </View>
 
       {/* Sección de Ratings */}
       <View style={styles.ratingsSection}>
-        <Text style={styles.sectionTitle}>⭐ Puntuación</Text>
+        <Text style={styles.sectionTitle}>⭐ {t('profileRatingTitle')}</Text>
         <View style={styles.ratingCard}>
           <View style={styles.ratingHeaderRow}>
             <View style={styles.ratingHeaderLeft}>
-              <Text style={styles.ratingTitle}>Mi Puntuación</Text>
+              <Text style={styles.ratingTitle}>{t('profileMyRating')}</Text>
               <View style={styles.ratingStarContainer}>
                 <RatingStars rating={safeAverageRating} size="lg" />
                 <Text style={styles.ratingScore}>{safeAverageRating.toFixed(1)}</Text>
@@ -327,7 +463,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.ratingHeaderRight}>
               <Text style={styles.ratingCount}>{ratings.length}</Text>
-              <Text style={styles.ratingCountLabel}>comentarios</Text>
+              <Text style={styles.ratingCountLabel}>{t('profileCommentsCount')}</Text>
             </View>
           </View>
         </View>
@@ -335,7 +471,7 @@ export default function ProfileScreen() {
         {/* Lista de Reviews */}
         {ratings.length > 0 && (
           <View style={styles.reviewsList}>
-            <Text style={styles.reviewsTitle}>Comentarios de usuarios</Text>
+            <Text style={styles.reviewsTitle}>{t('profileUserComments')}</Text>
             {ratings.map((rating) => (
               <View key={rating.id} style={styles.reviewItem}>
                 <View style={styles.reviewHeader}>
@@ -344,7 +480,7 @@ export default function ProfileScreen() {
                       <Text style={styles.avatarText}>👤</Text>
                     </View>
                     <View style={styles.reviewerDetails}>
-                      <Text style={styles.reviewerName}>{rating.ratedBy || 'Usuario anónimo'}</Text>
+                      <Text style={styles.reviewerName}>{rating.ratedBy || t('profileAnonymousUser')}</Text>
                       <Text style={styles.reviewDate}>
                         {formatReviewDate(rating.createdAt)}
                       </Text>
@@ -414,31 +550,27 @@ export default function ProfileScreen() {
         <Text style={styles.saveText}>{saving ? t('profileSaving') : t('profileSave')}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-        <Text style={styles.logoutText}>{t('profileLogout')}</Text>
-      </TouchableOpacity>
-
       {/* Botón de donación PayPal */}
       <View style={styles.donationSection}>
         <Text style={styles.donationMessage}>
-          Gracias por invitar al equipo BarcoStop, una birra o café ☕
+          {t('profileDonationThanks')} ☕
         </Text>
         <TouchableOpacity 
           style={styles.donationBtn}
           onPress={() => {
             feedback.confirm(
-              '💙 Donación PayPal',
-              'Gracias por tu apoyo al equipo BarcoStop. Mínimo de donación: €2.50',
+              `💙 ${t('profileDonateTitle')}`,
+              t('profileDonatePrompt'),
               [
-                {text: 'Cancelar', style: 'cancel'},
+                {text: t('profileCancel'), style: 'cancel'},
                 {
-                  text: 'Donar €2.50',
+                  text: t('profileDonateSmall'),
                   onPress: () => {
                     openPayPalDonation(2.5);
                   }
                 },
                 {
-                  text: 'Donar €5.00',
+                  text: t('profileDonateMedium'),
                   onPress: () => {
                     openPayPalDonation(5);
                   }
@@ -447,14 +579,96 @@ export default function ProfileScreen() {
             );
           }}
         >
-          <Text style={styles.donationBtnText}>💳 Donar con PayPal</Text>
+          <Text style={styles.donationBtnText}>💳 {t('profileDonateButton')}</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.supportSection}>
+        <TouchableOpacity style={styles.supportToggleButton} onPress={() => setSupportExpanded(prev => !prev)}>
+          <Text style={styles.supportToggleText}>💬 {t('profileImproveButton')}</Text>
+          <Text style={styles.supportToggleChevron}>{supportExpanded ? '−' : '+'}</Text>
+        </TouchableOpacity>
+
+        {supportExpanded ? (
+          <View style={styles.supportPanel}>
+            <Text style={styles.supportTitle}>{t('profileImproveTitle')}</Text>
+            <Text style={styles.supportSubtitle}>{t('profileImproveSubtitle')}</Text>
+
+            <Text style={styles.label}>{t('profileImproveInputLabel')}</Text>
+            <TextInput
+              style={[styles.input, styles.multiline, styles.supportInput]}
+              value={supportDraft}
+              onChangeText={setSupportDraft}
+              placeholder={t('profileImproveInputPlaceholder')}
+              placeholderTextColor={colors.textSubtle}
+              multiline
+              maxLength={1500}
+            />
+
+            <TouchableOpacity
+              style={[styles.supportSendButton, supportSending && styles.buttonDisabled]}
+              onPress={handleSendSupportMessage}
+              disabled={supportSending}
+            >
+              <Text style={styles.supportSendText}>{supportSending ? t('profileImproveSending') : t('profileImproveSend')}</Text>
+            </TouchableOpacity>
+
+            {supportLoading ? (
+              <View style={styles.supportLoadingRow}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : supportMessages.length === 0 ? (
+              <Text style={styles.supportEmpty}>{t('profileImproveEmpty')}</Text>
+            ) : (
+              <View style={styles.supportList}>
+                {supportMessages.map(item => (
+                  <View key={item.id} style={styles.supportCard}>
+                    <View style={styles.supportCardHeader}>
+                      <View
+                        style={[
+                          styles.supportStatusBadge,
+                          item.status === 'answered'
+                            ? styles.supportStatusAnswered
+                            : item.status === 'closed'
+                              ? styles.supportStatusClosed
+                              : styles.supportStatusOpen,
+                        ]}
+                      >
+                        <Text style={styles.supportStatusText}>{getSupportStatusLabel(item.status)}</Text>
+                      </View>
+                      <Text style={styles.supportDate}>{formatSupportDate(item.createdAt)}</Text>
+                    </View>
+                    <Text style={styles.supportMessage}>{item.message}</Text>
+
+                    {item.adminReply ? (
+                      <View style={styles.supportReplyBox}>
+                        <Text style={styles.supportReplyTitle}>{t('profileImproveReplyTitle')}</Text>
+                        <Text style={styles.supportReplyText}>{item.adminReply}</Text>
+                        <Text style={styles.supportReplyDate}>{formatSupportDate(item.repliedAt || item.updatedAt)}</Text>
+                      </View>
+                    ) : null}
+
+                    <TouchableOpacity
+                      style={styles.supportDeleteButton}
+                      onPress={() => handleDeleteSupportMessage(item.id)}
+                      disabled={deletingSupportId === item.id}
+                    >
+                      <Text style={styles.supportDeleteText}>
+                        {deletingSupportId === item.id ? `${t('profileImproveDelete')}...` : t('profileImproveDelete')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        ) : null}
       </View>
 
       <PayPalWebViewModal
         visible={paypalVisible}
         url={paypalUrl}
-        title="Donación con PayPal"
+        title={t('profileDonateTitle')}
         onClose={handleCloseDonationWebView}
       />
       
@@ -467,15 +681,25 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {padding: spacing.xl, backgroundColor: colors.background},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background},
+  topActionsRow: {flexDirection: 'row', gap: 8, marginBottom: spacing.md},
   homeBtn: {
-    alignSelf: 'flex-start',
+    flex: 1,
     backgroundColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: radius.md,
-    marginBottom: spacing.md,
+    alignItems: 'center',
   },
   homeBtnText: {color: colors.text, fontWeight: '700'},
+  exitBtn: {
+    flex: 1,
+    backgroundColor: colors.danger,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    alignItems: 'center',
+  },
+  exitBtnText: {color: colors.white, fontWeight: '700'},
   title: {fontSize: 24, fontWeight: '800', marginBottom: 16, color: colors.text},
   line: {fontSize: 16, marginBottom: 6, color: colors.textStrong},
   roleLine: {marginBottom: 14},
@@ -508,9 +732,6 @@ const styles = StyleSheet.create({
   saveButton: {marginTop: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 14},
   saveText: {textAlign: 'center', color: colors.white, fontWeight: '700'},
   buttonDisabled: {opacity: 0.6},
-  logoutButton: {marginTop: spacing.md, backgroundColor: colors.danger, borderRadius: radius.lg, paddingVertical: 14},
-  logoutText: {textAlign: 'center', color: colors.white, fontWeight: '700'},
-  
   // Donation styles
   donationSection: {
     marginTop: spacing.xl,
@@ -581,6 +802,156 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
+  supportSection: {
+    marginTop: spacing.lg,
+  },
+  supportToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  supportToggleText: {
+    color: colors.textStrong,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  supportToggleChevron: {
+    color: colors.primary,
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  supportPanel: {
+    marginTop: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+  },
+  supportTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  supportSubtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  supportInput: {
+    minHeight: 110,
+    marginBottom: 12,
+  },
+  supportSendButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  supportSendText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  supportLoadingRow: {
+    paddingVertical: 18,
+    alignItems: 'center',
+  },
+  supportEmpty: {
+    marginTop: 14,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  supportList: {
+    marginTop: 16,
+    gap: 12,
+  },
+  supportCard: {
+    backgroundColor: colors.background,
+    borderRadius: radius.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  supportCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  supportStatusBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  supportStatusOpen: {
+    backgroundColor: '#e0f2fe',
+  },
+  supportStatusAnswered: {
+    backgroundColor: '#dcfce7',
+  },
+  supportStatusClosed: {
+    backgroundColor: '#ede9fe',
+  },
+  supportStatusText: {
+    color: colors.textStrong,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  supportDate: {
+    color: colors.textMuted,
+    fontSize: 12,
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  supportMessage: {
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  supportReplyBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: radius.lg,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  supportReplyTitle: {
+    color: colors.primary,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  supportReplyText: {
+    color: colors.textStrong,
+    lineHeight: 20,
+  },
+  supportReplyDate: {
+    marginTop: 8,
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  supportDeleteButton: {
+    alignSelf: 'flex-end',
+    marginTop: 12,
+    backgroundColor: '#fee2e2',
+    borderRadius: radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  supportDeleteText: {
+    color: '#b91c1c',
+    fontWeight: '700',
+  },
   
   // Rating styles
   ratingsSection: {
@@ -588,9 +959,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-  },
-  avatarInput: {
-    width: '100%',
   },
   galleryBtn: {
     backgroundColor: '#0ea5e9',

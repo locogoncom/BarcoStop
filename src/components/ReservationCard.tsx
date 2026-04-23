@@ -1,4 +1,3 @@
-import React from 'react';
 import { Reservation, Trip, User } from '../types';
 import { Card, CardContent } from './ui/Card';
 import { Button } from './ui/Button';

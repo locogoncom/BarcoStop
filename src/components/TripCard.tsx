@@ -1,4 +1,3 @@
-import React from 'react';
 import { Trip, User } from '../types';
 import { Card, CardContent, CardHeader } from './ui/Card';
 import { Button } from './ui/Button';

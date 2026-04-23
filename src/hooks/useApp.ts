@@ -1,12 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, Trip, Reservation, Message, Conversation } from '../types';
 import {
-  getUsers,
-  saveUsers,
-  getTrips,
-  saveTrips,
-  getReservations,
-  saveReservations,
   getMessages,
   saveMessages,
   getConversations,
@@ -14,7 +8,6 @@ import {
   getCurrentUser,
   saveCurrentUser,
   getUserById,
-  getTripById,
 } from '../utils/storage';
 import { tripAPI, reservationAPI, mapTrip } from '../utils/api';
 

@@ -1,0 +1,77 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Mobile: Setup local.properties (Windows)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/mobile/scripts/create-local-properties.ps1"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Mobile: Setup local.properties (Linux/macOS)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "${workspaceFolder}/mobile/scripts/create-local-properties.sh"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Mobile: Start Metro",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "start"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/mobile"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Mobile: Start Android Emulator (Pixel 6, Windows)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/mobile/scripts/start-pixel6.ps1"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Mobile: Run Android (RN CLI)",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "android"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/mobile"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Mobile: Activate BarcoStop Android (Windows)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/mobile/scripts/activate-barcostop.ps1"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

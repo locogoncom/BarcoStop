@@ -1,5 +1,5 @@
 const HOURS_DEFAULT = 8;
-const INTERVAL_MS_DEFAULT = 60 * 60 * 1000;
+const INTERVAL_MS_DEFAULT = 60 * 60 * 1000; // 1h
 
 const toInt = (value, fallback) => {
   const parsed = Number.parseInt(String(value), 10);
@@ -7,6 +7,9 @@ const toInt = (value, fallback) => {
 };
 
 async function cleanupExpiredTripsMysql(db, hours) {
+  // "Expired" = departure datetime older than N hours AND row not updated in N hours.
+  // Safety: if trip has any reservation not cancelled, we keep it and mark as completed.
+
   const intervalExpr = `INTERVAL ${hours} HOUR`;
 
   const expiredWhere = `
@@ -15,6 +18,7 @@ async function cleanupExpiredTripsMysql(db, hours) {
     AND TIMESTAMP(CONCAT(departure_date, ' ', departure_time)) < DATE_SUB(NOW(), ${intervalExpr})
   `;
 
+  // Mark completed when there is non-cancelled activity.
   await db.query(
     `
       UPDATE trips t
@@ -29,6 +33,7 @@ async function cleanupExpiredTripsMysql(db, hours) {
     [],
   );
 
+  // Delete truly inactive trips with no reservations (or only cancelled).
   await db.query(
     `
       DELETE FROM trips
@@ -52,6 +57,7 @@ async function cleanupExpiredTripsSqlite(db, hours) {
     AND datetime(departure_date || ' ' || departure_time) < datetime('now', ?)
   `;
 
+  // Mark completed when there is non-cancelled activity.
   db.run(
     `
       UPDATE trips
@@ -66,6 +72,7 @@ async function cleanupExpiredTripsSqlite(db, hours) {
     [hoursLiteral, hoursLiteral],
   );
 
+  // Delete truly inactive trips with no reservations (or only cancelled).
   db.run(
     `
       DELETE FROM trips
@@ -85,26 +92,30 @@ async function runCleanup(dbModule, dbType, hours) {
     await cleanupExpiredTripsMysql(dbModule, hours);
     return;
   }
-
+  // sqlite module exports run/query; we need .run for mutations.
   await cleanupExpiredTripsSqlite(dbModule, hours);
 }
 
 function startTripCleanup(dbModule, dbType, opts = {}) {
   const hours = toInt(opts.hours, HOURS_DEFAULT);
   const intervalMs = toInt(opts.intervalMs, INTERVAL_MS_DEFAULT);
+
   const safeDbType = String(dbType || 'sqlite').toLowerCase();
 
   const tick = async () => {
     try {
       await runCleanup(dbModule, safeDbType, hours);
+      // keep it quiet; server already logs requests/errors.
     } catch (err) {
       console.error('[tripCleanup] failed:', err?.message || err);
     }
   };
 
+  // Run once on startup, then on interval.
   tick();
   const timer = setInterval(tick, intervalMs);
   return () => clearInterval(timer);
 }
 
 module.exports = { startTripCleanup };
+

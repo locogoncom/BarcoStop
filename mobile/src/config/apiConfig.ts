@@ -1,9 +1,16 @@
 export type AppEnv = 'dev' | 'staging' | 'prod';
 
+// Quick deployment override:
+// Set this to your backend URL to force all mobile API calls to that endpoint.
+// Example: 'https://api.tudominio.com/api'
+const MANUAL_API_BASE_URL: string | null = null;
+
 const API_BASE_URLS: Record<AppEnv, string> = {
+  // Use 10.0.2.2 for Android emulator to access host machine; localhost for iOS simulator
   dev: 'http://10.0.2.2:5000/api',
-  staging: 'https://staging-api.barcostop.net/api',
-  prod: 'https://api.barcostop.net/api',
+  staging: 'https://staging-api.barcostop.com/api',
+  // Public backend used by Android release builds distributed via Play.
+  prod: 'https://barcostop-api-2.onrender.com/api',
 };
 
 const normalizeEnv = (value: unknown): AppEnv | null => {
@@ -41,6 +48,8 @@ const apiUrlFromEnv =
     ? normalizeApiUrl(process.env?.BARCOSTOP_API_URL || process.env?.API_BASE_URL)
     : null;
 
-export const API_BASE_URL = apiUrlFromEnv ?? API_BASE_URLS[APP_ENV];
+const apiUrlFromManualConfig = normalizeApiUrl(MANUAL_API_BASE_URL);
+
+export const API_BASE_URL = apiUrlFromManualConfig ?? apiUrlFromEnv ?? API_BASE_URLS[APP_ENV];
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 export const API_BASE_URLS_BY_ENV = API_BASE_URLS;
-export const API_ORIGIN = API_BASE_URL.replace(/\/api$/, '');

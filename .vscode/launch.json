@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "React Native: Debug Android",
+      "type": "reactnative",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/mobile",
+      "platform": "android"
+    },
+    {
+      "name": "React Native: Attach to Metro",
+      "type": "reactnative",
+      "request": "attach",
+      "cwd": "${workspaceFolder}/mobile"
+    }
+  ]
+}

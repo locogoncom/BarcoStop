@@ -11,7 +11,7 @@ export default function UsersScreen({navigation}: any) {
       <Text style={styles.placeholder}>Coming soon...</Text>
       <TouchableOpacity
         style={styles.button}
-        onPress={() => navigation.navigate('Home')}>
+        onPress={() => navigation.getParent()?.getParent()?.reset({index: 0, routes: [{name: 'Home'}]})}>
         <Text style={styles.buttonText}>{t('goHome')}</Text>
       </TouchableOpacity>
     </View>

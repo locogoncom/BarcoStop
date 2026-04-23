@@ -1,11 +1,14 @@
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import React from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
 import type {LanguageCode} from '../i18n/translations';
 import type {RootStackParamList} from '../navigation/AppNavigator';
+import {colors} from '../theme/colors';
 
-const heroAccentTone = '#0369a1';
+const heroAccentTone = '#0f766e';
+const homeLogo = require('../../android/app/src/main/ic_launcher-playstore.png');
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -13,6 +16,11 @@ type Props = {
 
 export default function HomeScreen({navigation}: Props) {
   const {language, setLanguage, t} = useLanguage();
+  const {session} = useAuth();
+
+  const goToAuth = (role: 'patron' | 'viajero') => {
+    navigation.navigate('Auth', {role});
+  };
 
   const languageOptions: {code: LanguageCode; flag: string; label: string}[] = [
     {code: 'en', flag: '🇬🇧', label: 'English'},
@@ -23,35 +31,55 @@ export default function HomeScreen({navigation}: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>⛵</Text>
-      <Text style={styles.title}>BarcoStop</Text>
-      <Text style={styles.subtitle}>{t('homeSubtitle')}</Text>
+      <View style={styles.bgCircleTop} />
+      <View style={styles.bgCircleBottom} />
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate('Auth', {role: 'patron'})}>
-        <Text style={styles.buttonText}>{t('homeCaptain')}</Text>
-      </TouchableOpacity>
+      <View style={styles.heroCard}>
+        <View style={styles.logoWrap}>
+          <Image source={homeLogo} style={styles.logoImage} resizeMode="contain" />
+        </View>
 
-      <TouchableOpacity
-        style={[styles.button, styles.secondary]}
-        onPress={() => navigation.navigate('Auth', {role: 'viajero'})}>
-        <Text style={styles.buttonText}>{t('homeTraveler')}</Text>
-      </TouchableOpacity>
+        <Text style={styles.title}>BarcoStop</Text>
+        <Text style={styles.subtitle}>{t('homeSubtitle')}</Text>
+        {session ? (
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.reset({index: 0, routes: [{name: 'MainApp'}]})}>
+            <Text style={styles.buttonText}>⛵ {t('authContinue')}</Text>
+          </TouchableOpacity>
+        ) : null}
 
-      <Text style={[styles.subtitle, styles.calloutSpacing]}>{t('homeAnimateSailor')}</Text>
+        <TouchableOpacity
+          style={[styles.button, session ? styles.secondaryButton : null]}
+          onPress={() => goToAuth('patron')}>
+          <Text style={styles.buttonText}>🧭 {t('homeCaptain')}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.secondary]}
+          onPress={() => goToAuth('viajero')}>
+          <Text style={styles.buttonText}>🎒 {t('homeTraveler')}</Text>
+        </TouchableOpacity>
+
+
+        <Text style={styles.callout}>{t('homeAnimateSailor')}</Text>
+      </View>
 
       <View style={styles.languageWrap}>
         <Text style={styles.languageTitle}>{t('languageTitle')}</Text>
         <View style={styles.flagsRow}>
-          {languageOptions.map(option => (
-            <TouchableOpacity
-              key={option.code}
-              style={[styles.flagBtn, language === option.code && styles.flagBtnActive]}
-              onPress={() => setLanguage(option.code)}>
-              <Text style={styles.flagEmoji}>{option.flag}</Text>
-            </TouchableOpacity>
-          ))}
+          {languageOptions.map(option => {
+            const isActive = language === option.code;
+            return (
+              <TouchableOpacity
+                key={option.code}
+                style={[styles.flagBtn, isActive && styles.flagBtnActive]}
+                onPress={() => setLanguage(option.code)}>
+                <Text style={styles.flagEmoji}>{option.flag}</Text>
+                <Text style={[styles.flagLabel, isActive && styles.flagLabelActive]}>{option.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
     </View>
@@ -59,30 +87,95 @@ export default function HomeScreen({navigation}: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#f0f9ff'},
-  logo: {fontSize: 108, marginBottom: 2},
-  title: {fontSize: 32, fontWeight: '800', color: '#0c4a6e', marginTop: 4},
-  subtitle: {fontSize: 16, color: heroAccentTone, marginTop: 8, marginBottom: 24, textAlign: 'center'},
-  calloutSpacing: {marginTop: 6, marginBottom: 8},
-  button: {width: '100%', backgroundColor: '#0284c7', paddingVertical: 14, borderRadius: 10, marginBottom: 12},
-  secondary: {backgroundColor: '#0ea5e9'},
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    backgroundColor: '#ecfffb',
+  },
+  bgCircleTop: {
+    position: 'absolute',
+    top: -60,
+    right: -40,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: '#99f6e4',
+    opacity: 0.6,
+  },
+  bgCircleBottom: {
+    position: 'absolute',
+    bottom: -90,
+    left: -70,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: '#5eead4',
+    opacity: 0.28,
+  },
+  heroCard: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 16,
+    borderWidth: 1,
+    borderColor: '#c7f9f1',
+  },
+  logoWrap: {alignItems: 'center', marginBottom: 2},
+  logoImage: {width: 132, height: 132},
+  title: {fontSize: 34, fontWeight: '800', color: heroAccentTone, textAlign: 'center'},
+  subtitle: {fontSize: 15, color: heroAccentTone, marginTop: 8, marginBottom: 18, textAlign: 'center', lineHeight: 21},
+  button: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#159a8c',
+  },
+  secondary: {backgroundColor: colors.primaryAlt, borderColor: '#1cc7b6'},
+  secondaryButton: {backgroundColor: heroAccentTone, borderColor: heroAccentTone},
   buttonText: {textAlign: 'center', color: '#fff', fontWeight: '700', fontSize: 16},
-  languageWrap: {marginTop: 55, alignItems: 'center'},
-  languageTitle: {fontSize: 13, color: '#475569', marginBottom: 8, fontWeight: '600'},
-  flagsRow: {flexDirection: 'row', gap: 10},
+  callout: {
+    marginTop: 4,
+    marginBottom: 4,
+    textAlign: 'center',
+    color: heroAccentTone,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  languageWrap: {
+    width: '100%',
+    marginTop: 16,
+    alignItems: 'center',
+    backgroundColor: '#f4fffd',
+    borderRadius: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#c7f9f1',
+  },
+  languageTitle: {fontSize: 13, color: '#475569', marginBottom: 9, fontWeight: '700'},
+  flagsRow: {flexDirection: 'row', gap: 8},
   flagBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 62,
+    height: 62,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: '#d1d5db',
   },
   flagBtnActive: {
-    borderColor: '#0284c7',
+    borderColor: colors.primary,
     borderWidth: 2,
+    backgroundColor: '#eafffb',
   },
-  flagEmoji: {fontSize: 20},
+  flagEmoji: {fontSize: 21, marginBottom: 2},
+  flagLabel: {fontSize: 10, color: '#64748b', fontWeight: '600'},
+  flagLabelActive: {color: heroAccentTone},
 });

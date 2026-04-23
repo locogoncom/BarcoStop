@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { User, Trip, Reservation, Message, Conversation } from './types';
+import { useState, useEffect } from 'react';
+import { User, Trip, Message } from './types';
 import { useAuth, useTrips, useReservations, useChat } from './hooks/useApp';
-import { getUsers, saveUsers, getTrips, saveTrips } from './utils/storage';
-import { userAPI, tripAPI, reservationAPI, messageAPI, mapUser, mapTrip } from './utils/api';
+import { getUsers, saveUsers } from './utils/storage';
+import { userAPI, tripAPI, reservationAPI, mapUser, mapTrip } from './utils/api';
 import { Auth } from './components/Auth';
 import { TripList } from './components/TripList';
 import { CreateTrip } from './components/CreateTrip';
@@ -12,7 +12,6 @@ import { InviteFriends } from './components/InviteFriends';
 import { Donate } from './components/Donate';
 import { ShareQR } from './components/ShareQR';
 import { ReservationCard } from './components/ReservationCard';
-import { TripTrackingCard } from './components/TripTrackingCard';
 import { Button } from './components/ui/Button';
 import { Card, CardContent } from './components/ui/Card';
 import { MessageSquare, Anchor, Calendar, User as UserIcon } from 'lucide-react';
@@ -21,9 +20,9 @@ type Page = 'trips' | 'profile' | 'chat' | 'reservations' | 'tracking';
 
 function App() {
   const { currentUser, register, logout } = useAuth();
-  const { trips, addTrip, updateTrip } = useTrips();
+  const { trips, addTrip } = useTrips();
   const { reservations, addReservation, updateReservation } = useReservations();
-  const { conversations, messages, sendMessage, getConversationMessages, getUserConversations } = useChat();
+  const { sendMessage, getConversationMessages, getUserConversations } = useChat();
 
   const [currentPage, setCurrentPage] = useState<Page>('trips');
   const [showCreateTrip, setShowCreateTrip] = useState(false);

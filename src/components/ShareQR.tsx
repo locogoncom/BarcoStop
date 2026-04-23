@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from './ui/Button';
 import { Card, CardContent, CardHeader } from './ui/Card';

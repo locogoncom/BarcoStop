@@ -8,6 +8,7 @@ import {colors} from '../theme/colors';
 import {feedback} from '../theme/feedback';
 import {radius, shadows, spacing} from '../theme/layout';
 import {getReservationStatusColor, getReservationStatusLabel} from '../theme/reservationStatus';
+import {getErrorMessage} from '../utils/errors';
 
 export default function PatronRequestsScreen() {
   const navigation = useNavigation<any>();
@@ -45,6 +46,7 @@ export default function PatronRequestsScreen() {
     } catch (error) {
       console.error('Error loading requests:', error);
       setRequests([]);
+      feedback.error(getErrorMessage(error, 'No se pudieron cargar las solicitudes'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -82,6 +84,7 @@ export default function PatronRequestsScreen() {
       navigation.navigate('Messages', {
         screen: 'Chat',
         params: {
+          chatSeed: `${travelerId}-${Date.now()}`,
           otherUserName: travelerName,
           otherUserId: travelerId,
           tripId,
@@ -89,7 +92,7 @@ export default function PatronRequestsScreen() {
       });
     } catch (error) {
       console.error('Error opening chat from patron requests:', error);
-      feedback.error('No pudimos abrir el chat');
+      feedback.error(getErrorMessage(error, 'No pudimos abrir el chat'));
     }
   };
 
@@ -115,7 +118,7 @@ export default function PatronRequestsScreen() {
       ]);
       await loadRequests();
     } catch (error) {
-      feedback.error('No pudimos aceptar la solicitud');
+      feedback.error(getErrorMessage(error, 'No pudimos aceptar la solicitud'));
     } finally {
       setProcessingId(null);
     }
@@ -133,7 +136,7 @@ export default function PatronRequestsScreen() {
             feedback.success('Solicitud rechazada');
             await loadRequests();
           } catch (error) {
-            feedback.error('No pudimos rechazar la solicitud');
+            feedback.error(getErrorMessage(error, 'No pudimos rechazar la solicitud'));
           } finally {
             setProcessingId(null);
           }
@@ -168,7 +171,7 @@ export default function PatronRequestsScreen() {
       ) : (
         <FlatList
           data={requests}
-          keyExtractor={item => item.id}
+          keyExtractor={item => String(item.id)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadRequests(); }} />}
           renderItem={({item}) => (
             <View style={styles.card}>
@@ -193,7 +196,7 @@ export default function PatronRequestsScreen() {
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>👤 Viajero:</Text>
-                  <Text style={styles.detailValue}>ID: {item.userId || item.user_id}</Text>
+                  <Text style={styles.detailValue}>{item.userName || item.user_name || `ID: ${item.userId || item.user_id}`}</Text>
                 </View>
                 {item.message && (
                   <View style={[styles.detailRow, {marginTop: 8}]}>

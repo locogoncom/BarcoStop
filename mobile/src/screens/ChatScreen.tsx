@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useRef} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   StyleSheet,
   View,
@@ -10,17 +10,23 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  AppState,
+  Keyboard,
 } from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
 import {feedback} from '../theme/feedback';
 import {radius, spacing} from '../theme/layout';
 import {useAuth} from '../contexts/AuthContext';
 import {messageService} from '../services/api';
 import type {Message} from '../types';
 import {colors} from '../theme/colors';
+import {getErrorMessage, isAuthorizationError, isNotFoundError} from '../utils/errors';
+
+const CHAT_POLL_INTERVAL_MS = 5000;
 
 export default function ChatScreen({route, navigation}: any) {
   const routeParams = route?.params?.params ?? route?.params ?? {};
-  const {conversationId, otherUserName, otherUserId, tripId} = routeParams;
+  const {conversationId, otherUserName, otherUserId, tripId, chatSeed} = routeParams;
   const {session} = useAuth();
   const [activeConversationId, setActiveConversationId] = useState<string>(conversationId || '');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -28,7 +34,31 @@ export default function ChatScreen({route, navigation}: any) {
   const [loading, setLoading] = useState(true);
   const [initializingChat, setInitializingChat] = useState(false);
   const [sending, setSending] = useState(false);
+  const [isAppActive, setIsAppActive] = useState(true);
+  const [messageAccessBlocked, setMessageAccessBlocked] = useState(false);
+  const [blockState, setBlockState] = useState({blocked: false, blockedByMe: false, blockedByOther: false});
+  const [moderating, setModerating] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastTargetRef = useRef('');
+  const recoveringConversationRef = useRef(false);
+  const accessErrorNotifiedRef = useRef(false);
+
+  const scrollToBottom = useCallback((animated = true) => {
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToEnd({animated});
+    });
+  }, []);
+
+  const appendUniqueMessage = useCallback((message: Message) => {
+    if (!message?.id) {
+      return;
+    }
+
+    setMessages(prev => (prev.some(item => item.id === message.id) ? prev : [...prev, message]));
+    setTimeout(() => scrollToBottom(), 80);
+  }, [scrollToBottom]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -38,12 +68,78 @@ export default function ChatScreen({route, navigation}: any) {
   }, [navigation, otherUserName]);
 
   useEffect(() => {
-    setActiveConversationId(conversationId || '');
-  }, [conversationId]);
+    const explicitConversationId = typeof conversationId === 'string' ? conversationId.trim() : '';
+    const targetKey = `${String(session?.userId || '')}:${String(otherUserId || '')}:${String(tripId || '')}:${String(chatSeed || '')}`;
+
+    if (explicitConversationId) {
+      lastTargetRef.current = targetKey;
+      setActiveConversationId(explicitConversationId);
+      setMessages([]);
+      setMessageAccessBlocked(false);
+      accessErrorNotifiedRef.current = false;
+      return;
+    }
+
+    if (lastTargetRef.current !== targetKey) {
+      lastTargetRef.current = targetKey;
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      setActiveConversationId('');
+      setMessages([]);
+      setMessageAccessBlocked(false);
+      accessErrorNotifiedRef.current = false;
+      setLoading(Boolean(session?.userId && otherUserId));
+    }
+  }, [chatSeed, conversationId, otherUserId, session?.userId, tripId]);
+
+  const recoverConversationAccess = useCallback(async () => {
+    if (recoveringConversationRef.current || !session?.userId || !otherUserId) {
+      return false;
+    }
+
+    recoveringConversationRef.current = true;
+    try {
+      setInitializingChat(true);
+      const convo = await messageService.createOrGetConversation({
+        userId1: session.userId,
+        userId2: otherUserId,
+        tripId,
+      });
+
+      if (!convo?.id || convo.id === activeConversationId) {
+        return false;
+      }
+
+      setActiveConversationId(convo.id);
+      setMessages([]);
+      setMessageAccessBlocked(false);
+      accessErrorNotifiedRef.current = false;
+      navigation.setParams({
+        ...(route?.params ?? {}),
+        conversationId: convo.id,
+        otherUserId,
+        otherUserName,
+        tripId,
+        chatSeed,
+      });
+      return true;
+    } catch (recoveryError) {
+      console.error('Error recovering conversation access:', recoveryError);
+      return false;
+    } finally {
+      recoveringConversationRef.current = false;
+      setInitializingChat(false);
+    }
+  }, [activeConversationId, chatSeed, navigation, otherUserId, otherUserName, route?.params, session?.userId, tripId]);
 
   useEffect(() => {
     const ensureConversation = async () => {
       if (activeConversationId || !session?.userId || !otherUserId) {
+        if (!activeConversationId) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -64,7 +160,8 @@ export default function ChatScreen({route, navigation}: any) {
         });
       } catch (error) {
         console.error('Error ensuring conversation in ChatScreen:', error);
-        feedback.error('No pudimos abrir el chat. Vuelve a intentarlo.');
+        feedback.error(getErrorMessage(error, 'No pudimos abrir el chat. Vuelve a intentarlo.'));
+        setLoading(false);
       } finally {
         setInitializingChat(false);
       }
@@ -82,32 +179,142 @@ export default function ChatScreen({route, navigation}: any) {
     try {
       if (!session?.userId) return;
       const data = await messageService.getMessages(activeConversationId, session.userId);
+      setMessageAccessBlocked(false);
       setMessages(data);
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({animated: true});
-      }, 100);
+      setTimeout(() => scrollToBottom(), 100);
     } catch (error) {
       console.error('Error loading messages:', error);
+      setMessages([]);
+      if (isAuthorizationError(error) || isNotFoundError(error)) {
+        const resolvedMessage = getErrorMessage(error, '');
+        const canRecover = /participant|autorizado/i.test(resolvedMessage) && Boolean(otherUserId);
+        if (canRecover) {
+          const recovered = await recoverConversationAccess();
+          if (recovered) {
+            return;
+          }
+        }
+
+        setMessageAccessBlocked(true);
+        if (!accessErrorNotifiedRef.current) {
+          accessErrorNotifiedRef.current = true;
+          if (!isNotFoundError(error)) {
+            feedback.info('Este chat se ha desincronizado. Hemos detenido la actualizacion automatica para evitar errores repetidos.');
+          }
+        }
+        return;
+      }
+      feedback.error(getErrorMessage(error, 'No pudimos cargar los mensajes'));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadMessages();
-
-    // Mark conversation as read
-    if (session?.userId && activeConversationId) {
-      messageService.markConversationAsRead(activeConversationId, session.userId).catch(() => {});
+  const loadBlockStatus = useCallback(async () => {
+    if (!session?.userId || !otherUserId) {
+      setBlockState({blocked: false, blockedByMe: false, blockedByOther: false});
+      return;
     }
+    try {
+      const state = await messageService.getBlockStatus(session.userId, otherUserId);
+      setBlockState(state);
+    } catch (error) {
+      console.error('Error loading block status:', error);
+    }
+  }, [session?.userId, otherUserId]);
 
-    // Poll for new messages every 2 seconds
-    const interval = setInterval(loadMessages, 2000);
-    return () => clearInterval(interval);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      setIsAppActive(nextState === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const startPolling = useCallback(() => {
+    stopPolling();
+    if (!activeConversationId || !isAppActive || messageAccessBlocked) return;
+
+    // load now + poll
+    loadMessages();
+    pollTimerRef.current = setInterval(loadMessages, CHAT_POLL_INTERVAL_MS);
+  }, [activeConversationId, isAppActive, messageAccessBlocked, stopPolling]);
+
+  useFocusEffect(
+    useCallback(() => {
+      startPolling();
+      loadBlockStatus();
+
+      if (session?.userId && activeConversationId && !messageAccessBlocked) {
+        messageService.markConversationAsRead(activeConversationId, session.userId).catch(() => {});
+      }
+
+      return () => stopPolling();
+    }, [activeConversationId, loadBlockStatus, messageAccessBlocked, session?.userId, startPolling, stopPolling]),
+  );
+
+  useEffect(() => {
+    setMessageAccessBlocked(false);
+    accessErrorNotifiedRef.current = false;
   }, [activeConversationId, session?.userId]);
 
+  useEffect(() => {
+    if (isAppActive) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+  }, [isAppActive, startPolling, stopPolling]);
+
+  useEffect(() => {
+    if (!activeConversationId || !isAppActive || messageAccessBlocked) {
+      return;
+    }
+
+    let unsubscribe = () => {};
+    let disposed = false;
+
+    messageService.subscribeToConversationMessages(activeConversationId, appendUniqueMessage)
+      .then(cleanup => {
+        if (disposed) {
+          cleanup();
+          return;
+        }
+        unsubscribe = cleanup;
+      })
+      .catch(() => {});
+
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [activeConversationId, appendUniqueMessage, isAppActive, messageAccessBlocked]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(showEvent, () => {
+      setTimeout(() => scrollToBottom(), 60);
+    });
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setTimeout(() => scrollToBottom(false), 60);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [scrollToBottom]);
+
   const handleSendMessage = async () => {
-    if (!activeConversationId || !newMessage.trim() || !session?.userId) return;
+    if (!activeConversationId || !newMessage.trim() || !session?.userId || blockState.blocked) return;
 
     const messageContent = newMessage.trim();
     setNewMessage('');
@@ -119,17 +326,118 @@ export default function ChatScreen({route, navigation}: any) {
         senderId: session.userId,
         content: messageContent,
       });
-      setMessages(prev => [...prev, message]);
+      appendUniqueMessage(message);
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({animated: true});
+        scrollToBottom();
+        inputRef.current?.focus();
       }, 100);
     } catch (error) {
       console.error('Error sending message:', error);
       setNewMessage(messageContent);
-      feedback.error('No pudimos enviar el mensaje. Intenta de nuevo.');
+      feedback.error(getErrorMessage(error, 'No pudimos enviar el mensaje. Intenta de nuevo.'));
     } finally {
       setSending(false);
     }
+  };
+
+  const handleBlockToggle = () => {
+    if (!session?.userId || !otherUserId || moderating) return;
+    if (blockState.blockedByOther) {
+      feedback.info('No puedes bloquear o desbloquear porque este usuario te ha bloqueado.');
+      return;
+    }
+
+    if (blockState.blockedByMe) {
+      feedback.confirm('Desbloquear usuario', `¿Quieres desbloquear a ${otherUserName || 'este usuario'}?`, [
+        {text: 'Cancelar', style: 'cancel'},
+        {
+          text: 'Desbloquear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setModerating(true);
+              await messageService.unblockUser({blockerId: session.userId, blockedUserId: otherUserId});
+              await loadBlockStatus();
+              feedback.success('Usuario desbloqueado.');
+            } catch (error) {
+              feedback.error(getErrorMessage(error, 'No pudimos desbloquear al usuario.'));
+            } finally {
+              setModerating(false);
+            }
+          },
+        },
+      ]);
+      return;
+    }
+
+    feedback.confirm('Bloquear usuario', `Si bloqueas a ${otherUserName || 'este usuario'} no podran enviarse mensajes.`, [
+      {text: 'Cancelar', style: 'cancel'},
+      {
+        text: 'Bloquear',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setModerating(true);
+            await messageService.blockUser({
+              blockerId: session.userId,
+              blockedUserId: otherUserId,
+              reason: 'Bloqueo desde chat',
+            });
+            await loadBlockStatus();
+            feedback.success('Usuario bloqueado.');
+          } catch (error) {
+            feedback.error(getErrorMessage(error, 'No pudimos bloquear al usuario.'));
+          } finally {
+            setModerating(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleReportUser = () => {
+    if (!session?.userId || !otherUserId || moderating) return;
+    feedback.confirm('Reportar usuario', 'Selecciona un motivo de reporte.', [
+      {text: 'Cancelar', style: 'cancel'},
+      {
+        text: 'Acoso',
+        onPress: async () => {
+          try {
+            setModerating(true);
+            await messageService.reportUser({
+              reporterId: session.userId,
+              reportedUserId: otherUserId,
+              conversationId: activeConversationId || undefined,
+              reason: 'acoso',
+            });
+            feedback.success('Reporte enviado. Nuestro equipo revisara el caso.');
+          } catch (error) {
+            feedback.error(getErrorMessage(error, 'No pudimos enviar el reporte.'));
+          } finally {
+            setModerating(false);
+          }
+        },
+      },
+      {
+        text: 'Spam/Estafa',
+        onPress: async () => {
+          try {
+            setModerating(true);
+            await messageService.reportUser({
+              reporterId: session.userId,
+              reportedUserId: otherUserId,
+              conversationId: activeConversationId || undefined,
+              reason: 'spam_estafa',
+            });
+            feedback.success('Reporte enviado. Nuestro equipo revisara el caso.');
+          } catch (error) {
+            feedback.error(getErrorMessage(error, 'No pudimos enviar el reporte.'));
+          } finally {
+            setModerating(false);
+          }
+        },
+      },
+    ]);
   };
 
   const renderMessage = ({item}: {item: Message}) => {
@@ -177,34 +485,69 @@ export default function ChatScreen({route, navigation}: any) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={90}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <FlatList
         ref={flatListRef}
+        style={styles.messagesList}
         data={messages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={renderEmptyMessage}
-        contentContainerStyle={messages.length === 0 ? styles.emptyContainer : undefined}
+        contentContainerStyle={messages.length === 0 ? styles.emptyContainer : styles.listContent}
         onEndReachedThreshold={0.5}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        onContentSizeChange={() => scrollToBottom(false)}
       />
+      <View style={styles.safetyRow}>
+        <TouchableOpacity style={styles.safetyButton} onPress={handleReportUser} disabled={moderating}>
+          <Text style={styles.safetyButtonText}>Reportar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.safetyButton} onPress={handleBlockToggle} disabled={moderating}>
+          <Text style={[styles.safetyButtonText, styles.blockText]}>
+            {blockState.blockedByMe ? 'Desbloquear' : 'Bloquear'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {blockState.blocked ? (
+        <View style={styles.blockedBanner}>
+          <Text style={styles.blockedBannerText}>
+            {blockState.blockedByMe
+              ? 'Tienes bloqueado a este usuario. Desbloquealo para continuar el chat.'
+              : 'Este usuario te ha bloqueado. No puedes enviar mensajes.'}
+          </Text>
+        </View>
+      ) : null}
+
+      {messageAccessBlocked ? (
+        <View style={styles.blockedBanner}>
+          <Text style={styles.blockedBannerText}>
+            Este chat estaba apuntando a una conversacion invalida. Puedes volver atras y abrirlo de nuevo.
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.inputContainer}>
         <TextInput
+          ref={inputRef}
           style={styles.input}
           placeholder="Escribe un mensaje..."
           placeholderTextColor={colors.textSubtle}
           value={newMessage}
           onChangeText={setNewMessage}
-          multiline
+          onSubmitEditing={handleSendMessage}
+          blurOnSubmit={false}
+          returnKeyType="send"
           maxLength={500}
-          editable={!sending}
+          editable={!sending && !blockState.blocked && !messageAccessBlocked}
         />
         <TouchableOpacity
           style={[styles.sendButton, (!newMessage.trim() || sending) && styles.sendButtonDisabled]}
           onPress={handleSendMessage}
-          disabled={!activeConversationId || !newMessage.trim() || sending}
+          disabled={!activeConversationId || !newMessage.trim() || sending || blockState.blocked || messageAccessBlocked}
         >
           {sending ? (
             <ActivityIndicator size="small" color={colors.primary} />
@@ -227,6 +570,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.background,
+  },
+  messagesList: {
+    flex: 1,
+  },
+  listContent: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
   messageContainer: {
     flexDirection: 'row',
@@ -300,6 +650,43 @@ const styles = StyleSheet.create({
   emptyChatText: {
     fontSize: 16,
     color: '#64748b',
+    textAlign: 'center',
+  },
+  safetyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.surface,
+  },
+  safetyButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: radius.md,
+    backgroundColor: '#eef2ff',
+  },
+  safetyButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryAlt,
+  },
+  blockText: {
+    color: '#b91c1c',
+  },
+  blockedBanner: {
+    backgroundColor: '#fef2f2',
+    borderTopWidth: 1,
+    borderTopColor: '#fecaca',
+    borderBottomWidth: 1,
+    borderBottomColor: '#fecaca',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  blockedBannerText: {
+    color: '#991b1b',
+    fontSize: 12,
+    fontWeight: '600',
     textAlign: 'center',
   },
   inputContainer: {

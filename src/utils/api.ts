@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, Trip, Reservation, Message, Conversation } from '../types';
+import { User, Trip, Reservation, Message } from '../types';
 
 const normalizeApiUrl = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
