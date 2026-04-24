@@ -10,9 +10,15 @@
     "workerman/workerman": "^4.1",
     "workerman/phpsocket.io": "^2.2"
   },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5"
+  },
   "autoload": {
     "psr-4": {
       "BarcoStop\\ServerPhp\\": "src/"
     }
+  },
+  "scripts": {
+    "test": "phpunit -c ../../tests/api/phpunit.xml"
   }
 }

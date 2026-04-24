@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "npm run test:api && npm run test:mobile",
     "test:api": "php tests/api/php/run.php",
+    "test:api:phpunit": "composer --working-dir public_html/api test",
     "test:mobile": "npm --prefix mobile test -- --runInBand --testPathPattern=../tests/mobile",
     "start": "npm --prefix server start",
     "postinstall": "npm --prefix server install",

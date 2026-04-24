@@ -2,6 +2,5 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/includes/layout.php';
-
-siteRenderMarkdownDocumentPage('play-console-data-safety');
+header('Location: docs/play-console-data-safety.html', true, 301);
+exit;

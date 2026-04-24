@@ -13,11 +13,14 @@ siteRenderHeader('BarcoStop | Home', 'home');
 ?>
 
 <section class="hero hero-legacy reveal">
-  <p class="hero-kicker">Version 53 · API PHP activa</p>
+  <p class="hero-kicker">App Android v53 · API PHP activa</p>
+  <div class="hero-app-logo" aria-hidden="true">
+    <img src="assets/logo-barcostop.png" alt="">
+  </div>
   <h1 class="hero-title">Conecta marineros <br> con capitanes</h1>
   <p class="hero-subtitle">
-    Encuentra barco o tripulacion en segundos.
-    La forma mas facil de salir al mar.
+    La misma linea visual y experiencia de la app.
+    Encuentra barco o tripulacion en segundos, sin friccion.
   </p>
   <div class="hero-kpis" aria-label="Indicadores principales">
     <span class="kpi-pill"><b><?= h($totalUsers) ?></b> usuarios</span>
@@ -43,7 +46,7 @@ siteRenderHeader('BarcoStop | Home', 'home');
       <span class="play-text-main">Google Play</span>
     </span>
   </a>
-  <p class="hero-note">Gratis · Rapido · Sin complicaciones</p>
+  <p class="hero-note">Gratis · Rapido · Disenado para movil</p>
   <div class="trust-row" aria-label="Confianza">
     <span class="trust-chip">Comunidad verificada</span>
     <span class="trust-chip">Soporte real</span>

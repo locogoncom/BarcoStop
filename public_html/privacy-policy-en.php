@@ -2,6 +2,5 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/includes/layout.php';
-
-siteRenderMarkdownDocumentPage('privacy-policy-en');
+header('Location: docs/privacy-policy-en.html', true, 301);
+exit;

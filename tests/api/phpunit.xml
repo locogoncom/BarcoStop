@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+  bootstrap="phpunit/bootstrap.php"
+  cacheDirectory=".phpunit.cache"
+  colors="true"
+  failOnRisky="true"
+  failOnWarning="true"
+>
+  <testsuites>
+    <testsuite name="BarcoStop API Mobile Contract">
+      <directory suffix="Test.php">phpunit</directory>
+    </testsuite>
+  </testsuites>
+  <php>
+    <env name="BARCOSTOP_RUN_LIVE_AUTH_TEST" value="0"/>
+  </php>
+</phpunit>

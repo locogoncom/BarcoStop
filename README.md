@@ -15,6 +15,33 @@ npm run build:apk:release
 npm run android:usb
 ```
 
+## Tests
+
+Ejecuta desde la raiz del repo:
+
+```bash
+# Todos (API legacy + tests mobile)
+npm test
+
+# API legacy (runner propio en tests/api/php/run.php)
+npm run test:api
+
+# API PHP con PHPUnit (suite de contratos mobile)
+npm run test:api:phpunit
+
+# Mobile (Jest)
+npm run test:mobile
+```
+
+Test live opcional de login contra `https://api.barcostop.net/api/v1`:
+
+```bash
+BARCOSTOP_RUN_LIVE_AUTH_TEST=1 \
+BARCOSTOP_TEST_EMAIL=betolopezayesa@gmail.com \
+BARCOSTOP_TEST_PASSWORD=test22 \
+composer --working-dir public_html/api test
+```
+
 # BarcoStop 🚤
 
 Una plataforma moderna para compartir viajes en barco, conectar navegantes y construir comunidad en el mar.

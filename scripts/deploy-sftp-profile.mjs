@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -65,6 +66,14 @@ const pick = (key, fallback = "") => {
   return fallback;
 };
 
+const pickArray = (key) => {
+  const value = profile[key];
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item) => typeof item === "string" && item.trim() !== "").map((item) => item.trim());
+};
+
 const protocol = String(pick("protocol", "sftp")).toLowerCase();
 const host = String(pick("host", ""));
 const port = Number(pick("port", protocol === "sftp" ? 22 : 21));
@@ -91,6 +100,16 @@ if (!fs.existsSync(localDir) || !fs.statSync(localDir).isDirectory()) {
 
 const lftpTarget = `${protocol}://${host}`;
 
+const defaultExcludeGlobs = [
+  ".git/**",
+  ".vscode/**",
+  "node_modules/**",
+  ".DS_Store",
+];
+const profileExcludeGlobs = pickArray("excludeGlobs");
+const allExcludeGlobs = [...new Set([...defaultExcludeGlobs, ...profileExcludeGlobs])];
+const excludeArgs = allExcludeGlobs.map((glob) => `--exclude-glob "${glob}"`).join(" ");
+
 const commands = [
   "set cmd:fail-exit true",
   "set net:max-retries 2",
@@ -98,9 +117,7 @@ const commands = [
   "set xfer:clobber on",
   `open -u "${username}","${password}" -p ${port} ${lftpTarget}`,
   `lcd "${localDir}"`,
-  `mkdir -p "${remotePath}"`,
-  `cd "${remotePath}"`,
-  'mirror -R --only-newer --verbose --exclude-glob ".git/**" --exclude-glob ".vscode/**" --exclude-glob "node_modules/**" --exclude-glob ".DS_Store" . .',
+  `mirror -R --only-newer --verbose ${excludeArgs} . "${remotePath}"`,
   "bye",
 ];
 
@@ -117,10 +134,16 @@ console.log(`[DEPLOY] Perfil: ${profileName}`);
 console.log(`[DEPLOY] ${localDir} -> ${remotePath}`);
 
 try {
-  execFileSync("lftp", ["-f", "-"], {
-    input: commands.join("\n") + "\n",
-    stdio: ["pipe", "inherit", "inherit"],
-  });
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "barcostop-lftp-"));
+  const commandFile = path.join(tempDir, "commands.lftp");
+  fs.writeFileSync(commandFile, commands.join("\n") + "\n", "utf8");
+  try {
+    execFileSync("lftp", ["-f", commandFile], {
+      stdio: ["ignore", "inherit", "inherit"],
+    });
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
   console.log("[DEPLOY] Subida completada.");
 } catch (error) {
   console.error("[DEPLOY] Fallo en la subida.");

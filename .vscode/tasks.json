@@ -72,6 +72,26 @@
         "${workspaceFolder}/mobile/scripts/activate-barcostop.ps1"
       ],
       "problemMatcher": []
+    },
+    {
+      "label": "Deploy: Upload public_html (sin api ni vendor)",
+      "type": "shell",
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/scripts/deploy-sftp-profile.mjs",
+        "public_html_web"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Deploy: Upload solo public_html/api",
+      "type": "shell",
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/scripts/deploy-sftp-profile.mjs",
+        "public_html_api"
+      ],
+      "problemMatcher": []
     }
   ]
 }
