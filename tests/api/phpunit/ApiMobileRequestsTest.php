@@ -124,7 +124,118 @@ final class ApiMobileRequestsTest extends TestCase
             $this->markTestSkipped('Test live desactivado. Exporta BARCOSTOP_RUN_LIVE_AUTH_TEST=1 para ejecutarlo.');
         }
 
-        $baseUrl = rtrim((string) (getenv('BARCOSTOP_LIVE_API_BASE_URL') ?: 'https://api.barcostop.net/api/v1'), '/');
+        $response = $this->loginLiveOrSkip();
+
+        self::assertSame(200, $response['status'], 'El login live debe responder 200 con la cuenta de prueba.');
+        self::assertIsArray($response['json'], 'El login live debe devolver JSON');
+        self::assertNotEmpty($response['json']['token'] ?? null, 'El login live debe devolver token');
+        self::assertNotEmpty($response['json']['userId'] ?? null, 'El login live debe devolver userId');
+    }
+
+    public function testLiveTripCrudCreateListDetailDeleteWhenEnabled(): void
+    {
+        $enabled = getenv('BARCOSTOP_RUN_LIVE_TRIP_CRUD_TEST') === '1';
+        if (!$enabled) {
+            $this->markTestSkipped('Test live de trips desactivado. Exporta BARCOSTOP_RUN_LIVE_TRIP_CRUD_TEST=1 para ejecutarlo.');
+        }
+
+        $baseUrl = $this->liveApiBaseUrl();
+        $login = $this->loginLiveOrSkip();
+        $token = (string) ($login['json']['token'] ?? '');
+        $userId = (string) ($login['json']['userId'] ?? '');
+
+        self::assertNotSame('', $token, 'Token requerido para test live trips.');
+        self::assertNotSame('', $userId, 'userId requerido para test live trips.');
+
+        $tripId = '';
+        $deleted = false;
+
+        try {
+            $departureDate = date('Y-m-d', time() + (86400 * 7));
+            $unique = 'phpunit-' . substr(hash('sha1', microtime(true) . random_int(1, 999999)), 0, 8);
+
+            $create = $this->httpJsonAuth('POST', $baseUrl . '/trips', [
+                'actorId' => $userId,
+                'patronId' => $userId,
+                'route' => [
+                    'origin' => 'Puerto Test ' . $unique,
+                    'destination' => 'Destino Test ' . $unique,
+                    'departureDate' => $departureDate,
+                    'departureTime' => '10:30:00',
+                    'estimatedDuration' => '2h',
+                ],
+                'description' => 'Trip creado por PHPUnit [' . $unique . ']',
+                'availableSeats' => 2,
+                'cost' => 9.5,
+            ], $token);
+
+            if ($create['networkError'] !== null) {
+                $this->markTestSkipped('Sin conectividad para test live trips (create): ' . $create['networkError']);
+            }
+
+            self::assertSame(201, $create['status'], 'Crear viaje debe responder 201');
+            self::assertIsArray($create['json'], 'Crear viaje debe devolver JSON');
+            $tripId = (string) ($create['json']['id'] ?? '');
+            self::assertNotSame('', $tripId, 'Crear viaje debe devolver id');
+
+            $list = $this->httpJson('GET', $baseUrl . '/trips');
+            if ($list['networkError'] !== null) {
+                $this->markTestSkipped('Sin conectividad para test live trips (list): ' . $list['networkError']);
+            }
+            self::assertSame(200, $list['status'], 'Listar viajes debe responder 200');
+            self::assertIsArray($list['json'], 'Listar viajes debe devolver JSON array');
+            $found = false;
+            foreach ($list['json'] as $item) {
+                if (is_array($item) && (string) ($item['id'] ?? '') === $tripId) {
+                    $found = true;
+                    break;
+                }
+            }
+            self::assertTrue($found, 'El viaje creado debe aparecer en el listado');
+
+            $detail = $this->httpJson('GET', $baseUrl . '/trips/' . rawurlencode($tripId));
+            if ($detail['networkError'] !== null) {
+                $this->markTestSkipped('Sin conectividad para test live trips (detail): ' . $detail['networkError']);
+            }
+            self::assertSame(200, $detail['status'], 'Detalle de viaje debe responder 200');
+            self::assertIsArray($detail['json'], 'Detalle de viaje debe devolver JSON');
+            self::assertSame($tripId, (string) ($detail['json']['id'] ?? ''), 'Detalle debe corresponder al viaje creado');
+
+            $delete = $this->httpJsonAuth(
+                'DELETE',
+                $baseUrl . '/trips/' . rawurlencode($tripId) . '?actorId=' . rawurlencode($userId),
+                [],
+                $token
+            );
+            if ($delete['networkError'] !== null) {
+                $this->markTestSkipped('Sin conectividad para test live trips (delete): ' . $delete['networkError']);
+            }
+            self::assertSame(204, $delete['status'], 'Borrar viaje debe responder 204');
+            $deleted = true;
+
+            $detailAfterDelete = $this->httpJson('GET', $baseUrl . '/trips/' . rawurlencode($tripId));
+            if ($detailAfterDelete['networkError'] !== null) {
+                $this->markTestSkipped('Sin conectividad para test live trips (detail after delete): ' . $detailAfterDelete['networkError']);
+            }
+            self::assertSame(404, $detailAfterDelete['status'], 'Tras borrar, detalle debe responder 404');
+        } finally {
+            if ($tripId !== '' && !$deleted) {
+                $this->httpJsonAuth(
+                    'DELETE',
+                    $baseUrl . '/trips/' . rawurlencode($tripId) . '?actorId=' . rawurlencode($userId),
+                    [],
+                    $token
+                );
+            }
+        }
+    }
+
+    /**
+     * @return array{status:int,body:string,json:array<string,mixed>|null,networkError:?string}
+     */
+    private function loginLiveOrSkip(): array
+    {
+        $baseUrl = $this->liveApiBaseUrl();
         $email = (string) (getenv('BARCOSTOP_TEST_EMAIL') ?: 'betolopezayesa@gmail.com');
         $password = (string) (getenv('BARCOSTOP_TEST_PASSWORD') ?: 'test22');
 
@@ -137,10 +248,12 @@ final class ApiMobileRequestsTest extends TestCase
             $this->markTestSkipped('Sin conectividad para test live: ' . $response['networkError']);
         }
 
-        self::assertSame(200, $response['status'], 'El login live debe responder 200 con la cuenta de prueba.');
-        self::assertIsArray($response['json'], 'El login live debe devolver JSON');
-        self::assertNotEmpty($response['json']['token'] ?? null, 'El login live debe devolver token');
-        self::assertNotEmpty($response['json']['userId'] ?? null, 'El login live debe devolver userId');
+        return $response;
+    }
+
+    private function liveApiBaseUrl(): string
+    {
+        return rtrim((string) (getenv('BARCOSTOP_LIVE_API_BASE_URL') ?: 'https://api.barcostop.net/api/v1'), '/');
     }
 
     private function buildRouterFromApiKernel(): Router
@@ -260,17 +373,25 @@ final class ApiMobileRequestsTest extends TestCase
     }
 
     /**
+     * @param array<string,string> $extraHeaders
      * @return array{status:int,body:string,json:array<string,mixed>|null,networkError:?string}
      */
-    private function httpJson(string $method, string $url, array $payload = []): array
+    private function httpJson(string $method, string $url, array $payload = [], array $extraHeaders = []): array
     {
         $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $body = is_string($body) ? $body : '{}';
+        $headerLines = [
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ];
+        foreach ($extraHeaders as $name => $value) {
+            $headerLines[] = $name . ': ' . $value;
+        }
 
         $context = stream_context_create([
             'http' => [
                 'method' => strtoupper($method),
-                'header' => "Content-Type: application/json\r\nAccept: application/json\r\n",
+                'header' => implode("\r\n", $headerLines) . "\r\n",
                 'content' => $body,
                 'ignore_errors' => true,
                 'timeout' => 15,
@@ -295,5 +416,15 @@ final class ApiMobileRequestsTest extends TestCase
             'json' => is_array($json) ? $json : null,
             'networkError' => $networkError,
         ];
+    }
+
+    /**
+     * @return array{status:int,body:string,json:array<string,mixed>|null,networkError:?string}
+     */
+    private function httpJsonAuth(string $method, string $url, array $payload, string $token): array
+    {
+        return $this->httpJson($method, $url, $payload, [
+            'Authorization' => 'Bearer ' . $token,
+        ]);
     }
 }
