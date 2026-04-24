@@ -40,7 +40,7 @@ siteRenderHeader('BarcoStop | FAQ', 'faq');
     <ol class="list">
       <li><strong>Hay chat entre usuarios?</strong> Si, puedes hablar con otros usuarios y con grupos de regata.</li>
       <li><strong>Como reporto un problema?</strong> Desde la app o en la pagina de contacto.</li>
-      <li><strong>Como solicito eliminar mis datos?</strong> Escribe a soporte@barcostop.app indicando tu cuenta.</li>
+      <li><strong>Como solicito eliminar mis datos?</strong> Escribe a hola@barcostop.net indicando tu cuenta.</li>
     </ol>
   </div>
 </section>

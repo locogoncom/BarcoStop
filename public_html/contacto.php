@@ -38,7 +38,7 @@ siteRenderHeader('BarcoStop | Contacto', 'contacto');
   <div class="cards-3">
     <article class="card">
       <h3>Soporte general</h3>
-      <p class="muted"><a href="mailto:soporte@barcostop.app">soporte@barcostop.app</a></p>
+      <p class="muted"><a href="mailto:hola@barcostop.net">hola@barcostop.net</a></p>
     </article>
     <article class="card">
       <h3>Google Play</h3>
@@ -56,7 +56,7 @@ siteRenderHeader('BarcoStop | Contacto', 'contacto');
   <form class="form" method="post" action="contacto.php" novalidate>
     <?php if ($isPost && $isValid): ?>
       <p class="success">
-        Gracias, <?= h($name) ?>. Hemos recibido tu mensaje. Tambien puedes escribirnos a soporte@barcostop.app.
+        Gracias, <?= h($name) ?>. Hemos recibido tu mensaje. Tambien puedes escribirnos a hola@barcostop.net.
       </p>
     <?php endif; ?>
 

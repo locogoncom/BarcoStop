@@ -7,7 +7,7 @@ BarcoStop ("the App") is committed to protecting user privacy and security. This
 ## 1. Data controller
 
 - App: BarcoStop
-- Contact: support@barcostop.app
+- Contact: hola@barcostop.net
 
 ## 2. Data we process
 
@@ -64,7 +64,7 @@ We apply technical and organizational safeguards, including:
 
 ## 8. User rights
 
-Users may request access, correction, or deletion of personal data and exercise applicable rights by contacting support@barcostop.app.
+Users may request access, correction, or deletion of personal data and exercise applicable rights by contacting hola@barcostop.net.
 
 ## 9. Children
 

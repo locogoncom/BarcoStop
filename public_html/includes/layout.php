@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__.'/bootstrap.php';
 
 function siteRenderHeader(string $title, string $activePage): void
 {
@@ -19,13 +19,13 @@ function siteRenderHeader(string $title, string $activePage): void
         'contacto' => 'contacto',
     ];
     $activeValue = $activeMap[$activePage] ?? '';
-?>
+    ?>
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= h($title) ?></title>
+  <title><?php echo h($title); ?></title>
   <meta name="description" content="BarcoStop conecta marineros con capitanes. Encuentra barco o tripulacion en segundos.">
   <meta property="og:title" content="BarcoStop">
   <meta property="og:description" content="Conecta marineros con capitanes">
@@ -39,19 +39,19 @@ function siteRenderHeader(string $title, string $activePage): void
   <header class="topbar">
     <div class="shell topbar-row">
       <a class="brand" href="index.php">
-        <img class="brand-logo" src="assets/logo-barcostop.png" alt="Logo BarcoStop">
+        <img class="brand-logo" src="assets/logo-barcostop-header.png" alt="Logo BarcoStop">
         <span>BarcoStop</span>
       </a>
       <nav class="nav">
-        <?php foreach ($navigation as $key => $item): ?>
+        <?php foreach ($navigation as $key => $item) { ?>
           <?php $isActive = $activeValue === $key; ?>
           <a
-            class="nav-link <?= $isActive ? 'is-active' : '' ?>"
-            href="<?= h($item['href']) ?>"
+            class="nav-link <?php echo $isActive ? 'is-active' : ''; ?>"
+            href="<?php echo h($item['href']); ?>"
           >
-            <?= h($item['label']) ?>
+            <?php echo h($item['label']); ?>
           </a>
-        <?php endforeach; ?>
+        <?php } ?>
       </nav>
     </div>
   </header>
@@ -62,16 +62,17 @@ function siteRenderHeader(string $title, string $activePage): void
 function siteRenderFooter(): void
 {
     $documents = array_values(siteMarkdownDocuments());
-?>
+    ?>
   </main>
   <footer class="footer">
     <div class="shell footer-doc-links">
-      <?php foreach ($documents as $doc): ?>
-        <a href="<?= h($doc['url']) ?>"><?= h($doc['label']) ?></a>
-      <?php endforeach; ?>
+      <?php foreach ($documents as $doc) { ?>
+        <a href="<?php echo h($doc['url']); ?>"><?php echo h($doc['label']); ?></a>
+      <?php } ?>
     </div>
     <div class="shell footer-row">
-      <p>Copyright Barco Stop AYESA DIGITAL, SLU. B01732791 Paseo de los tilos 25-27, Bajos A. 08034 Barcelona, Spain. Idea Original y v1 por Gonzalo Cordero</p>
+      <p>Idea Original, prototipo y versión inicial por Gonzalo Cordero desde el puerto de las Palmas de Gran Canaria<br>
+      <small>Powered by AYESA DIGITAL, SLU. B01732791 Paseo de los tilos 25-27, Bajos A. 08034 Barcelona, Spain.</small> </p>
       <a href="https://play.google.com/store/apps/details?id=com.barcostop.app" target="_blank" rel="noopener noreferrer">Descargar en Google Play</a>
     </div>
   </footer>
@@ -95,22 +96,23 @@ function siteRenderMarkdownDocumentPage(string $slug): void
         </section>
         <?php
         siteRenderFooter();
+
         return;
     }
 
-    siteRenderHeader($document['title'] . ' | BarcoStop', '');
+    siteRenderHeader($document['title'].' | BarcoStop', '');
     $rawMarkdown = @file_get_contents($document['source']);
     ?>
     <section class="doc-section reveal">
-      <h1 class="doc-title"><?= h($document['title']) ?></h1>
-      <p class="muted doc-source">Origen: <?= h(str_replace(dirname(__DIR__, 2) . '/', '', $document['source'])) ?></p>
-      <?php if ($rawMarkdown === false): ?>
+      <h1 class="doc-title"><?php echo h($document['title']); ?></h1>
+      <p class="muted doc-source">Origen: <?php echo h(str_replace(dirname(__DIR__, 2).'/', '', $document['source'])); ?></p>
+      <?php if ($rawMarkdown === false) { ?>
         <p class="alert">No se pudo leer el archivo fuente Markdown.</p>
-      <?php else: ?>
+      <?php } else { ?>
         <article class="markdown-body">
-          <?= siteMarkdownToHtml($rawMarkdown) ?>
+          <?php echo siteMarkdownToHtml($rawMarkdown); ?>
         </article>
-      <?php endif; ?>
+      <?php } ?>
     </section>
     <?php
     siteRenderFooter();

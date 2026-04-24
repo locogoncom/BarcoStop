@@ -4,7 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${MOBILE_ROOT}/.." && pwd)"
-SERVER_ROOT="${REPO_ROOT}/server"
 AVD_NAME="${AVD_NAME:-Pixel_6_2}"
 
 resolve_sdk_dir() {
@@ -25,23 +24,6 @@ resolve_sdk_dir() {
     return 0
   fi
   return 1
-}
-
-test_backend_ready() {
-  curl -fsS "http://127.0.0.1:5000/" >/dev/null 2>&1
-}
-
-wait_backend_ready() {
-  local timeout="${1:-30}"
-  local elapsed=0
-  until test_backend_ready; do
-    sleep 1
-    elapsed=$((elapsed + 1))
-    if (( elapsed >= timeout )); then
-      return 1
-    fi
-  done
-  return 0
 }
 
 test_metro_ready() {
@@ -78,6 +60,28 @@ resolve_java_home() {
   return 1
 }
 
+wait_device_ready() {
+  local device_id="$1"
+  local timeout="${2:-120}"
+  local elapsed=0
+
+  "${ADB}" -s "${device_id}" wait-for-device >/dev/null 2>&1 || true
+
+  while (( elapsed < timeout )); do
+    local boot
+    local sdk
+    boot="$("${ADB}" -s "${device_id}" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')"
+    sdk="$("${ADB}" -s "${device_id}" shell getprop ro.build.version.sdk 2>/dev/null | tr -d '\r\n')"
+    if [[ "${boot}" == "1" && "${sdk}" =~ ^[0-9]+$ ]]; then
+      return 0
+    fi
+    sleep 2
+    elapsed=$((elapsed + 2))
+  done
+
+  return 1
+}
+
 SDK_DIR="$(resolve_sdk_dir || true)"
 if [[ -z "${SDK_DIR}" ]]; then
   echo "No se encontro Android SDK. Define ANDROID_SDK_ROOT o ANDROID_HOME." >&2
@@ -105,21 +109,8 @@ if [[ -z "${DEVICE_ID}" ]]; then
 fi
 echo "[barcostop] Usando dispositivo: ${DEVICE_ID}"
 
-if ! test_backend_ready; then
-  if [[ ! -d "${SERVER_ROOT}" ]]; then
-    echo "No se encontro carpeta server: ${SERVER_ROOT}" >&2
-    exit 1
-  fi
-  (
-    cd "${SERVER_ROOT}"
-    nohup node index.js >/tmp/barcostop-backend.log 2>&1 &
-  )
-  echo "[barcostop] Backend no estaba activo, iniciando en 5000..."
-fi
-
-if ! wait_backend_ready 30; then
-  echo "Backend no responde en http://127.0.0.1:5000/." >&2
-  echo "Revisa /tmp/barcostop-backend.log y server/index.js." >&2
+if ! wait_device_ready "${DEVICE_ID}" 140; then
+  echo "El dispositivo ${DEVICE_ID} no termino de arrancar correctamente." >&2
   exit 1
 fi
 
@@ -189,8 +180,6 @@ fi
 
 "${ADB}" -s "${DEVICE_ID}" reverse --remove tcp:8081 >/dev/null 2>&1 || true
 "${ADB}" -s "${DEVICE_ID}" reverse tcp:8081 tcp:8081 >/dev/null
-"${ADB}" -s "${DEVICE_ID}" reverse --remove tcp:5000 >/dev/null 2>&1 || true
-"${ADB}" -s "${DEVICE_ID}" reverse tcp:5000 tcp:5000 >/dev/null
 "${ADB}" -s "${DEVICE_ID}" shell monkey -p "${APP_ID}" -c android.intent.category.LAUNCHER 1 >/dev/null
 
 echo "BarcoStop abierto en ${DEVICE_ID} con paquete ${APP_ID}"

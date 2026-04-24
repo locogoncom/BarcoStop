@@ -7,7 +7,7 @@ BarcoStop ("la App") se compromete a proteger la privacidad y seguridad de las p
 ## 1. Responsable del tratamiento
 
 - App: BarcoStop
-- Contacto: soporte@barcostop.app
+- Contacto: hola@barcostop.net
 
 ## 2. Datos que tratamos
 
@@ -64,7 +64,7 @@ Aplicamos medidas tecnicas y organizativas, incluyendo:
 
 ## 8. Tus derechos
 
-Puedes solicitar acceso, rectificacion o eliminacion de tus datos, y ejercer otros derechos aplicables escribiendo a soporte@barcostop.app.
+Puedes solicitar acceso, rectificacion o eliminacion de tus datos, y ejercer otros derechos aplicables escribiendo a hola@barcostop.net.
 
 ## 9. Menores de edad
 
