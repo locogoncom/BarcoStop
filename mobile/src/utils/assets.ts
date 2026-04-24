@@ -1,5 +1,8 @@
 import {API_ORIGIN} from '../config/apiConfig';
 
+const normalizeUploadPathPrefix = (value: string): string =>
+  value.replace(/^\/(?:api\/v1|api|v1)(?=\/uploads\/)/i, '');
+
 export const normalizeRemoteAssetUrl = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
 
@@ -13,7 +16,7 @@ export const normalizeRemoteAssetUrl = (value: unknown): string | undefined => {
   if (/^https?:\/\//i.test(trimmed)) {
     try {
       const parsed = new URL(trimmed);
-      const normalizedPath = parsed.pathname.replace(/^\/api(?=\/uploads\/)/i, '');
+      const normalizedPath = normalizeUploadPathPrefix(parsed.pathname);
 
       if (/^\/uploads\//i.test(normalizedPath)) {
         return `${API_ORIGIN}${normalizedPath}`;
@@ -48,7 +51,7 @@ export const toServerUploadPath = (value: unknown): string | undefined => {
   if (/^https?:\/\//i.test(trimmed)) {
     try {
       const parsed = new URL(trimmed);
-      const normalizedPath = parsed.pathname.replace(/^\/api(?=\/uploads\/)/i, '');
+      const normalizedPath = normalizeUploadPathPrefix(parsed.pathname);
       if (normalizedPath.startsWith('/uploads/')) {
         return normalizedPath;
       }

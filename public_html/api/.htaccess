@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# Conserva Authorization para JWT en algunos setups Apache/PHP-FPM.
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Sirve archivos/directorios existentes directamente.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Front controller (public/index.php) para todo lo demás.
+RewriteRule ^ public/index.php [L]

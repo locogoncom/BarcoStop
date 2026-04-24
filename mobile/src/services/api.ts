@@ -1,7 +1,7 @@
 import axios from 'axios';
 import {io, type Socket} from 'socket.io-client';
 import type {Role, SessionData, Trip, User, UserSkill, Boat, Rating, Message, Conversation, Patron, SupportMessage, RegattaChatState, RegattaParticipant} from '../types';
-import {API_BASE_URL, API_ORIGIN} from '../config/apiConfig';
+import {API_BASE_URL, API_ORIGIN, WS_URL} from '../config/apiConfig';
 import {logger} from '../utils/logger';
 import {normalizeRemoteAssetUrl, toServerUploadPath} from '../utils/assets';
 
@@ -167,7 +167,7 @@ const getRealtimeSocket = (): Socket | null => {
   }
 
   resetRealtimeSocket();
-  realtimeSocket = io(API_ORIGIN, {
+  realtimeSocket = io(WS_URL, {
     transports: ['websocket'],
     autoConnect: true,
     reconnection: true,

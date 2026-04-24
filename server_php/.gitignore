@@ -1,7 +1,0 @@
-/vendor/
-/.env
-/.phpunit.result.cache
-/storage/uploads/avatars/*
-/storage/uploads/trips/*
-!/storage/uploads/avatars/.gitkeep
-!/storage/uploads/trips/.gitkeep
