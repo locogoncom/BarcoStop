@@ -34,7 +34,7 @@ siteRenderHeader('BarcoStop | Home', 'home');
   >
     <img class="play-badge" src="assets/google-play-badge.svg" alt="Descargar en Google Play">
   </a>
-  <p class="hero-note text-center">Grautuïto · Sin publicidad · Diseñado para movil</p>
+  <p class="hero-note text-center">Gratuïto · Sin publicidad · Diseñado para movil · <span class="underline">Gon lo recomienda</span></p>
   <div class="trust-row" aria-label="Confianza">
     <span class="trust-chip">Comunidad verificada</span>
     <span class="trust-chip">Soporte real</span>
@@ -61,6 +61,14 @@ siteRenderHeader('BarcoStop | Home', 'home');
       <p class="muted">Chat, reservas y seguimiento en una misma app para evitar fricciones.</p>
     </article>
   </div>
+</section>
+
+<section class="py-20 text-center reveal reveal-d2 center">
+  
+    <h3 class="font-extrabold text-4xl">Registro Capitán</h3>
+    <p class="muted">La tripulación para tu próximo viaje está aquí.</p>
+    <p><a class="button-like" href="capitanes.php">Ir al registro de capitanes</a></p>
+  
 </section>
 
 <section class="reveal reveal-d3">
@@ -121,17 +129,30 @@ siteRenderHeader('BarcoStop | Home', 'home');
           $destination = trim((string) ($trip['destination'] ?? ''));
           $route = ($origin !== '' && $destination !== '') ? ($origin.' -> '.$destination) : 'Ruta pendiente';
           $tripDate = siteFormatTripDate((string) ($trip['departureDate'] ?? ''), (string) ($trip['departureTime'] ?? ''));
+          $imageUrl = siteTripImageUrl(is_array($trip) ? $trip : []);
+          $parsedDescription = siteParseTripDescription((string) ($trip['description'] ?? ''));
+          $tripSummary = trim((string) ($parsedDescription['plain'] ?? ''));
+          if ($tripSummary === '') $tripSummary = 'Salida publicada en BarcoStop.';
           $captain = (string) ($trip['captainName'] ?? 'Capitan');
           $status = (string) ($trip['status'] ?? 'active');
           $seats = (int) ($trip['availableSeats'] ?? 0);
           $cost = number_format((float) ($trip['cost'] ?? 0), 2, ',', '.');
           ?>
         <article class="trip-card">
+          <img
+            class="trip-thumb"
+            src="<?php echo h($imageUrl); ?>"
+            alt="Imagen del viaje"
+            loading="lazy"
+            onerror="this.onerror=null;this.src='assets/logo-barcostop-header.png';"
+          >
           <h3 class="trip-route"><?php echo h($route); ?></h3>
           <p class="trip-meta">Capitan: <?php echo h($captain); ?></p>
           <p class="trip-meta">Salida: <?php echo h($tripDate); ?></p>
           <p class="trip-meta">Asientos: <?php echo h((string) $seats); ?> | Coste: <?php echo h($cost); ?> EUR</p>
           <p class="trip-meta">Estado: <?php echo h($status); ?></p>
+          <p class="trip-meta trip-summary"><?php echo h($tripSummary); ?></p>
+          <p class="trip-meta"><a href="trip.php?id=<?php echo urlencode((string) ($trip['id'] ?? '')); ?>">Ver detalle</a></p>
         </article>
       <?php } ?>
     </div>

@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_page">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="12dp"
+        android:background="@drawable/bg_section_card"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/public_profile_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/bs_primary_dark"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/public_profile_role"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/bs_text_muted" />
+
+        <TextView
+            android:id="@+id/public_profile_rating"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/bs_text"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/public_profile_bio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="@color/bs_text_muted" />
+
+        <TextView
+            android:id="@+id/public_profile_location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/bs_text_muted"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/public_profile_instagram"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/bs_text_muted"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/public_profile_languages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/bs_text_muted"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/public_profile_boat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/bs_text_muted" />
+
+        <TextView
+            android:id="@+id/public_profile_rate_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/public_profile_rate_title"
+            android:textColor="@color/bs_primary_dark"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/public_profile_rate_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/public_profile_rate_hint"
+            android:inputType="number" />
+
+        <EditText
+            android:id="@+id/public_profile_rate_comment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/public_profile_rate_comment_hint"
+            android:inputType="textMultiLine"
+            android:maxLines="4"
+            android:minLines="2" />
+
+        <Button
+            android:id="@+id/public_profile_rate_send"
+            style="@style/Widget.BarcoStop.Button.Secondary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/public_profile_rate_send" />
+
+        <TextView
+            android:id="@+id/public_profile_reviews_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/public_profile_reviews"
+            android:textColor="@color/bs_primary_dark"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/public_profile_reviews_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/public_profile_reviews_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/public_profile_no_reviews"
+            android:textColor="@color/bs_text_muted"
+            android:visibility="gone" />
+
+        <ProgressBar
+            android:id="@+id/public_profile_loading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp" />
+    </LinearLayout>
+</ScrollView>

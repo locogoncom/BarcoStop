@@ -1,0 +1,106 @@
+import java.util.Properties
+import java.util.TimeZone
+
+plugins {
+    id 'com.android.application'
+}
+
+def credentials = new Properties()
+def credentialsFile = rootProject.file("config/credentials.ttb.properties")
+if (credentialsFile.exists()) {
+    credentialsFile.withInputStream { credentials.load(it) }
+}
+
+def cred = { String key, String fallback = "" ->
+    def raw = credentials.getProperty(key)
+    return raw == null ? fallback : raw.trim()
+}
+
+def q = { String value ->
+    return value.replace("\\", "\\\\").replace("\"", "\\\"")
+}
+
+def buildDateUtc = cred(
+        "BARCOSTOP_BUILD_DATE_UTC",
+        new Date().format("yyyy-MM-dd HH:mm 'UTC'", TimeZone.getTimeZone("UTC"))
+)
+
+def hasReleaseSigning =
+        !cred("RELEASE_STORE_FILE").isEmpty() &&
+        !cred("RELEASE_STORE_PASSWORD").isEmpty() &&
+        !cred("RELEASE_KEY_ALIAS").isEmpty() &&
+        !cred("RELEASE_KEY_PASSWORD").isEmpty()
+
+android {
+    namespace 'com.barcostop.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.barcostop.app'
+        minSdk 24
+        targetSdk 35
+        versionCode 2100000000
+        versionName '1.0.0'
+        buildConfigField "String", "BUILD_DATE_UTC", "\"" + q(buildDateUtc) + "\""
+        buildConfigField "String", "API_BASE_URL", "\"" + q(cred("BARCOSTOP_API_BASE_URL", "https://api.barcostop.net/api/v1/")) + "\""
+        buildConfigField "String", "WS_URL", "\"" + q(cred("BARCOSTOP_WS_URL", "https://api.barcostop.net")) + "\""
+        buildConfigField "String", "APP_ENV", "\"" + q(cred("BARCOSTOP_ENV", "prod")) + "\""
+        buildConfigField "String", "GOOGLE_WEB_CLIENT_ID", "\"" + q(cred("GOOGLE_WEB_CLIENT_ID", "")) + "\""
+        buildConfigField "String", "GOOGLE_ANDROID_CLIENT_ID", "\"" + q(cred("GOOGLE_ANDROID_CLIENT_ID", "")) + "\""
+        buildConfigField "String", "REDDIT_CLIENT_ID", "\"" + q(cred("REDDIT_CLIENT_ID", "")) + "\""
+        buildConfigField "String", "REDDIT_USERNAME", "\"" + q(cred("REDDIT_USERNAME", "")) + "\""
+        buildConfigField "String", "REDDIT_SUBREDDIT", "\"" + q(cred("REDDIT_SUBREDDIT", "")) + "\""
+        buildConfigField "String", "JWT_EXPECTED_ISSUER", "\"" + q(cred("JWT_EXPECTED_ISSUER", "")) + "\""
+        buildConfigField "String", "JWT_EXPECTED_AUDIENCE", "\"" + q(cred("JWT_EXPECTED_AUDIENCE", "")) + "\""
+        buildConfigField "String", "PAYPAL_ME", "\"" + q(cred("PAYPAL_ME", "")) + "\""
+
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(cred("RELEASE_STORE_FILE"))
+                storePassword cred("RELEASE_STORE_PASSWORD")
+                keyAlias cred("RELEASE_KEY_ALIAS")
+                keyPassword cred("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.google.android.gms:play-services-auth:21.2.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+    implementation 'com.google.code.gson:gson:2.11.0'
+}

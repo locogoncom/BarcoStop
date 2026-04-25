@@ -42,5 +42,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+!api/.env
+!public_html/.env
 # Nested repo backup
 server/.git_backup_*/

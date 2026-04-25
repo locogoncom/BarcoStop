@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:name=".core.BarcoStopApplication"
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/ic_launcher_foreground"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.BarcoStop">
+        <activity android:name=".ui.screens.MainAppActivity" />
+        <activity android:name=".ui.screens.UsersActivity" />
+        <activity android:name=".ui.screens.UserPublicProfileActivity" />
+        <activity android:name=".ui.screens.TripListActivity" />
+        <activity android:name=".ui.screens.EditTripActivity" />
+        <activity android:name=".ui.screens.TripDetailActivity" />
+        <activity android:name=".ui.screens.ReservationsActivity" />
+        <activity android:name=".ui.screens.ProfileActivity" />
+        <activity android:name=".ui.screens.PatronRequestsActivity" />
+        <activity android:name=".ui.screens.MessagesActivity" />
+        <activity android:name=".ui.screens.NewChatActivity" />
+        <activity android:name=".ui.screens.FavoritesActivity" />
+        <activity android:name=".ui.screens.CreateTripActivity" />
+        <activity android:name=".ui.screens.ChatActivity" />
+        <activity android:name=".ui.screens.BookingsActivity" />
+        <activity android:name=".ui.screens.BoatsActivity" />
+        <activity android:name=".ui.screens.AuthActivity" />
+        <activity
+            android:name=".ui.screens.HomeActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

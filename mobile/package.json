@@ -8,6 +8,7 @@
     "android:activate": "powershell -ExecutionPolicy Bypass -File ./scripts/activate-barcostop.ps1",
     "android:barcostop:linux": "bash ./scripts/run-android-pixel6.sh",
     "android:usb": "bash ./scripts/run-android-usb.sh",
+    "dev:usb": "npm run android:usb",
     "android:activate:linux": "bash ./scripts/activate-barcostop.sh",
     "android:start-emulator:linux": "bash ./scripts/start-pixel6.sh",
     "ios": "react-native run-ios",

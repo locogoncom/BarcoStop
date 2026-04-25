@@ -20,14 +20,20 @@ npm run android:usb
 Ejecuta desde la raiz del repo:
 
 ```bash
-# Todos (API legacy + tests mobile)
+# Todos (API legacy + API PHPUnit + tests mobile)
 npm test
 
-# API legacy (runner propio en tests/api/php/run.php)
+# API completa (legacy + PHPUnit)
 npm run test:api
+
+# API legacy (runner propio en tests/api/php/run.php)
+npm run test:api:legacy
 
 # API PHP con PHPUnit (suite de contratos mobile)
 npm run test:api:phpunit
+
+# API live contra producción (login + CRUD viajes en api.barcostop.net)
+npm run test:api:live:prod
 
 # Mobile (Jest)
 npm run test:mobile
@@ -37,6 +43,17 @@ Test live opcional de login contra `https://api.barcostop.net/api/v1`:
 
 ```bash
 BARCOSTOP_RUN_LIVE_AUTH_TEST=1 \
+BARCOSTOP_TEST_EMAIL=betolopezayesa@gmail.com \
+BARCOSTOP_TEST_PASSWORD=test22 \
+composer --working-dir public_html/api test
+```
+
+Si este test live falla por rutas/respuestas, revisa primero que la API desplegada en producción (`api.barcostop.net`) esté actualizada con la última versión.
+
+Test live opcional de CRUD de viajes (crear, listar, detalle y borrar):
+
+```bash
+BARCOSTOP_RUN_LIVE_TRIP_CRUD_TEST=1 \
 BARCOSTOP_TEST_EMAIL=betolopezayesa@gmail.com \
 BARCOSTOP_TEST_PASSWORD=test22 \
 composer --working-dir public_html/api test

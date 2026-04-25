@@ -1,0 +1,43 @@
+<resources>
+    <string name="app_name">BarcoStop</string>
+    <string name="home_title">BarcoStop</string>
+    <string name="home_subtitle">Trouve un bateau ou un equipage en secondes.</string>
+    <string name="token_expired">Votre session a expire. Reconnectez-vous.</string>
+    <string name="auth_login">Connexion</string>
+    <string name="auth_register">Creer un compte</string>
+    <string name="auth_name">Nom</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Mot de passe</string>
+    <string name="auth_confirm_password">Confirmer mot de passe</string>
+    <string name="auth_continue">Continuer</string>
+    <string name="auth_have_account">J ai deja un compte</string>
+    <string name="auth_no_account">Creer un nouveau compte</string>
+    <string name="auth_required">Completez les champs obligatoires</string>
+    <string name="auth_password_mismatch">Les mots de passe ne correspondent pas</string>
+    <string name="auth_error_generic">Impossible de se connecter</string>
+    <string name="role_captain">Capitaine</string>
+    <string name="role_traveler">Voyageur</string>
+    <string name="home_continue_session">Continuer la session</string>
+    <string name="home_start_captain">Je suis capitaine</string>
+    <string name="home_start_traveler">Je suis voyageur</string>
+    <string name="home_logout">Se deconnecter</string>
+    <string name="home_build_info">v%1$s (%2$d) · %3$s</string>
+    <string name="main_title">BarcoStop</string>
+    <string name="welcome_user">Bienvenue, %1$s</string>
+
+    <string name="screen_home">Accueil</string>
+    <string name="screen_auth">Connexion</string>
+    <string name="screen_boats">Bateaux</string>
+    <string name="screen_bookings">Demandes</string>
+    <string name="screen_chat">Chat</string>
+    <string name="screen_create_trip">Creer Voyage</string>
+    <string name="screen_favorites">Favoris</string>
+    <string name="screen_messages">Messages</string>
+    <string name="screen_patron_requests">Demandes Patron</string>
+    <string name="screen_profile">Profil</string>
+    <string name="screen_reservations">Reservations</string>
+    <string name="screen_trip_detail">Detail Voyage</string>
+    <string name="screen_trip_list">Liste Voyages</string>
+    <string name="screen_user_public_profile">Profil Public</string>
+    <string name="screen_users">Utilisateurs</string>
+</resources>

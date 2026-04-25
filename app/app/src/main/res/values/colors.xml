@@ -1,0 +1,14 @@
+<resources>
+    <color name="bs_primary">#199C52</color>
+    <color name="bs_primary_dark">#0F6A37</color>
+    <color name="bs_secondary">#43C47B</color>
+    <color name="bs_bg">#F2FAF4</color>
+    <color name="bs_surface">#FFFFFF</color>
+    <color name="bs_surface_alt">#EAF8EE</color>
+    <color name="bs_border">#CDE8D6</color>
+    <color name="bs_text">#0F172A</color>
+    <color name="bs_text_muted">#475569</color>
+    <color name="bs_success">#16A34A</color>
+    <color name="bs_danger">#DC2626</color>
+    <color name="white">#FFFFFF</color>
+</resources>

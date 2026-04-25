@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 require_once __DIR__.'/bootstrap.php';
 
-function siteRenderHeader(string $title, string $activePage): void
+function siteRenderHeader(string $title, string $activePage, bool $useTailwind = false): void
 {
     $navigation = [
         'home' => ['label' => 'Home', 'href' => 'index.php'],
         'faq' => ['label' => 'FAQ', 'href' => 'faq.php'],
         'casos' => ['label' => 'Casos de uso', 'href' => 'casos-uso.php'],
         'contacto' => ['label' => 'Contacto', 'href' => 'contacto.php'],
+        'capitanes' => ['label' => 'Registro Capitán', 'href' => 'capitanes.php'],
     ];
     $activeMap = [
         'home' => 'home',
+        'capitanes' => 'capitanes',
         'faq' => 'faq',
         'casos' => 'casos',
         'contacto' => 'contacto',
@@ -30,10 +32,21 @@ function siteRenderHeader(string $title, string $activePage): void
   <meta property="og:title" content="BarcoStop">
   <meta property="og:description" content="Conecta marineros con capitanes">
   <meta property="og:type" content="website">
+  <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/site.css">
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = {
+      corePlugins: { preflight: false }
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
   <header class="topbar">
@@ -46,7 +59,7 @@ function siteRenderHeader(string $title, string $activePage): void
         <?php foreach ($navigation as $key => $item) { ?>
           <?php $isActive = $activeValue === $key; ?>
           <a
-            class="nav-link <?php echo $isActive ? 'is-active' : ''; ?>"
+            class="nav-link <?php echo $key === 'capitanes' ? 'nav-register' : ''; ?> <?php echo $isActive ? 'is-active' : ''; ?>"
             href="<?php echo h($item['href']); ?>"
           >
             <?php echo h($item['label']); ?>

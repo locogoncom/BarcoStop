@@ -1,0 +1,43 @@
+<resources>
+    <string name="app_name">BarcoStop</string>
+    <string name="home_title">BarcoStop</string>
+    <string name="home_subtitle">Encontra barco ou tripulacao em segundos.</string>
+    <string name="token_expired">A sua sessao expirou. Inicie sessao novamente.</string>
+    <string name="auth_login">Entrar</string>
+    <string name="auth_register">Criar conta</string>
+    <string name="auth_name">Nome</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Senha</string>
+    <string name="auth_confirm_password">Confirmar senha</string>
+    <string name="auth_continue">Continuar</string>
+    <string name="auth_have_account">Ja tenho conta</string>
+    <string name="auth_no_account">Criar nova conta</string>
+    <string name="auth_required">Preencha os campos obrigatorios</string>
+    <string name="auth_password_mismatch">As senhas nao coincidem</string>
+    <string name="auth_error_generic">Nao foi possivel autenticar</string>
+    <string name="role_captain">Patrao</string>
+    <string name="role_traveler">Viajante</string>
+    <string name="home_continue_session">Continuar sessao</string>
+    <string name="home_start_captain">Sou patrao</string>
+    <string name="home_start_traveler">Sou viajante</string>
+    <string name="home_logout">Terminar sessao</string>
+    <string name="home_build_info">v%1$s (%2$d) · %3$s</string>
+    <string name="main_title">BarcoStop</string>
+    <string name="welcome_user">Bem-vindo, %1$s</string>
+
+    <string name="screen_home">Inicio</string>
+    <string name="screen_auth">Acesso</string>
+    <string name="screen_boats">Barcos</string>
+    <string name="screen_bookings">Pedidos</string>
+    <string name="screen_chat">Chat</string>
+    <string name="screen_create_trip">Criar Viagem</string>
+    <string name="screen_favorites">Favoritos</string>
+    <string name="screen_messages">Mensagens</string>
+    <string name="screen_patron_requests">Pedidos Patron</string>
+    <string name="screen_profile">Perfil</string>
+    <string name="screen_reservations">Reservas</string>
+    <string name="screen_trip_detail">Detalhe Viagem</string>
+    <string name="screen_trip_list">Lista Viagens</string>
+    <string name="screen_user_public_profile">Perfil Publico</string>
+    <string name="screen_users">Usuarios</string>
+</resources>

@@ -5,6 +5,7 @@ import {useAuth} from '../contexts/AuthContext';
 import {useLanguage} from '../contexts/LanguageContext';
 import type {LanguageCode} from '../i18n/translations';
 import type {RootStackParamList} from '../navigation/AppNavigator';
+import {APP_BUILD_LABEL} from '../config/appVersion';
 import {colors} from '../theme/colors';
 
 const heroAccentTone = '#0f766e';
@@ -82,6 +83,7 @@ export default function HomeScreen({navigation}: Props) {
           })}
         </View>
       </View>
+      <Text style={styles.buildMetaText}>{APP_BUILD_LABEL}</Text>
     </View>
   );
 }
@@ -178,4 +180,15 @@ const styles = StyleSheet.create({
   flagEmoji: {fontSize: 21, marginBottom: 2},
   flagLabel: {fontSize: 10, color: '#64748b', fontWeight: '600'},
   flagLabelActive: {color: heroAccentTone},
+  buildMetaText: {
+    position: 'absolute',
+    left: 10,
+    bottom: 18,
+    fontSize: 10,
+    color: '#334155',
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    paddingHorizontal: 4,
+    borderRadius: 4,
+  },
 });

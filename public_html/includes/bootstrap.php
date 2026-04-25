@@ -2,52 +2,39 @@
 
 declare(strict_types=1);
 
-function siteLoadEnvFile(string $path): void
+/**
+ * @return array<string, mixed>
+ */
+function siteWebsiteConfig(): array
 {
-    if (!is_file($path) || !is_readable($path)) {
-        return;
+    static $config = null;
+    if (is_array($config)) {
+        return $config;
     }
 
-    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    if ($lines === false) {
-        return;
+    $configPath = dirname(__DIR__, 1) . '/config.php';
+    if (is_file($configPath) && is_readable($configPath)) {
+        $loaded = require $configPath;
+        if (is_array($loaded)) {
+            $config = $loaded;
+            return $config;
+        }
     }
 
-    foreach ($lines as $line) {
-        $trimmed = trim($line);
-        if ($trimmed === '' || str_starts_with($trimmed, '#') || !str_contains($trimmed, '=')) {
-            continue;
-        }
-
-        [$keyRaw, $valueRaw] = explode('=', $trimmed, 2);
-        $key = trim($keyRaw);
-        if ($key === '') {
-            continue;
-        }
-
-        if (getenv($key) !== false) {
-            continue;
-        }
-
-        $value = trim($valueRaw);
-        $quoted = strlen($value) >= 2
-            && (($value[0] === '"' && $value[strlen($value) - 1] === '"')
-                || ($value[0] === "'" && $value[strlen($value) - 1] === "'"));
-        if ($quoted) {
-            $value = substr($value, 1, -1);
-        }
-
-        putenv("$key=$value");
-        $_ENV[$key] = $value;
-        $_SERVER[$key] = $value;
-    }
+    $config = [];
+    return $config;
 }
-
-siteLoadEnvFile(dirname(__DIR__, 1) . '/api/.env');
-siteLoadEnvFile(dirname(__DIR__, 2) . '/.env');
 
 function siteEnv(string $key, ?string $default = null): ?string
 {
+    $config = siteWebsiteConfig();
+    if (array_key_exists($key, $config)) {
+        $configured = $config[$key];
+        if ($configured !== null && $configured !== '') {
+            return (string) $configured;
+        }
+    }
+
     $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
     if ($value === false || $value === null || $value === '') {
         return $default;
@@ -108,6 +95,230 @@ function siteDbError(): ?string
     return $state['error'];
 }
 
+function siteApiBaseUrl(): string
+{
+    $configured = trim((string) siteEnv('WEBSITE_API_BASE', ''));
+    if ($configured !== '') {
+        return rtrim($configured, '/');
+    }
+
+    return 'https://api.barcostop.net/api/v1';
+}
+
+function siteApiOrigin(): string
+{
+    $base = siteApiBaseUrl();
+    $parts = parse_url($base);
+    if (!is_array($parts) || empty($parts['host'])) {
+        return 'https://api.barcostop.net';
+    }
+    $scheme = (string) ($parts['scheme'] ?? 'https');
+    $host = (string) $parts['host'];
+    $port = isset($parts['port']) ? (int) $parts['port'] : null;
+    if ($port !== null && $port > 0) {
+        return $scheme . '://' . $host . ':' . $port;
+    }
+    return $scheme . '://' . $host;
+}
+
+/**
+ * @return array{plain:string,meta:array<string,mixed>}
+ */
+function siteParseTripDescription(string $raw): array
+{
+    $description = trim($raw);
+    $meta = [];
+
+    $marker = "\n[BSMETA]";
+    $pos = strpos($description, $marker);
+    if ($pos === false) {
+        return ['plain' => $description, 'meta' => $meta];
+    }
+
+    $plain = trim(substr($description, 0, $pos));
+    $metaRaw = trim(substr($description, $pos + strlen($marker)));
+    if ($metaRaw !== '') {
+        $decoded = json_decode($metaRaw, true);
+        if (is_array($decoded)) {
+            $meta = $decoded;
+        }
+    }
+
+    return ['plain' => $plain, 'meta' => $meta];
+}
+
+function siteResolveTripImageUrl(string $value): string
+{
+    $url = trim($value);
+    if ($url === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $url) === 1) {
+        return $url;
+    }
+    if (str_starts_with($url, '/uploads/')) {
+        return siteApiOrigin() . $url;
+    }
+    if (str_starts_with($url, 'uploads/')) {
+        return siteApiOrigin() . '/' . $url;
+    }
+    if (str_starts_with($url, '/')) {
+        return siteApiOrigin() . $url;
+    }
+    return siteApiOrigin() . '/' . $url;
+}
+
+function siteTripImageUrl(array $trip): string
+{
+    $description = (string) ($trip['description'] ?? '');
+    $parsed = siteParseTripDescription($description);
+    $meta = $parsed['meta'];
+    $metaUrl = is_array($meta) ? (string) ($meta['boatImageUrl'] ?? '') : '';
+    $directUrl = (string) ($trip['boatImageUrl'] ?? '');
+
+    $resolved = siteResolveTripImageUrl($metaUrl !== '' ? $metaUrl : $directUrl);
+    if ($resolved !== '') {
+        return $resolved;
+    }
+
+    return 'assets/logo-barcostop-header.png';
+}
+
+/**
+ * @return array<mixed>|null
+ */
+function siteFetchApiJsonArray(string $path): ?array
+{
+    $url = siteApiBaseUrl() . '/' . ltrim($path, '/');
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'timeout' => 4,
+            'ignore_errors' => true,
+            'header' => "Accept: application/json\r\n",
+        ],
+    ]);
+
+    $raw = @file_get_contents($url, false, $context);
+    if ($raw === false) {
+        return null;
+    }
+
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : null;
+}
+
+/**
+ * @return array{
+ *   totalUsers: int,
+ *   totalTrips: int,
+ *   latestTrips: array<int, array<string, mixed>>,
+ *   dbConnected: bool,
+ *   dbError: ?string
+ * }|null
+ */
+function siteHomeMetricsFromApi(): ?array
+{
+    $trips = siteFetchApiJsonArray('/trips');
+    if (!is_array($trips)) {
+        return null;
+    }
+
+    $users = siteFetchApiJsonArray('/users');
+    $totalUsers = is_array($users) ? count($users) : 0;
+    $totalTrips = count($trips);
+
+    usort($trips, static function ($a, $b): int {
+        $aCreated = is_array($a) ? (string) ($a['createdAt'] ?? $a['created_at'] ?? '') : '';
+        $bCreated = is_array($b) ? (string) ($b['createdAt'] ?? $b['created_at'] ?? '') : '';
+        return strcmp($bCreated, $aCreated);
+    });
+
+    $latestTrips = [];
+    foreach (array_slice($trips, 0, 6) as $trip) {
+        if (!is_array($trip)) {
+            continue;
+        }
+
+        $latestTrips[] = [
+            'id' => (string) ($trip['id'] ?? ''),
+            'origin' => (string) ($trip['origin'] ?? ''),
+            'destination' => (string) ($trip['destination'] ?? ''),
+            'departureDate' => (string) ($trip['departureDate'] ?? $trip['departure_date'] ?? ''),
+            'departureTime' => (string) ($trip['departureTime'] ?? $trip['departure_time'] ?? ''),
+            'availableSeats' => (int) ($trip['availableSeats'] ?? $trip['available_seats'] ?? 0),
+            'cost' => (float) ($trip['cost'] ?? 0),
+            'description' => (string) ($trip['description'] ?? ''),
+            'status' => (string) ($trip['status'] ?? 'active'),
+            'captainName' => (string) ($trip['patronName'] ?? $trip['captainName'] ?? 'Capitan'),
+            'createdAt' => (string) ($trip['createdAt'] ?? $trip['created_at'] ?? ''),
+        ];
+    }
+
+    return [
+        'totalUsers' => $totalUsers,
+        'totalTrips' => $totalTrips,
+        'latestTrips' => $latestTrips,
+        'dbConnected' => false,
+        'dbError' => siteDbError(),
+    ];
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function siteTripByIdFromApi(string $tripId): ?array
+{
+    $tripId = trim($tripId);
+    if ($tripId === '') {
+        return null;
+    }
+
+    $url = siteApiBaseUrl() . '/trips/' . rawurlencode($tripId);
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'timeout' => 4,
+            'ignore_errors' => true,
+            'header' => "Accept: application/json\r\n",
+        ],
+    ]);
+    $raw = @file_get_contents($url, false, $context);
+    if ($raw === false) {
+        return null;
+    }
+    $trip = json_decode($raw, true);
+    if (!is_array($trip) || empty($trip['id'])) {
+        return null;
+    }
+
+    $captain = is_array($trip['patron'] ?? null) ? $trip['patron'] : [];
+    return [
+        'id' => (string) ($trip['id'] ?? ''),
+        'origin' => (string) ($trip['origin'] ?? ''),
+        'destination' => (string) ($trip['destination'] ?? ''),
+        'departureDate' => (string) ($trip['departureDate'] ?? ''),
+        'departureTime' => (string) ($trip['departureTime'] ?? ''),
+        'estimatedDuration' => (string) ($trip['estimatedDuration'] ?? ''),
+        'description' => (string) ($trip['description'] ?? ''),
+        'availableSeats' => (int) ($trip['availableSeats'] ?? 0),
+        'cost' => (float) ($trip['cost'] ?? 0),
+        'status' => (string) ($trip['status'] ?? 'active'),
+        'createdAt' => (string) ($trip['createdAt'] ?? ''),
+        'updatedAt' => (string) ($trip['updatedAt'] ?? ''),
+        'captain' => [
+            'id' => (string) ($captain['id'] ?? ''),
+            'name' => (string) ($captain['name'] ?? 'Capitan'),
+            'bio' => (string) ($captain['bio'] ?? ''),
+            'boatName' => (string) ($captain['boatName'] ?? ''),
+            'boatType' => (string) ($captain['boatType'] ?? ''),
+            'boatModel' => (string) ($captain['boatModel'] ?? ''),
+            'homePort' => (string) ($captain['homePort'] ?? ''),
+            'instagram' => (string) ($captain['instagram'] ?? ''),
+        ],
+    ];
+}
+
 /**
  * @return array{
  *   totalUsers: int,
@@ -121,6 +332,11 @@ function siteHomeMetrics(): array
 {
     $pdo = siteDb();
     if (!$pdo) {
+        $apiMetrics = siteHomeMetricsFromApi();
+        if (is_array($apiMetrics)) {
+            return $apiMetrics;
+        }
+
         return [
             'totalUsers' => 0,
             'totalTrips' => 0,
@@ -143,6 +359,7 @@ function siteHomeMetrics(): array
                 t.departure_time,
                 t.available_seats,
                 t.cost,
+                t.description,
                 t.status,
                 t.created_at,
                 u.name AS patron_name
@@ -152,6 +369,11 @@ function siteHomeMetrics(): array
             LIMIT 6'
         );
     } catch (\Throwable $e) {
+        $apiMetrics = siteHomeMetricsFromApi();
+        if (is_array($apiMetrics)) {
+            return $apiMetrics;
+        }
+
         return [
             'totalUsers' => 0,
             'totalTrips' => 0,
@@ -172,6 +394,7 @@ function siteHomeMetrics(): array
                 'departureTime' => (string) ($row['departure_time'] ?? ''),
                 'availableSeats' => (int) ($row['available_seats'] ?? 0),
                 'cost' => (float) ($row['cost'] ?? 0),
+                'description' => (string) ($row['description'] ?? ''),
                 'status' => (string) ($row['status'] ?? 'active'),
                 'captainName' => (string) ($row['patron_name'] ?? 'Capitan'),
                 'createdAt' => (string) ($row['created_at'] ?? ''),
@@ -188,6 +411,112 @@ function siteHomeMetrics(): array
     ];
 }
 
+/**
+ * @return array<string,mixed>|null
+ */
+function siteTripById(string $tripId): ?array
+{
+    $tripId = trim($tripId);
+    if ($tripId === '') {
+        return null;
+    }
+
+    $pdo = siteDb();
+    if (!$pdo) {
+        return siteTripByIdFromApi($tripId);
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT
+                t.id,
+                t.origin,
+                t.destination,
+                t.departure_date,
+                t.departure_time,
+                t.estimated_duration,
+                t.description,
+                t.available_seats,
+                t.cost,
+                t.status,
+                t.created_at,
+                t.updated_at,
+                u.id AS captain_id,
+                u.name AS captain_name,
+                u.bio AS captain_bio,
+                u.boat_name,
+                u.boat_type,
+                u.boat_model,
+                u.home_port,
+                u.instagram
+            FROM trips t
+            LEFT JOIN users u ON u.id = t.patron_id
+            WHERE t.id = ?
+            LIMIT 1'
+        );
+        $stmt->execute([$tripId]);
+        $row = $stmt->fetch();
+    } catch (\Throwable $e) {
+        // Backward-compatible query for older production schemas (missing optional user columns).
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT
+                    t.id,
+                    t.origin,
+                    t.destination,
+                    t.departure_date,
+                    t.departure_time,
+                    t.estimated_duration,
+                    t.description,
+                    t.available_seats,
+                    t.cost,
+                    t.status,
+                    t.created_at,
+                    t.updated_at,
+                    u.id AS captain_id,
+                    u.name AS captain_name,
+                    u.bio AS captain_bio
+                FROM trips t
+                LEFT JOIN users u ON u.id = t.patron_id
+                WHERE t.id = ?
+                LIMIT 1'
+            );
+            $stmt->execute([$tripId]);
+            $row = $stmt->fetch();
+        } catch (\Throwable $ignored) {
+            return siteTripByIdFromApi($tripId);
+        }
+    }
+    if (!is_array($row)) {
+        return siteTripByIdFromApi($tripId);
+    }
+
+    return [
+        'id' => (string) ($row['id'] ?? ''),
+        'origin' => (string) ($row['origin'] ?? ''),
+        'destination' => (string) ($row['destination'] ?? ''),
+        'departureDate' => (string) ($row['departure_date'] ?? ''),
+        'departureTime' => (string) ($row['departure_time'] ?? ''),
+        'estimatedDuration' => (string) ($row['estimated_duration'] ?? ''),
+        'description' => (string) ($row['description'] ?? ''),
+        'availableSeats' => (int) ($row['available_seats'] ?? 0),
+        'cost' => (float) ($row['cost'] ?? 0),
+        'status' => (string) ($row['status'] ?? 'active'),
+        'createdAt' => (string) ($row['created_at'] ?? ''),
+        'updatedAt' => (string) ($row['updated_at'] ?? ''),
+        'captain' => [
+            'id' => (string) ($row['captain_id'] ?? ''),
+            'name' => (string) ($row['captain_name'] ?? 'Capitan'),
+            'bio' => (string) ($row['captain_bio'] ?? ''),
+            'boatName' => (string) ($row['boat_name'] ?? ''),
+            'boatType' => (string) ($row['boat_type'] ?? ''),
+            'boatModel' => (string) ($row['boat_model'] ?? ''),
+            'homePort' => (string) ($row['home_port'] ?? ''),
+            'instagram' => (string) ($row['instagram'] ?? ''),
+        ],
+    ];
+}
+
 function siteFormatTripDate(string $date, string $time): string
 {
     if ($date === '') {
@@ -201,6 +530,123 @@ function siteFormatTripDate(string $date, string $time): string
     }
 
     return $candidate->format('d/m/Y H:i');
+}
+
+function siteUuidV4(): string
+{
+    $bytes = random_bytes(16);
+    $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+    $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+    $hex = bin2hex($bytes);
+    return sprintf(
+        '%s-%s-%s-%s-%s',
+        substr($hex, 0, 8),
+        substr($hex, 8, 4),
+        substr($hex, 12, 4),
+        substr($hex, 16, 4),
+        substr($hex, 20, 12)
+    );
+}
+
+/**
+ * @return array{ok:bool,message:string,userId?:string,tripId?:string}
+ */
+function siteCreateCaptainWithTrip(array $input): array
+{
+    $pdo = siteDb();
+    if (!$pdo) {
+        return ['ok' => false, 'message' => 'Base de datos no disponible en este momento.'];
+    }
+
+    $name = trim((string) ($input['name'] ?? ''));
+    $email = trim((string) ($input['email'] ?? ''));
+    $password = trim((string) ($input['password'] ?? ''));
+    $boatName = trim((string) ($input['boat_name'] ?? ''));
+    $boatType = trim((string) ($input['boat_type'] ?? ''));
+    $origin = trim((string) ($input['origin'] ?? ''));
+    $destination = trim((string) ($input['destination'] ?? ''));
+    $departureDate = trim((string) ($input['departure_date'] ?? ''));
+    $departureTime = trim((string) ($input['departure_time'] ?? '10:00:00'));
+    $seats = max(1, (int) ($input['available_seats'] ?? 1));
+    $cost = max(0.0, (float) ($input['cost'] ?? 0));
+    $description = trim((string) ($input['description'] ?? ''));
+
+    if ($name === '' || $email === '' || $password === '' || $boatName === '' || $origin === '' || $destination === '' || $departureDate === '') {
+        return ['ok' => false, 'message' => 'Faltan campos obligatorios del formulario.'];
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return ['ok' => false, 'message' => 'Email invalido.'];
+    }
+    if (strlen($password) < 4) {
+        return ['ok' => false, 'message' => 'La contraseña debe tener al menos 4 caracteres.'];
+    }
+
+    $exists = $pdo->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
+    $exists->execute([$email]);
+    if ($exists->fetch()) {
+        return ['ok' => false, 'message' => 'Ya existe una cuenta con ese email.'];
+    }
+
+    $userId = siteUuidV4();
+    $tripId = siteUuidV4();
+    $hashed = password_hash($password, PASSWORD_BCRYPT, ['cost' => 10]);
+
+    try {
+        $pdo->beginTransaction();
+
+        $insertUser = $pdo->prepare(
+            'INSERT INTO users
+             (id, name, email, password, role, boat_name, boat_type, created_at, updated_at)
+             VALUES (?, ?, ?, ?, "patron", ?, ?, NOW(), NOW())'
+        );
+        $insertUser->execute([$userId, $name, $email, $hashed, $boatName, $boatType]);
+
+        $insertBoat = $pdo->prepare(
+            'INSERT INTO boats
+             (id, patron_id, name, type, capacity, length, year_built, fuel_type, license_number, safety_equipment, description, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, "active", NOW(), NOW())'
+        );
+        $insertBoat->execute([
+            siteUuidV4(),
+            $userId,
+            $boatName,
+            $boatType,
+            $seats,
+            json_encode([], JSON_UNESCAPED_UNICODE),
+            'Boat registered from captain web form',
+        ]);
+
+        $insertTrip = $pdo->prepare(
+            'INSERT INTO trips
+             (id, patron_id, origin, destination, departure_date, departure_time, estimated_duration, description, available_seats, cost, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "active", NOW(), NOW())'
+        );
+        $insertTrip->execute([
+            $tripId,
+            $userId,
+            $origin,
+            $destination,
+            $departureDate,
+            $departureTime,
+            '',
+            $description,
+            $seats,
+            $cost,
+        ]);
+
+        $pdo->commit();
+        return [
+            'ok' => true,
+            'message' => 'Alta completada. Ya tienes cuenta de capitan y tu primer viaje publicado.',
+            'userId' => $userId,
+            'tripId' => $tripId,
+        ];
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        return ['ok' => false, 'message' => 'No se pudo completar el alta ahora mismo.'];
+    }
 }
 
 function h(mixed $value): string

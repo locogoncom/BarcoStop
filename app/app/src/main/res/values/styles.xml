@@ -1,0 +1,48 @@
+<resources>
+    <style name="Widget.BarcoStop.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/bs_surface</item>
+        <item name="cardCornerRadius">14dp</item>
+        <item name="cardElevation">1.5dp</item>
+        <item name="strokeColor">@color/bs_border</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="Widget.BarcoStop.Button" parent="Widget.Material3.Button">
+        <item name="android:backgroundTint">@color/bs_primary</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="cornerRadius">11dp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+    </style>
+
+    <style name="Widget.BarcoStop.Button.Secondary" parent="Widget.BarcoStop.Button">
+        <item name="android:backgroundTint">@color/bs_surface_alt</item>
+        <item name="android:textColor">@color/bs_primary_dark</item>
+    </style>
+
+    <style name="Widget.BarcoStop.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/bs_primary</item>
+        <item name="android:textColor">@color/bs_primary_dark</item>
+        <item name="cornerRadius">11dp</item>
+        <item name="android:minHeight">42dp</item>
+    </style>
+
+    <style name="Widget.BarcoStop.Button.Danger" parent="Widget.BarcoStop.Button">
+        <item name="android:backgroundTint">@color/bs_danger</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Widget.BarcoStop.BottomNav.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/bs_surface_alt</item>
+    </style>
+
+    <style name="Widget.BarcoStop.EditText" parent="@android:style/Widget.EditText">
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:textColor">@color/bs_text</item>
+        <item name="android:textColorHint">@color/bs_text_muted</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:minHeight">46dp</item>
+    </style>
+</resources>
