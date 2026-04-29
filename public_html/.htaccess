@@ -1,0 +1,4 @@
+RewriteEngine On
+
+# Redirect short QR path to Google Play listing.
+RewriteRule ^qr/?$ https://play.google.com/store/apps/details?id=com.barcostop.app [R=302,L]

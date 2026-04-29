@@ -15,6 +15,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,6 +24,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.barcostop.app.R;
 import com.barcostop.app.core.BarcoStopApplication;
 import com.barcostop.app.core.actions.TripActions;
+import com.barcostop.app.core.util.TripTextSanitizer;
 import com.barcostop.app.core.storage.SessionStore;
 import com.barcostop.app.ui.adapters.TripListAdapter;
 import com.barcostop.app.ui.feedback.FeedbackFx;
@@ -31,6 +33,7 @@ import com.barcostop.app.ui.screens.EditTripActivity;
 import com.barcostop.app.ui.screens.HomeActivity;
 import com.barcostop.app.ui.screens.MainAppActivity;
 import com.barcostop.app.ui.screens.TripDetailActivity;
+import com.barcostop.app.ui.util.KeyboardUtils;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -49,8 +52,8 @@ public class TripsFragment extends Fragment {
     private SwipeRefreshLayout swipeRefresh;
     private ProgressBar loadingView;
     private TextView emptyView;
-    private TextView summaryView;
     private LinearLayout searchContainer;
+    private View searchExtraContainer;
     private EditText searchOriginInput;
     private EditText searchDestinationInput;
     private EditText searchDateInput;
@@ -72,8 +75,8 @@ public class TripsFragment extends Fragment {
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
         loadingView = view.findViewById(R.id.loading_view);
         emptyView = view.findViewById(R.id.empty_view);
-        summaryView = view.findViewById(R.id.trips_summary);
         searchContainer = view.findViewById(R.id.trips_search_container);
+        searchExtraContainer = view.findViewById(R.id.trips_search_extra);
         searchOriginInput = view.findViewById(R.id.trips_search_origin);
         searchDestinationInput = view.findViewById(R.id.trips_search_destination);
         searchDateInput = view.findViewById(R.id.trips_search_date);
@@ -127,12 +130,16 @@ public class TripsFragment extends Fragment {
         boolean isTraveler = HomeActivity.ROLE_VIAJERO.equals(safe(sessionStore.getRole()));
         searchContainer.setVisibility(isTraveler ? View.VISIBLE : View.GONE);
         if (isTraveler) {
+            setSearchExpanded(false);
             TextWatcher searchWatcher = new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
                 @Override
                 public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (searchOriginInput.hasFocus() || !safe(String.valueOf(searchOriginInput.getText())).isEmpty()) {
+                        setSearchExpanded(true);
+                    }
                     applyFilters();
                 }
 
@@ -142,23 +149,50 @@ public class TripsFragment extends Fragment {
             searchOriginInput.addTextChangedListener(searchWatcher);
             searchDestinationInput.addTextChangedListener(searchWatcher);
             searchDateInput.addTextChangedListener(searchWatcher);
+            searchOriginInput.setOnEditorActionListener((v, actionId, event) -> {
+                KeyboardUtils.hide(requireContext(), v);
+                v.clearFocus();
+                return false;
+            });
+            searchDestinationInput.setOnEditorActionListener((v, actionId, event) -> {
+                KeyboardUtils.hide(requireContext(), v);
+                v.clearFocus();
+                return false;
+            });
+            searchDateInput.setOnEditorActionListener((v, actionId, event) -> {
+                KeyboardUtils.hide(requireContext(), v);
+                v.clearFocus();
+                return false;
+            });
+            searchOriginInput.setOnClickListener(v -> setSearchExpanded(true));
+            searchOriginInput.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) setSearchExpanded(true);
+            });
 
             todayButton.setOnClickListener(v -> {
+                setSearchExpanded(true);
                 searchDateInput.setText(todayIsoDate());
                 applyFilters();
             });
             tomorrowButton.setOnClickListener(v -> {
+                setSearchExpanded(true);
                 searchDateInput.setText(tomorrowIsoDate());
                 applyFilters();
             });
             clearSearchButton.setOnClickListener(v -> {
+                KeyboardUtils.hide(requireContext(), v);
                 searchOriginInput.setText("");
                 searchDestinationInput.setText("");
                 searchDateInput.setText("");
+                searchOriginInput.clearFocus();
+                searchDestinationInput.clearFocus();
+                searchDateInput.clearFocus();
+                setSearchExpanded(false);
                 applyFilters();
             });
         }
 
+        updateToolbarTitle(0);
         swipeRefresh.setOnRefreshListener(() -> loadTrips(false));
         loadTrips(true);
     }
@@ -169,7 +203,7 @@ public class TripsFragment extends Fragment {
             emptyView.setVisibility(View.GONE);
         }
 
-        tripActions.listTrips(new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        tripActions.listTrips(new UiApiCallback(TripsFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 if (!isAdded()) {
@@ -230,9 +264,21 @@ public class TripsFragment extends Fragment {
 
         adapter.submit(filtered);
         emptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
-        if (summaryView != null) {
-            summaryView.setText(getString(R.string.trips_summary_count, filtered.size()));
-        }
+        updateToolbarTitle(filtered.size());
+    }
+
+    private void setSearchExpanded(boolean expanded) {
+        if (searchExtraContainer == null) return;
+        searchExtraContainer.setVisibility(expanded ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateToolbarTitle(int count) {
+        if (!(requireActivity() instanceof AppCompatActivity)) return;
+        AppCompatActivity activity = (AppCompatActivity) requireActivity();
+        if (activity.getSupportActionBar() == null) return;
+        activity.getSupportActionBar().setTitle(
+                getString(R.string.tab_with_count, getString(R.string.tab_trips), Math.max(0, count))
+        );
     }
 
     private static String todayIsoDate() {
@@ -266,29 +312,54 @@ public class TripsFragment extends Fragment {
                 mapped.origin = route != null ? route.optString("origin", "") : item.optString("origin", "");
                 mapped.destination = route != null ? route.optString("destination", "") : item.optString("destination", "");
                 String rawDescription = item.optString("description", "");
-                mapped.title = rawDescription;
+                mapped.title = TripTextSanitizer.stripBsMeta(rawDescription);
+                if (mapped.title.isEmpty()) {
+                    mapped.title = TripTextSanitizer.stripBsMeta(item.optString("title", ""));
+                }
                 if (mapped.title == null || mapped.title.trim().isEmpty()) {
                     mapped.title = mapped.origin + " → " + mapped.destination;
                 } else {
-                    int marker = mapped.title.indexOf("\n[BSMETA]");
+                    int marker = rawDescription.indexOf("[BSMETA]");
                     if (marker >= 0) {
-                        mapped.title = mapped.title.substring(0, marker).trim();
                         try {
-                            String metaRaw = rawDescription.substring(marker + "\n[BSMETA]".length()).trim();
+                            String metaRaw = rawDescription.substring(marker + "[BSMETA]".length()).trim();
                             JSONObject meta = new JSONObject(metaRaw);
                             mapped.tripKind = meta.optString("tripKind", "trip");
                             mapped.captainNote = meta.optString("captainNote", "");
                             mapped.contributionType = meta.optString("contributionType", "");
+                            mapped.contributionNote = meta.optString("contributionNote", "");
                             mapped.boatImageUrl = meta.optString("boatImageUrl", "");
+                            mapped.timeWindow = meta.optString("timeWindow", "");
                         } catch (Throwable ignored) {
                         }
                     }
+                }
+                JSONObject metaObj = item.optJSONObject("descriptionMeta");
+                if (metaObj != null) {
+                    mapped.tripKind = metaObj.optString("tripKind", mapped.tripKind);
+                    mapped.captainNote = metaObj.optString("captainNote", mapped.captainNote);
+                    mapped.contributionType = metaObj.optString("contributionType", mapped.contributionType);
+                    mapped.contributionNote = metaObj.optString("contributionNote", mapped.contributionNote);
+                    mapped.boatImageUrl = metaObj.optString("boatImageUrl", mapped.boatImageUrl);
+                    mapped.timeWindow = metaObj.optString("timeWindow", mapped.timeWindow);
+                }
+                String topLevelTripKind = item.optString("tripKind", "").trim();
+                if (!topLevelTripKind.isEmpty()) {
+                    mapped.tripKind = topLevelTripKind;
                 }
                 String departureDate = route != null ? route.optString("departureDate", "") : item.optString("departureDate", "");
                 mapped.departureDate = departureDate.replace("T", " ").split(" ")[0];
                 mapped.availableSeats = item.optInt("availableSeats", item.optInt("available_seats", 0));
                 mapped.price = item.has("cost") ? item.optDouble("cost", 0) : item.optDouble("price", 0);
                 mapped.patronId = item.optString("patronId", item.optString("patron_id", ""));
+                JSONObject patron = item.optJSONObject("patron");
+                if (patron != null) {
+                    mapped.patronName = patron.optString("name", "").trim();
+                    mapped.patronBoatName = patron.optString("boatName", patron.optString("boat_name", "")).trim();
+                } else {
+                    mapped.patronName = item.optString("patronName", item.optString("captainName", "")).trim();
+                    mapped.patronBoatName = item.optString("boatName", item.optString("boat_name", "")).trim();
+                }
 
                 list.add(mapped);
             }
@@ -303,7 +374,7 @@ public class TripsFragment extends Fragment {
             return;
         }
 
-        tripActions.deleteTripWithActor(item.id, userId, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        tripActions.deleteTripWithActor(item.id, userId, new UiApiCallback(TripsFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 FeedbackFx.success(requireActivity(), getString(R.string.trips_deleted_ok));
@@ -318,20 +389,34 @@ public class TripsFragment extends Fragment {
     }
 
     private abstract static class UiApiCallback implements com.barcostop.app.core.network.ApiCallback {
-        private final androidx.appcompat.app.AppCompatActivity activity;
+        private final androidx.fragment.app.Fragment fragment;
 
-        UiApiCallback(androidx.appcompat.app.AppCompatActivity activity) {
-            this.activity = activity;
+        UiApiCallback(androidx.fragment.app.Fragment fragment) {
+            this.fragment = fragment;
         }
 
         @Override
         public final void onSuccess(String body) {
-            activity.runOnUiThread(() -> onUiSuccess(body));
+            android.app.Activity activity = fragment.getActivity();
+            if (activity == null || !fragment.isAdded() || activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+            activity.runOnUiThread(() -> {
+                if (!fragment.isAdded()) return;
+                onUiSuccess(body);
+            });
         }
 
         @Override
         public final void onError(Throwable throwable) {
-            activity.runOnUiThread(() -> onUiError(throwable));
+            android.app.Activity activity = fragment.getActivity();
+            if (activity == null || !fragment.isAdded() || activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+            activity.runOnUiThread(() -> {
+                if (!fragment.isAdded()) return;
+                onUiError(throwable);
+            });
         }
 
         public abstract void onUiSuccess(String body);

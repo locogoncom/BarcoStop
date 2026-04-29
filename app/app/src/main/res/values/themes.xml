@@ -6,8 +6,10 @@
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorControlActivated">@color/bs_primary</item>
         <item name="colorAccent">@color/bs_primary</item>
-        <item name="android:statusBarColor">@color/bs_primary_dark</item>
-        <item name="android:navigationBarColor">@color/bs_bg</item>
+        <item name="android:statusBarColor">@color/bs_primary</item>
+        <item name="android:navigationBarColor">@color/bs_nav_bg</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
         <item name="android:windowBackground">@color/bs_bg</item>
         <item name="android:textColorPrimary">@color/bs_text</item>
         <item name="android:textColorSecondary">@color/bs_text_muted</item>

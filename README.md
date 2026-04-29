@@ -45,7 +45,7 @@ Test live opcional de login contra `https://api.barcostop.net/api/v1`:
 BARCOSTOP_RUN_LIVE_AUTH_TEST=1 \
 BARCOSTOP_TEST_EMAIL=betolopezayesa@gmail.com \
 BARCOSTOP_TEST_PASSWORD=test22 \
-composer --working-dir public_html/api test
+composer --working-dir api test
 ```
 
 Si este test live falla por rutas/respuestas, revisa primero que la API desplegada en producción (`api.barcostop.net`) esté actualizada con la última versión.
@@ -56,7 +56,7 @@ Test live opcional de CRUD de viajes (crear, listar, detalle y borrar):
 BARCOSTOP_RUN_LIVE_TRIP_CRUD_TEST=1 \
 BARCOSTOP_TEST_EMAIL=betolopezayesa@gmail.com \
 BARCOSTOP_TEST_PASSWORD=test22 \
-composer --working-dir public_html/api test
+composer --working-dir api test
 ```
 
 # BarcoStop 🚤

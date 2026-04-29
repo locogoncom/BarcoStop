@@ -1,21 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_page">
+    android:background="@drawable/bg_page"
+    android:orientation="vertical">
 
-    <LinearLayout
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/edit_toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="12dp"
-        android:background="@drawable/bg_section_card"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/bs_primary_dark"
+        android:elevation="2dp"
+        android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar"
+        app:navigationIconTint="@color/white"
+        app:title="@string/trip_btn_edit"
+        app:titleTextColor="@color/white" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            android:background="@drawable/bg_section_card"
+            android:orientation="vertical"
+            android:padding="16dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Trip type"
+            android:text="@string/trip_form_type"
             android:textColor="@color/bs_primary_dark"
             android:textStyle="bold" />
 
@@ -31,14 +49,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
-                android:text="Trip" />
+                android:text="@string/trip_form_type_trip" />
 
             <RadioButton
                 android:id="@+id/edit_kind_regatta"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
-                android:text="Regatta" />
+                android:text="@string/trip_form_type_regatta" />
         </RadioGroup>
 
         <EditText
@@ -46,7 +64,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="Title" />
+            android:hint="@string/trip_form_title_hint" />
 
         <EditText
             android:id="@+id/edit_note"
@@ -54,7 +72,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="top"
-            android:hint="Captain note (optional)"
+            android:hint="@string/trip_form_note_hint"
             android:inputType="textMultiLine"
             android:minLines="3" />
 
@@ -63,34 +81,34 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="Boat image URL (optional)" />
+            android:hint="@string/trip_form_boat_image_hint" />
 
         <EditText
             android:id="@+id/edit_origin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="Origin" />
+            android:hint="@string/trip_form_origin_hint" />
 
         <EditText
             android:id="@+id/edit_destination"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="Destination" />
+            android:hint="@string/trip_form_destination_hint" />
 
         <EditText
             android:id="@+id/edit_date"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="Departure date (YYYY-MM-DD)" />
+            android:hint="@string/trip_form_date_hint" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="Time window"
+            android:text="@string/trip_form_time_window"
             android:textColor="@color/bs_primary_dark"
             android:textStyle="bold" />
 
@@ -106,21 +124,21 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
-                android:text="Morning" />
+                android:text="@string/trip_form_time_morning" />
 
             <RadioButton
                 android:id="@+id/edit_time_afternoon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:text="Afternoon" />
+                android:text="@string/trip_form_time_afternoon" />
 
             <RadioButton
                 android:id="@+id/edit_time_night"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:text="Night" />
+                android:text="@string/trip_form_time_night" />
         </RadioGroup>
 
         <EditText
@@ -128,7 +146,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="Available seats"
+            android:hint="@string/trip_form_seats_hint"
             android:inputType="number" />
 
         <EditText
@@ -136,7 +154,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="Price (€)"
+            android:hint="@string/trip_form_price_hint"
             android:inputType="numberDecimal" />
 
         <EditText
@@ -144,7 +162,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:hint="Contribution type (if price = 0)"
+            android:hint="@string/trip_form_contribution_type_hint"
             android:visibility="gone" />
 
         <EditText
@@ -153,7 +171,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="top"
-            android:hint="Contribution note (optional)"
+            android:hint="@string/trip_form_contribution_note_hint"
             android:inputType="textMultiLine"
             android:minLines="2"
             android:visibility="gone" />
@@ -164,7 +182,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:text="Save changes" />
+            android:text="@string/trip_form_edit_submit" />
 
         <ProgressBar
             android:id="@+id/edit_loading"
@@ -173,5 +191,6 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="14dp"
             android:visibility="gone" />
-    </LinearLayout>
-</ScrollView>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

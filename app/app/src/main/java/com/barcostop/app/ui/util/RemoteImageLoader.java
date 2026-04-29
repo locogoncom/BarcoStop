@@ -23,7 +23,10 @@ public final class RemoteImageLoader {
         if (target == null) return;
         String normalized = normalizeUrl(safe(url));
         if (normalized.isEmpty()) {
-            target.setVisibility(View.GONE);
+            target.setVisibility(View.VISIBLE);
+            if (placeholderRes != 0) {
+                target.setImageResource(placeholderRes);
+            }
             return;
         }
 

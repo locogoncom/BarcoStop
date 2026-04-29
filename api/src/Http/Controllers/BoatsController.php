@@ -25,7 +25,7 @@ final class BoatsController
         $body = $request->body();
         $actorId = $this->actorId($request);
         if ($actorId !== '' && !empty($body['patronId']) && (string) $body['patronId'] !== $actorId) {
-            JsonResponse::send(['error' => 'No autorizado para crear barcos con otro patrón'], 403);
+            JsonResponse::send(['error' => 'No autorizado para crear barcos con otro capitan'], 403);
             return;
         }
 

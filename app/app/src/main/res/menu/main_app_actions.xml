@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/action_users"
-        android:title="@string/screen_users"
-        android:showAsAction="never" />
-    <item
-        android:id="@+id/action_boats"
-        android:title="@string/screen_boats"
+        android:id="@+id/action_share_hub"
+        android:title="@string/tab_share"
         android:showAsAction="never" />
     <item
         android:id="@+id/action_logout"

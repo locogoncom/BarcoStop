@@ -8,13 +8,66 @@ use BarcoStop\ServerPhp\Support\Helpers;
 
 final class TripRepository extends BaseRepository
 {
+    private function encodeTripMeta(mixed $tripMeta): ?string
+    {
+        if (is_array($tripMeta)) {
+            $encoded = json_encode($tripMeta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            return is_string($encoded) ? $encoded : null;
+        }
+        if (is_string($tripMeta)) {
+            $trimmed = trim($tripMeta);
+            if ($trimmed === '') return null;
+            $decoded = json_decode($trimmed, true);
+            if (is_array($decoded)) {
+                $encoded = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                return is_string($encoded) ? $encoded : null;
+            }
+        }
+        return null;
+    }
+
+    private function decodeTripMeta(mixed $tripMetaRaw): array
+    {
+        if (is_array($tripMetaRaw)) {
+            return $tripMetaRaw;
+        }
+        if (!is_string($tripMetaRaw) || trim($tripMetaRaw) === '') {
+            return [];
+        }
+        $decoded = json_decode($tripMetaRaw, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function splitDescriptionAndMeta(?string $description): array
+    {
+        $raw = (string) ($description ?? '');
+        $marker = '[BSMETA]';
+        $idx = strpos($raw, $marker);
+        if ($idx === false) {
+            return ['plain' => $raw, 'meta' => []];
+        }
+
+        $plain = rtrim(substr($raw, 0, $idx));
+        $rawMeta = trim(substr($raw, $idx + strlen($marker)));
+        if ($rawMeta === '') {
+            return ['plain' => $plain, 'meta' => []];
+        }
+
+        $meta = json_decode($rawMeta, true);
+        if (!is_array($meta)) {
+            return ['plain' => $plain, 'meta' => []];
+        }
+
+        return ['plain' => $plain, 'meta' => $meta];
+    }
+
     public function create(array $payload): array
     {
         $id = \Ramsey\Uuid\Uuid::uuid4()->toString();
         $route = $payload['route'] ?? [];
 
         $this->execute(
-            'INSERT INTO trips (id, patron_id, origin, destination, departure_date, departure_time, estimated_duration, description, available_seats, cost, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO trips (id, patron_id, origin, destination, departure_date, departure_time, estimated_duration, description, trip_meta, available_seats, cost, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $id,
                 $payload['patronId'] ?? null,
@@ -24,6 +77,7 @@ final class TripRepository extends BaseRepository
                 $route['departureTime'] ?? null,
                 $route['estimatedDuration'] ?? null,
                 $payload['description'] ?? '',
+                $this->encodeTripMeta($payload['tripMeta'] ?? null),
                 (int) ($payload['availableSeats'] ?? 1),
                 (float) ($payload['cost'] ?? 0),
                 'active',
@@ -110,6 +164,7 @@ final class TripRepository extends BaseRepository
 
         $map = [
             'description' => 'description',
+            'tripMeta' => 'trip_meta',
             'availableSeats' => 'available_seats',
             'cost' => 'cost',
             'status' => 'status',
@@ -117,7 +172,11 @@ final class TripRepository extends BaseRepository
         foreach ($map as $key => $col) {
             if (array_key_exists($key, $payload)) {
                 $fields[] = $col . ' = ?';
-                $params[] = $payload[$key];
+                if ($key === 'tripMeta') {
+                    $params[] = $this->encodeTripMeta($payload[$key]);
+                } else {
+                    $params[] = $payload[$key];
+                }
             }
         }
 
@@ -160,6 +219,12 @@ final class TripRepository extends BaseRepository
 
     private function hydrateTrip(array $row): array
     {
+        $descriptionData = $this->splitDescriptionAndMeta((string) ($row['description'] ?? ''));
+        $legacyMeta = is_array($descriptionData['meta']) ? $descriptionData['meta'] : [];
+        $columnMeta = $this->decodeTripMeta($row['trip_meta'] ?? null);
+        $descriptionMeta = !empty($columnMeta) ? $columnMeta : $legacyMeta;
+        $tripKind = (($descriptionMeta['tripKind'] ?? 'trip') === 'regatta') ? 'regatta' : 'trip';
+
         $trip = [
             'id' => (string) $row['id'],
             'patronId' => (string) $row['patron_id'],
@@ -175,7 +240,12 @@ final class TripRepository extends BaseRepository
                 'departureTime' => $row['departure_time'],
                 'estimatedDuration' => $row['estimated_duration'],
             ],
-            'description' => $row['description'],
+            'title' => $descriptionData['plain'] !== ''
+                ? (string) $descriptionData['plain']
+                : trim(((string) $row['origin']) . ' -> ' . ((string) $row['destination'])),
+            'description' => (string) $descriptionData['plain'],
+            'descriptionMeta' => $descriptionMeta,
+            'tripKind' => $tripKind,
             'availableSeats' => (int) $row['available_seats'],
             'cost' => (float) $row['cost'],
             'status' => $row['status'],

@@ -84,13 +84,23 @@
       "problemMatcher": []
     },
     {
-      "label": "Deploy: Upload solo public_html/api",
+      "label": "DEPLOY API",
       "type": "shell",
-      "command": "node",
+      "command": "rsync",
       "args": [
-        "${workspaceFolder}/scripts/deploy-sftp-profile.mjs",
-        "public_html_api"
+        "-az",
+        "--itemize-changes",
+        "--human-readable",
+        "--stats",
+        "--delete",
+        "--exclude=vendor/",
+        "${workspaceFolder}/api/",
+        "barcostop-prod:public_html/api/"
       ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
       "problemMatcher": []
     }
   ]

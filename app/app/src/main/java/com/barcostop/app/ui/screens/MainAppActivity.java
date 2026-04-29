@@ -17,6 +17,7 @@ import com.barcostop.app.ui.fragments.PatronRequestsFragment;
 import com.barcostop.app.ui.fragments.ProfileFragment;
 import com.barcostop.app.ui.fragments.ReservationsFragment;
 import com.barcostop.app.ui.fragments.FavoritesFragment;
+import com.barcostop.app.ui.fragments.ShareFragment;
 import com.barcostop.app.ui.fragments.TripsFragment;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -27,6 +28,7 @@ public class MainAppActivity extends AppCompatActivity {
     public static final String TAB_SECONDARY = "secondary";
     public static final String TAB_MESSAGES = "messages";
     public static final String TAB_FAVORITES = "favorites";
+    public static final String TAB_SHARE = "share";
     public static final String TAB_PROFILE = "profile";
 
     private AuthSessionManager authSessionManager;
@@ -77,27 +79,27 @@ public class MainAppActivity extends AppCompatActivity {
         bottomNav.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.nav_trips) {
-                switchFragment(new TripsFragment());
+                switchFragment(new TripsFragment(), R.string.tab_trips);
                 return true;
             }
             if (itemId == R.id.nav_secondary) {
                 if (HomeActivity.ROLE_PATRON.equals(authSessionManager.getRole())) {
-                    switchFragment(new PatronRequestsFragment());
+                    switchFragment(new PatronRequestsFragment(), R.string.tab_requests);
                 } else {
-                    switchFragment(new ReservationsFragment());
+                    switchFragment(new ReservationsFragment(), R.string.tab_reservations);
                 }
                 return true;
             }
             if (itemId == R.id.nav_messages) {
-                switchFragment(new MessagesFragment());
+                switchFragment(new MessagesFragment(), R.string.tab_messages);
                 return true;
             }
             if (itemId == R.id.nav_favorites) {
-                switchFragment(new FavoritesFragment());
+                switchFragment(new FavoritesFragment(), R.string.tab_favorites);
                 return true;
             }
             if (itemId == R.id.nav_profile) {
-                switchFragment(new ProfileFragment());
+                switchFragment(new ProfileFragment(), R.string.tab_profile);
                 return true;
             }
             return false;
@@ -106,14 +108,22 @@ public class MainAppActivity extends AppCompatActivity {
         bottomNav.setSelectedItemId(mapTabToMenuId(initialTab));
     }
 
-    private void switchFragment(Fragment fragment) {
+    private void switchFragment(Fragment fragment, int titleResId) {
         getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.main_fragment_container, fragment)
                 .commit();
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(titleResId);
+            getSupportActionBar().setSubtitle(null);
+        }
     }
 
     private void selectInitialTab() {
+        if (TAB_SHARE.equals(initialTab)) {
+            switchFragment(new ShareFragment(), R.string.tab_share);
+            return;
+        }
         int itemId = mapTabToMenuId(initialTab);
         BottomNavigationView bottomNav = findViewById(R.id.main_bottom_nav);
         bottomNav.setSelectedItemId(itemId);
@@ -131,6 +141,7 @@ public class MainAppActivity extends AppCompatActivity {
         if (TAB_SECONDARY.equals(tab)) return TAB_SECONDARY;
         if (TAB_MESSAGES.equals(tab)) return TAB_MESSAGES;
         if (TAB_FAVORITES.equals(tab)) return TAB_FAVORITES;
+        if (TAB_SHARE.equals(tab)) return TAB_SHARE;
         if (TAB_PROFILE.equals(tab)) return TAB_PROFILE;
         return TAB_TRIPS;
     }
@@ -149,12 +160,8 @@ public class MainAppActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int itemId = item.getItemId();
-        if (itemId == R.id.action_users) {
-            startActivity(new Intent(this, UsersActivity.class));
-            return true;
-        }
-        if (itemId == R.id.action_boats) {
-            startActivity(new Intent(this, BoatsActivity.class));
+        if (itemId == R.id.action_share_hub) {
+            switchFragment(new ShareFragment(), R.string.tab_share);
             return true;
         }
         if (itemId == R.id.action_logout) {

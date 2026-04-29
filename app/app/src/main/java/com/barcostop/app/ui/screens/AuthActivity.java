@@ -18,6 +18,7 @@ import com.barcostop.app.core.actions.AuthActions;
 import com.barcostop.app.core.auth.AuthSessionManager;
 import com.barcostop.app.core.auth.GoogleAuthHelper;
 import com.barcostop.app.ui.feedback.FeedbackFx;
+import com.barcostop.app.ui.util.KeyboardUtils;
 import com.google.android.gms.common.api.ApiException;
 
 import org.json.JSONObject;
@@ -31,6 +32,7 @@ public class AuthActivity extends AppCompatActivity {
     private EditText passwordInput;
     private EditText confirmPasswordInput;
     private TextView titleView;
+    private TextView orDividerView;
     private TextView roleView;
     private Button submitButton;
     private Button googleLoginButton;
@@ -63,6 +65,7 @@ public class AuthActivity extends AppCompatActivity {
 
     private void bindViews() {
         titleView = findViewById(R.id.tv_auth_title);
+        orDividerView = findViewById(R.id.tv_auth_or);
         roleView = findViewById(R.id.tv_auth_role);
         nameInput = findViewById(R.id.et_name);
         emailInput = findViewById(R.id.et_email);
@@ -89,7 +92,9 @@ public class AuthActivity extends AppCompatActivity {
         roleView.setText(getRoleLabel());
         nameInput.setVisibility(isRegister ? View.VISIBLE : View.GONE);
         confirmPasswordInput.setVisibility(isRegister ? View.VISIBLE : View.GONE);
+        orDividerView.setVisibility(isRegister ? View.GONE : View.VISIBLE);
         googleLoginButton.setVisibility(isRegister ? View.GONE : View.VISIBLE);
+        submitButton.setText(isRegister ? R.string.auth_register : R.string.auth_login);
         toggleModeButton.setText(isRegister ? R.string.auth_have_account : R.string.auth_no_account);
     }
 
@@ -100,6 +105,7 @@ public class AuthActivity extends AppCompatActivity {
     }
 
     private void submit() {
+        KeyboardUtils.hide(this, getCurrentFocus());
         String name = text(nameInput);
         String email = text(emailInput);
         String password = text(passwordInput);
@@ -164,6 +170,7 @@ public class AuthActivity extends AppCompatActivity {
     }
 
     private void submitGoogleLogin() {
+        KeyboardUtils.hide(this, getCurrentFocus());
         setLoading(true);
         authActions.getGoogleAuthConfig(new UiApiCallback(this) {
             @Override

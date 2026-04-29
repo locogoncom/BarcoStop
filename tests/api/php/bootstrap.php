@@ -7,11 +7,11 @@ use BarcoStop\ServerPhp\Support\Helpers;
 use BarcoStop\ServerPhp\Support\Request;
 use BarcoStop\ServerPhp\Support\Router;
 
-require_once __DIR__ . '/../../../public_html/api/src/Config/AppConfig.php';
-require_once __DIR__ . '/../../../public_html/api/src/Support/Helpers.php';
-require_once __DIR__ . '/../../../public_html/api/src/Support/Request.php';
-require_once __DIR__ . '/../../../public_html/api/src/Support/JsonResponse.php';
-require_once __DIR__ . '/../../../public_html/api/src/Support/Router.php';
+require_once __DIR__ . '/../../../api/src/Config/AppConfig.php';
+require_once __DIR__ . '/../../../api/src/Support/Helpers.php';
+require_once __DIR__ . '/../../../api/src/Support/Request.php';
+require_once __DIR__ . '/../../../api/src/Support/JsonResponse.php';
+require_once __DIR__ . '/../../../api/src/Support/Router.php';
 
 function testAssertTrue(bool $condition, string $message): void
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-$srcRoot = dirname(__DIR__, 3) . '/public_html/api/src';
+$srcRoot = dirname(__DIR__, 3) . '/api/src';
 if (!is_dir($srcRoot)) {
     throw new RuntimeException('No se encontro src de API PHP en: ' . $srcRoot);
 }

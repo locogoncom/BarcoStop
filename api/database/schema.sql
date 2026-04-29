@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS trips (
   departure_time TIME NOT NULL,
   estimated_duration VARCHAR(50),
   description TEXT,
+  trip_meta LONGTEXT,
   available_seats INT NOT NULL,
   cost DECIMAL(10,2) NOT NULL,
   status ENUM('active', 'completed', 'cancelled') DEFAULT 'active',

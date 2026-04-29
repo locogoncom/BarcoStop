@@ -28,6 +28,47 @@ final class TripsController
         return (string) ($fromHeader ?: ($body['actorId'] ?? $request->query('actorId') ?? ''));
     }
 
+    private function normalizeDescriptionAndMeta(?string $descriptionRaw, mixed $tripMetaRaw): array
+    {
+        $description = (string) ($descriptionRaw ?? '');
+        $marker = '[BSMETA]';
+        $idx = strpos($description, $marker);
+        $plain = $description;
+        $parsedMeta = [];
+
+        if ($idx !== false) {
+            $plain = rtrim(substr($description, 0, $idx));
+            $rawMeta = trim(substr($description, $idx + strlen($marker)));
+            if ($rawMeta !== '') {
+                $decoded = json_decode($rawMeta, true);
+                if (is_array($decoded)) {
+                    $parsedMeta = $decoded;
+                }
+            }
+        }
+
+        $providedMeta = [];
+        if (is_array($tripMetaRaw)) {
+            $providedMeta = $tripMetaRaw;
+        } elseif (is_string($tripMetaRaw) && trim($tripMetaRaw) !== '') {
+            $decoded = json_decode($tripMetaRaw, true);
+            if (is_array($decoded)) {
+                $providedMeta = $decoded;
+            }
+        }
+
+        $meta = array_merge($parsedMeta, $providedMeta);
+
+        if (array_key_exists('boatImageUrl', $meta)) {
+            $meta['boatImageUrl'] = Helpers::toUploadPath((string) $meta['boatImageUrl']) ?? $meta['boatImageUrl'];
+        }
+
+        return [
+            'description' => $plain,
+            'tripMeta' => $meta,
+        ];
+    }
+
     public function uploadImage(Request $request): void
     {
         $auth = $this->auth->requireAuth($request);
@@ -68,19 +109,17 @@ final class TripsController
             $body = $request->body();
             $actorId = $this->getActorId($request);
             if ($actorId !== '' && !empty($body['patronId']) && (string) $body['patronId'] !== $actorId) {
-                JsonResponse::send(['error' => 'No autorizado para crear viajes con otro patrón'], 403);
+                JsonResponse::send(['error' => 'No autorizado para crear viajes con otro capitan'], 403);
                 return;
             }
 
-            if (isset($body['description']) && is_string($body['description']) && str_contains($body['description'], "\n[BSMETA]")) {
-                $parts = explode("\n[BSMETA]", $body['description'], 2);
-                if (count($parts) === 2) {
-                    $meta = json_decode(trim($parts[1]), true);
-                    if (is_array($meta) && array_key_exists('boatImageUrl', $meta)) {
-                        $meta['boatImageUrl'] = Helpers::toUploadPath($meta['boatImageUrl']) ?? $meta['boatImageUrl'];
-                        $body['description'] = $parts[0] . "\n[BSMETA]" . json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                    }
-                }
+            if (array_key_exists('description', $body) || array_key_exists('tripMeta', $body)) {
+                $normalized = $this->normalizeDescriptionAndMeta(
+                    isset($body['description']) && is_string($body['description']) ? $body['description'] : '',
+                    $body['tripMeta'] ?? null
+                );
+                $body['description'] = $normalized['description'];
+                $body['tripMeta'] = $normalized['tripMeta'];
             }
 
             $trip = $this->trips->create($body);
@@ -141,7 +180,16 @@ final class TripsController
         }
 
         try {
-            $trip = $this->trips->update((string) $params['id'], $request->body());
+            $body = $request->body();
+            if (array_key_exists('description', $body) || array_key_exists('tripMeta', $body)) {
+                $normalized = $this->normalizeDescriptionAndMeta(
+                    isset($body['description']) && is_string($body['description']) ? $body['description'] : '',
+                    $body['tripMeta'] ?? null
+                );
+                $body['description'] = $normalized['description'];
+                $body['tripMeta'] = $normalized['tripMeta'];
+            }
+            $trip = $this->trips->update((string) $params['id'], $body);
             JsonResponse::send($trip ?? []);
         } catch (\Throwable $e) {
             JsonResponse::send(['error' => $e->getMessage()], 400);

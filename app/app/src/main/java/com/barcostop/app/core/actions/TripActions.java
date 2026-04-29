@@ -45,4 +45,15 @@ public class TripActions {
         req.jsonBody = "{\"actorId\":\"" + actorId + "\"}";
         apiClient.execute(req, callback);
     }
+
+    public void listTripCheckpoints(String tripId, int limit, ApiCallback callback) {
+        int safeLimit = Math.max(1, limit);
+        apiClient.execute(new ApiRequest("GET", ApiEndpoints.TRIP_CHECKPOINTS + "?tripId=" + tripId + "&limit=" + safeLimit), callback);
+    }
+
+    public void createTripCheckpoint(String jsonBody, ApiCallback callback) {
+        ApiRequest req = new ApiRequest("POST", ApiEndpoints.TRIP_CHECKPOINTS);
+        req.jsonBody = jsonBody;
+        apiClient.execute(req, callback);
+    }
 }

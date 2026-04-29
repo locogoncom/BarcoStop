@@ -16,7 +16,7 @@ siteRenderHeader('BarcoStop | FAQ', 'faq');
   <h2 class="section-title">Cuenta y seguridad</h2>
   <div class="card">
     <ol class="list">
-      <li><strong>Como me registro?</strong> Descarga la app, crea cuenta con email y selecciona rol (patron o viajero).</li>
+      <li><strong>Como me registro?</strong> Descarga la app, crea cuenta con email y selecciona rol (capitan o viajero).</li>
       <li><strong>Que pasa si olvido mi sesion?</strong> Vuelve a iniciar con tu email y password; el token se renueva automaticamente.</li>
       <li><strong>Mis datos estan protegidos?</strong> Si. La API valida JWT y las contrasenas se almacenan cifradas.</li>
     </ol>
@@ -27,8 +27,8 @@ siteRenderHeader('BarcoStop | FAQ', 'faq');
   <h2 class="section-title">Viajes y reservas</h2>
   <div class="card">
     <ol class="list">
-      <li><strong>Como creo un viaje?</strong> Si eres patron, pulsa "crear viaje", define ruta, fecha, plazas y coste.</li>
-      <li><strong>Cuantos asientos puedo reservar?</strong> Segun las plazas disponibles indicadas por el patron.</li>
+      <li><strong>Como creo un viaje?</strong> Si eres capitan, pulsa "crear viaje", define ruta, fecha, plazas y coste.</li>
+      <li><strong>Cuantos asientos puedo reservar?</strong> Segun las plazas disponibles indicadas por el capitan.</li>
       <li><strong>Puedo cancelar una reserva?</strong> Si, desde tus reservas mientras el viaje no haya finalizado.</li>
     </ol>
   </div>

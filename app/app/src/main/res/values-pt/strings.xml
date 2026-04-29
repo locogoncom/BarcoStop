@@ -15,13 +15,14 @@
     <string name="auth_required">Preencha os campos obrigatorios</string>
     <string name="auth_password_mismatch">As senhas nao coincidem</string>
     <string name="auth_error_generic">Nao foi possivel autenticar</string>
-    <string name="role_captain">Patrao</string>
+    <string name="role_captain">Patron</string>
     <string name="role_traveler">Viajante</string>
     <string name="home_continue_session">Continuar sessao</string>
-    <string name="home_start_captain">Sou patrao</string>
+    <string name="home_start_captain">Sou patron</string>
     <string name="home_start_traveler">Sou viajante</string>
     <string name="home_logout">Terminar sessao</string>
-    <string name="home_build_info">v%1$s (%2$d) · %3$s</string>
+    <string name="home_build_info">build %2$d · v%1$s · %3$s</string>
+    <string name="home_callout">Anime marinheiro!!!!</string>
     <string name="main_title">BarcoStop</string>
     <string name="welcome_user">Bem-vindo, %1$s</string>
 
@@ -34,10 +35,13 @@
     <string name="screen_favorites">Favoritos</string>
     <string name="screen_messages">Mensagens</string>
     <string name="screen_patron_requests">Pedidos Patron</string>
+    <string name="tab_share">Invitar amig@</string>
     <string name="screen_profile">Perfil</string>
     <string name="screen_reservations">Reservas</string>
-    <string name="screen_trip_detail">Detalhe Viagem</string>
+    <string name="screen_trip_detail">Detalhe viagem</string>
     <string name="screen_trip_list">Lista Viagens</string>
     <string name="screen_user_public_profile">Perfil Publico</string>
     <string name="screen_users">Usuarios</string>
+    <string name="tab_with_count">%1$s (%2$d)</string>
+    <string name="trips_search_hint">Buscar viagem</string>
 </resources>

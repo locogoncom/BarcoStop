@@ -1,5 +1,6 @@
 import java.util.Properties
 import java.util.TimeZone
+import java.util.Calendar
 
 plugins {
     id 'com.android.application'
@@ -25,6 +26,15 @@ def buildDateUtc = cred(
         new Date().format("yyyy-MM-dd HH:mm 'UTC'", TimeZone.getTimeZone("UTC"))
 )
 
+def versionDateUtc = new Date()
+def utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+utcCalendar.setTime(versionDateUtc)
+def quarterHourSlot = utcCalendar.get(Calendar.HOUR_OF_DAY) * 4 + utcCalendar.get(Calendar.MINUTE).intdiv(15)
+def generatedVersionCode = ("20" + versionDateUtc.format("yyMMdd", TimeZone.getTimeZone("UTC")) + String.format("%02d", quarterHourSlot)).toInteger()
+def generatedVersionName = "55." + versionDateUtc.format("yyyy.MM.dd-HHmm", TimeZone.getTimeZone("UTC"))
+def appVersionCode = (project.findProperty("BARCOSTOP_VERSION_CODE") ?: generatedVersionCode.toString()).toInteger()
+def appVersionName = project.findProperty("BARCOSTOP_VERSION_NAME") ?: generatedVersionName
+
 def hasReleaseSigning =
         !cred("RELEASE_STORE_FILE").isEmpty() &&
         !cred("RELEASE_STORE_PASSWORD").isEmpty() &&
@@ -37,10 +47,10 @@ android {
 
     defaultConfig {
         applicationId 'com.barcostop.app'
-        minSdk 24
+        minSdk 21
         targetSdk 35
-        versionCode 2100000000
-        versionName '1.0.0'
+        versionCode appVersionCode
+        versionName appVersionName
         buildConfigField "String", "BUILD_DATE_UTC", "\"" + q(buildDateUtc) + "\""
         buildConfigField "String", "API_BASE_URL", "\"" + q(cred("BARCOSTOP_API_BASE_URL", "https://api.barcostop.net/api/v1/")) + "\""
         buildConfigField "String", "WS_URL", "\"" + q(cred("BARCOSTOP_WS_URL", "https://api.barcostop.net")) + "\""
@@ -103,4 +113,5 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
     implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.google.zxing:core:3.5.3'
 }

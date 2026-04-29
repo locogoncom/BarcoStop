@@ -1,6 +1,8 @@
 package com.barcostop.app.ui.screens;
 
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -16,6 +18,9 @@ import com.barcostop.app.core.actions.RatingActions;
 import com.barcostop.app.core.actions.UserActions;
 import com.barcostop.app.core.storage.SessionStore;
 import com.barcostop.app.ui.feedback.FeedbackFx;
+import com.barcostop.app.ui.util.KeyboardUtils;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -50,7 +55,12 @@ public class UserPublicProfileActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_public_profile);
-        setTitle(R.string.screen_user_public_profile);
+        MaterialToolbar toolbar = findViewById(R.id.public_profile_toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle(R.string.screen_user_public_profile);
+        }
 
         BarcoStopApplication app = (BarcoStopApplication) getApplication();
         userActions = new UserActions(app.getApiClient());
@@ -78,8 +88,42 @@ public class UserPublicProfileActivity extends AppCompatActivity {
         reviewsEmpty = findViewById(R.id.public_profile_reviews_empty);
         loading = findViewById(R.id.public_profile_loading);
         rateSendButton.setOnClickListener(v -> submitRating());
+        setupBottomNav();
 
         loadProfile();
+    }
+
+    private void setupBottomNav() {
+        BottomNavigationView bottomNav = findViewById(R.id.public_profile_bottom_nav);
+        Menu menu = bottomNav.getMenu();
+        MenuItem secondaryItem = menu.findItem(R.id.nav_secondary);
+        if (HomeActivity.ROLE_PATRON.equalsIgnoreCase(safe(sessionStore.getRole()))) {
+            secondaryItem.setTitle(R.string.tab_requests);
+        } else {
+            secondaryItem.setTitle(R.string.tab_reservations);
+        }
+
+        bottomNav.setSelectedItemId(R.id.nav_profile);
+        bottomNav.setOnItemSelectedListener(item -> {
+            openMainTab(mapMenuIdToTab(item.getItemId()));
+            return true;
+        });
+    }
+
+    private void openMainTab(String tab) {
+        android.content.Intent intent = new android.content.Intent(this, MainAppActivity.class);
+        intent.putExtra(MainAppActivity.EXTRA_INITIAL_TAB, tab);
+        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
+        finish();
+    }
+
+    private static String mapMenuIdToTab(int itemId) {
+        if (itemId == R.id.nav_secondary) return MainAppActivity.TAB_SECONDARY;
+        if (itemId == R.id.nav_messages) return MainAppActivity.TAB_MESSAGES;
+        if (itemId == R.id.nav_favorites) return MainAppActivity.TAB_FAVORITES;
+        if (itemId == R.id.nav_profile) return MainAppActivity.TAB_PROFILE;
+        return MainAppActivity.TAB_TRIPS;
     }
 
     private void loadProfile() {
@@ -100,8 +144,10 @@ public class UserPublicProfileActivity extends AppCompatActivity {
                     String boatType = readFirst(user, "boatType", "boat_type");
                     double avgRating = user.optDouble("averageRating", 0);
 
-                    nameView.setText(name.isEmpty() ? "User" : name);
-                    roleView.setText(role.equalsIgnoreCase("patron") ? "Captain" : "Traveler");
+                    nameView.setText(name.isEmpty() ? getString(R.string.user_fallback) : name);
+                    roleView.setText(role.equalsIgnoreCase("patron")
+                            ? getString(R.string.role_captain)
+                            : getString(R.string.role_traveler));
                     ratingView.setText(getString(R.string.public_profile_rating_value, avgRating));
                     bioView.setText(bio.isEmpty() ? getString(R.string.public_profile_no_bio) : bio);
                     bindOptionalText(locationView, getString(R.string.public_profile_location_value, currentLocation), currentLocation);
@@ -157,6 +203,7 @@ public class UserPublicProfileActivity extends AppCompatActivity {
     }
 
     private void submitRating() {
+        KeyboardUtils.hide(this, getCurrentFocus());
         String viewerId = safe(sessionStore.getUserId());
         if (viewerId.isEmpty()) {
             FeedbackFx.error(this, getString(R.string.public_profile_rate_error));
@@ -310,5 +357,14 @@ public class UserPublicProfileActivity extends AppCompatActivity {
         public abstract void onUiSuccess(String body);
 
         public abstract void onUiError(Throwable throwable);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 }

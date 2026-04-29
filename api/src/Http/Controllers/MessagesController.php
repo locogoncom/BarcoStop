@@ -161,9 +161,22 @@ final class MessagesController
         }
     }
 
-    private function parseTripKind(string $description): string
+    private function parseTripKind(array $trip): string
     {
-        $marker = "\n[BSMETA]";
+        $tripMetaRaw = (string) ($trip['trip_meta'] ?? '');
+        if ($tripMetaRaw !== '') {
+            $meta = json_decode($tripMetaRaw, true);
+            if (is_array($meta) && (($meta['tripKind'] ?? 'trip') === 'regatta')) {
+                return 'regatta';
+            }
+        }
+
+        return $this->parseTripKindFromDescription((string) ($trip['description'] ?? ''));
+    }
+
+    private function parseTripKindFromDescription(string $description): string
+    {
+        $marker = '[BSMETA]';
         $idx = strpos($description, $marker);
         if ($idx === false) {
             return 'trip';
@@ -185,7 +198,7 @@ final class MessagesController
             return ['status' => 404, 'error' => 'Regata no encontrada'];
         }
 
-        if ($this->parseTripKind((string) ($trip['description'] ?? '')) !== 'regatta') {
+        if ($this->parseTripKind($trip) !== 'regatta') {
             return ['status' => 400, 'error' => 'Este viaje no es una regata'];
         }
 

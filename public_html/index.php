@@ -42,6 +42,20 @@ siteRenderHeader('BarcoStop | Home', 'home');
   </div>
 </section>
 
+<section class="qr-section reveal reveal-d2">
+  <h2 class="section-title">Escanea y entra directo</h2>
+  <p class="muted">Compártelo con tu amigo en un momento.</p>
+  <p class="muted">Enlace para descargar a través de Google Play.</p>
+  <div class="qr-card">
+    <img src="assets/http_www_barcostop_net_qr.png" alt="QR BarcoStop hacia barcostop.net/qr" loading="lazy">
+  </div>
+  <p class="qr-download-link">
+    <a href="https://play.google.com/store/apps/details?id=com.barcostop.app" target="_blank" rel="noopener noreferrer">
+      Descargar en Google Play
+    </a>
+  </p>
+</section>
+
 <section class="reveal reveal-d2">
   <h2 class="section-title">Por que BarcoStop</h2>
   <div class="benefits-grid reveal-list">
@@ -114,7 +128,7 @@ siteRenderHeader('BarcoStop | Home', 'home');
 </section>
 
 <section class="reveal reveal-d3">
-  <h2 class="section-title">Ultimos 6 viajes creados</h2>
+  <h2 class="section-title">Ultimos 4 viajes creados</h2>
   <p class="muted">Ordenados por fecha de creacion descendente.</p>
 
   <?php if (count($latestTrips) === 0) { ?>
@@ -144,13 +158,13 @@ siteRenderHeader('BarcoStop | Home', 'home');
             src="<?php echo h($imageUrl); ?>"
             alt="Imagen del viaje"
             loading="lazy"
-            onerror="this.onerror=null;this.src='assets/logo-barcostop-header.png';"
+            onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1473116763249-2faaef81ccda?auto=format&fit=crop&w=1200&q=80';"
           >
           <h3 class="trip-route"><?php echo h($route); ?></h3>
-          <p class="trip-meta">Capitan: <?php echo h($captain); ?></p>
-          <p class="trip-meta">Salida: <?php echo h($tripDate); ?></p>
-          <p class="trip-meta">Asientos: <?php echo h((string) $seats); ?> | Coste: <?php echo h($cost); ?> EUR</p>
-          <p class="trip-meta">Estado: <?php echo h($status); ?></p>
+          <p class="trip-meta"><strong>Capitan:</strong> <?php echo h($captain); ?></p>
+          <p class="trip-meta"><strong>Salida:</strong> <?php echo h($tripDate); ?></p>
+          <p class="trip-meta"><strong>Plazas:</strong> <?php echo h((string) $seats); ?> | <strong>Coste:</strong> <?php echo h($cost); ?> EUR</p>
+          <p class="trip-meta"><strong>Estado:</strong> <?php echo h($status); ?></p>
           <p class="trip-meta trip-summary"><?php echo h($tripSummary); ?></p>
           <p class="trip-meta"><a href="trip.php?id=<?php echo urlencode((string) ($trip['id'] ?? '')); ?>">Ver detalle</a></p>
         </article>

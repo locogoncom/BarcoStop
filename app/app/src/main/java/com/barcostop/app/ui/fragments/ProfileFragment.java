@@ -34,10 +34,9 @@ import com.barcostop.app.core.network.ApiConfig;
 import com.barcostop.app.core.storage.SessionStore;
 import com.barcostop.app.ui.adapters.ProfileTripAdapter;
 import com.barcostop.app.ui.feedback.FeedbackFx;
-import com.barcostop.app.ui.screens.BoatsActivity;
 import com.barcostop.app.ui.screens.HomeActivity;
 import com.barcostop.app.ui.screens.MainAppActivity;
-import com.barcostop.app.ui.screens.UsersActivity;
+import com.barcostop.app.ui.util.KeyboardUtils;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -79,8 +78,11 @@ public class ProfileFragment extends Fragment {
     private EditText sailingExperienceInput;
     private EditText certificationsInput;
     private EditText preferredRoutesInput;
+    private EditText skillsGeneralInput;
+    private EditText cleaningLevelInput;
     private EditText boatNameInput;
     private EditText boatTypeInput;
+    private EditText boatDetailsInput;
     private EditText boatModelInput;
     private EditText boatLengthInput;
     private EditText homePortInput;
@@ -139,8 +141,11 @@ public class ProfileFragment extends Fragment {
         sailingExperienceInput = view.findViewById(R.id.profile_sailing_experience_input);
         certificationsInput = view.findViewById(R.id.profile_certifications_input);
         preferredRoutesInput = view.findViewById(R.id.profile_preferred_routes_input);
+        skillsGeneralInput = view.findViewById(R.id.profile_skills_general_input);
+        cleaningLevelInput = view.findViewById(R.id.profile_cleaning_level_input);
         boatNameInput = view.findViewById(R.id.profile_boat_name_input);
         boatTypeInput = view.findViewById(R.id.profile_boat_type_input);
+        boatDetailsInput = view.findViewById(R.id.profile_boat_details_input);
         boatModelInput = view.findViewById(R.id.profile_boat_model_input);
         boatLengthInput = view.findViewById(R.id.profile_boat_length_input);
         homePortInput = view.findViewById(R.id.profile_home_port_input);
@@ -169,9 +174,6 @@ public class ProfileFragment extends Fragment {
         myTripsRecycler.setAdapter(myTripsAdapter);
 
         Button saveButton = view.findViewById(R.id.profile_save_button);
-        Button logoutButton = view.findViewById(R.id.profile_logout_button);
-        Button openUsersButton = view.findViewById(R.id.profile_open_users);
-        Button openBoatsButton = view.findViewById(R.id.profile_open_boats);
         Button donateButton = view.findViewById(R.id.profile_donate_button);
         Button supportSendButton = view.findViewById(R.id.profile_support_send);
         Button avatarPickButton = view.findViewById(R.id.profile_avatar_pick);
@@ -186,16 +188,15 @@ public class ProfileFragment extends Fragment {
             }
         });
 
-        saveButton.setOnClickListener(v -> saveProfile());
-        logoutButton.setOnClickListener(v -> {
-            if (requireActivity() instanceof MainAppActivity) {
-                ((MainAppActivity) requireActivity()).forceLogoutToHome();
-            }
+        saveButton.setOnClickListener(v -> {
+            KeyboardUtils.hide(ProfileFragment.this);
+            saveProfile();
         });
-        openUsersButton.setOnClickListener(v -> startActivity(new Intent(requireContext(), UsersActivity.class)));
-        openBoatsButton.setOnClickListener(v -> startActivity(new Intent(requireContext(), BoatsActivity.class)));
         donateButton.setOnClickListener(v -> registerFixedDonation());
-        supportSendButton.setOnClickListener(v -> sendSupportMessage());
+        supportSendButton.setOnClickListener(v -> {
+            KeyboardUtils.hide(ProfileFragment.this);
+            sendSupportMessage();
+        });
         avatarPickButton.setOnClickListener(v -> avatarPicker.launch("image/*"));
 
         bindRoleSections();
@@ -209,7 +210,7 @@ public class ProfileFragment extends Fragment {
         }
 
         loadingView.setVisibility(View.VISIBLE);
-        userActions.getUserById(userId, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        userActions.getUserById(userId, new UiApiCallback(ProfileFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 loadingView.setVisibility(View.GONE);
@@ -236,8 +237,11 @@ public class ProfileFragment extends Fragment {
                     sailingExperienceInput.setText(readFirst(user, "sailingExperience", "sailing_experience"));
                     certificationsInput.setText(readFirst(user, "certifications"));
                     preferredRoutesInput.setText(readFirst(user, "preferredRoutes", "preferred_routes"));
+                    skillsGeneralInput.setText(readFirst(user, "skillsGeneral", "skills_general"));
+                    cleaningLevelInput.setText(readFirst(user, "cleaningLevel", "cleaning_level"));
                     boatNameInput.setText(readFirst(user, "boatName", "boat_name"));
                     boatTypeInput.setText(readFirst(user, "boatType", "boat_type"));
+                    boatDetailsInput.setText(readFirst(user, "boatDetails", "boat_details"));
                     boatModelInput.setText(readFirst(user, "boatModel", "boat_model"));
                     boatLengthInput.setText(readFirst(user, "boatLengthM", "boat_length_m"));
                     homePortInput.setText(readFirst(user, "homePort", "home_port"));
@@ -290,12 +294,16 @@ public class ProfileFragment extends Fragment {
             payload.put("sailingExperience", text(sailingExperienceInput));
             payload.put("certifications", text(certificationsInput));
             payload.put("preferredRoutes", text(preferredRoutesInput));
+            payload.put("skillsGeneral", text(skillsGeneralInput));
+            payload.put("cleaningLevel", text(cleaningLevelInput));
+            payload.put("boatDetails", text(boatDetailsInput));
             if (!HomeActivity.ROLE_PATRON.equals(currentRole)) {
                 payload.put("boatName", "");
                 payload.put("boatType", "");
+                payload.put("boatDetails", "");
             }
 
-            userActions.updateUser(userId, payload.toString(), new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+            userActions.updateUser(userId, payload.toString(), new UiApiCallback(ProfileFragment.this) {
                 @Override
                 public void onUiSuccess(String body) {
                     if (HomeActivity.ROLE_PATRON.equals(currentRole)) {
@@ -319,7 +327,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadRatings(String userId) {
-        ratingActions.listRatingsByUser(userId, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        ratingActions.listRatingsByUser(userId, new UiApiCallback(ProfileFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 try {
@@ -340,7 +348,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadDonationSummary(String userId) {
-        donationActions.getDonationsByUser(userId, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        donationActions.getDonationsByUser(userId, new UiApiCallback(ProfileFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 try {
@@ -369,7 +377,7 @@ public class ProfileFragment extends Fragment {
             payload.put("userId", userId);
             payload.put("amount", 2.5);
 
-            donationActions.createDonation(payload.toString(), new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+            donationActions.createDonation(payload.toString(), new UiApiCallback(ProfileFragment.this) {
                 @Override
                 public void onUiSuccess(String body) {
                     FeedbackFx.success(requireActivity(), getString(R.string.profile_donate_success));
@@ -401,7 +409,7 @@ public class ProfileFragment extends Fragment {
             payload.put("userId", userId);
             payload.put("message", message);
 
-            supportActions.createSupportMessage(payload.toString(), new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+            supportActions.createSupportMessage(payload.toString(), new UiApiCallback(ProfileFragment.this) {
                 @Override
                 public void onUiSuccess(String body) {
                     supportInput.setText("");
@@ -420,7 +428,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadSupportMessages(String userId) {
-        supportActions.listSupportMessages(userId, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        supportActions.listSupportMessages(userId, new UiApiCallback(ProfileFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 try {
@@ -450,20 +458,54 @@ public class ProfileFragment extends Fragment {
         int count = items == null ? 0 : items.length();
         supportEmptyView.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
 
+        String userId = safe(sessionStore.getUserId());
         for (int i = 0; i < count; i++) {
             JSONObject row = items.optJSONObject(i);
             if (row == null) continue;
 
+            String id = readFirst(row, "id");
             String status = readFirst(row, "status");
             String message = readFirst(row, "message");
             String date = formatSupportDate(readFirst(row, "createdAt", "created_at"));
 
+            LinearLayout rowView = new LinearLayout(requireContext());
+            rowView.setOrientation(LinearLayout.HORIZONTAL);
+            rowView.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            rowView.setPadding(0, 6, 0, 6);
+
             TextView line = new TextView(requireContext());
+            line.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
             line.setText(getString(R.string.profile_support_item, nonEmpty(message, "-"), nonEmpty(status, date)));
             line.setTextColor(requireContext().getColor(R.color.bs_text));
-            line.setPadding(0, 6, 0, 6);
-            supportListView.addView(line);
+
+            Button deleteBtn = new Button(requireContext());
+            deleteBtn.setText("✕");
+            deleteBtn.setMinWidth(0);
+            deleteBtn.setMinimumWidth(0);
+            deleteBtn.setPadding(16, 6, 16, 6);
+            deleteBtn.setAllCaps(false);
+            deleteBtn.setOnClickListener(v -> deleteSupportMessage(id, userId));
+
+            rowView.addView(line);
+            rowView.addView(deleteBtn);
+            supportListView.addView(rowView);
         }
+    }
+
+    private void deleteSupportMessage(String messageId, String userId) {
+        if (safe(messageId).isEmpty() || safe(userId).isEmpty()) return;
+        supportActions.deleteSupportMessage(messageId, new UiApiCallback(ProfileFragment.this) {
+            @Override
+            public void onUiSuccess(String body) {
+                FeedbackFx.success(requireActivity(), getString(R.string.profile_support_deleted));
+                loadSupportMessages(userId);
+            }
+
+            @Override
+            public void onUiError(Throwable throwable) {
+                FeedbackFx.error(requireActivity(), getString(R.string.profile_support_delete_error));
+            }
+        });
     }
 
     private String formatSupportDate(String raw) {
@@ -577,8 +619,11 @@ public class ProfileFragment extends Fragment {
 
     private static String readFirst(JSONObject obj, String... keys) {
         for (String key : keys) {
-            String value = obj.optString(key, "").trim();
-            if (!value.isEmpty()) return value;
+            String value = obj.optString(key, "");
+            if (value == null) continue;
+            String clean = value.trim();
+            if (clean.isEmpty() || "null".equalsIgnoreCase(clean)) continue;
+            return clean;
         }
         return "";
     }
@@ -596,6 +641,7 @@ public class ProfileFragment extends Fragment {
         setVisible(captainSectionTitle, isCaptain);
         setVisible(boatNameInput, isCaptain);
         setVisible(boatTypeInput, isCaptain);
+        setVisible(boatDetailsInput, isCaptain);
         setVisible(boatModelInput, isCaptain);
         setVisible(boatLengthInput, isCaptain);
         setVisible(homePortInput, isCaptain);
@@ -611,6 +657,8 @@ public class ProfileFragment extends Fragment {
         setVisible(sailingExperienceInput, !isCaptain);
         setVisible(certificationsInput, !isCaptain);
         setVisible(preferredRoutesInput, !isCaptain);
+        setVisible(skillsGeneralInput, !isCaptain);
+        setVisible(cleaningLevelInput, !isCaptain);
     }
 
     private static void setVisible(View view, boolean visible) {
@@ -633,7 +681,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadCaptainTrips(String userId) {
-        tripActions.listTrips(new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        tripActions.listTrips(new UiApiCallback(ProfileFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 List<ProfileTripAdapter.Item> items = new ArrayList<>();
@@ -659,7 +707,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadTravelerTrips(String userId) {
-        bookingActions.listReservationsByUser(userId, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        bookingActions.listReservationsByUser(userId, new UiApiCallback(ProfileFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 Set<String> reservedTripIds = new HashSet<>();
@@ -676,7 +724,7 @@ public class ProfileFragment extends Fragment {
                 } catch (Throwable ignored) {
                 }
 
-                tripActions.listTrips(new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+                tripActions.listTrips(new UiApiCallback(ProfileFragment.this) {
                     @Override
                     public void onUiSuccess(String tripsBody) {
                         List<ProfileTripAdapter.Item> items = new ArrayList<>();
@@ -714,10 +762,21 @@ public class ProfileFragment extends Fragment {
         String origin = readFirst(trip, "origin");
         String destination = readFirst(trip, "destination");
         String date = readFirst(trip, "departureDate", "departure_date");
+        String time = readFirst(trip, "departureTime", "departure_time");
+        String seats = readFirst(trip, "availableSeats", "available_seats");
         String price = readFirst(trip, "cost", "price");
-        item.title = (origin.isEmpty() ? getString(R.string.profile_trip_fallback) : origin) + " -> " + destination;
+        String left = origin.isEmpty() ? getString(R.string.profile_trip_fallback) : origin;
+        String right = destination.isEmpty() ? getString(R.string.trip_detail_value_undefined) : destination;
+        String when = (date + " " + time).trim();
+        if (when.isEmpty()) when = getString(R.string.trip_detail_value_undefined);
+        String seatsLabel = seats.isEmpty() ? "?" : seats;
+        String priceLabel = price.isEmpty() || "0".equals(price) || "0.0".equals(price) || "0.00".equals(price)
+                ? getString(R.string.trip_card_price_free)
+                : (price + " EUR");
+        item.title = left + " → " + right;
         item.subtitle = (travelerMode ? getString(R.string.profile_trip_reserved) : getString(R.string.profile_trip_owned))
-                + " · " + date + " · " + price + " EUR";
+                + " · " + when + " · " + getString(R.string.trip_detail_seats_label) + ": " + seatsLabel
+                + " · " + getString(R.string.trip_detail_price_label) + ": " + priceLabel;
         item.shareText = getString(
                 R.string.profile_share_trip_template,
                 item.title,
@@ -746,7 +805,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadCaptainBoat(String userId) {
-        boatActions.listBoatsByPatron(userId, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        boatActions.listBoatsByPatron(userId, new UiApiCallback(ProfileFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 try {
@@ -760,6 +819,7 @@ public class ProfileFragment extends Fragment {
 
                     boatNameInput.setText(readFirst(boat, "name"));
                     boatTypeInput.setText(readFirst(boat, "type"));
+                    boatDetailsInput.setText(readFirst(meta, "boatDetails"));
                     String boatModel = readFirst(meta, "boatModel");
                     boatModelInput.setText(boatModel.isEmpty() ? readFirst(boat, "fuelType") : boatModel);
                     boatLengthInput.setText(readFirst(boat, "length"));
@@ -798,7 +858,7 @@ public class ProfileFragment extends Fragment {
             payload.put("description", buildBoatDescriptionWithMeta());
             payload.put("safetyEquipment", new JSONArray());
 
-            UiApiCallback callback = new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+            UiApiCallback callback = new UiApiCallback(ProfileFragment.this) {
                 @Override
                 public void onUiSuccess(String body) {
                     loadingView.setVisibility(View.GONE);
@@ -828,6 +888,7 @@ public class ProfileFragment extends Fragment {
         try {
             JSONObject meta = new JSONObject();
             meta.put("boatModel", text(boatModelInput));
+            meta.put("boatDetails", text(boatDetailsInput));
             meta.put("homePort", text(homePortInput));
             meta.put("captainLicense", text(captainLicenseInput));
             meta.put("photo1", text(boatPhoto1Input));
@@ -890,20 +951,34 @@ public class ProfileFragment extends Fragment {
     }
 
     private abstract static class UiApiCallback implements com.barcostop.app.core.network.ApiCallback {
-        private final androidx.appcompat.app.AppCompatActivity activity;
+        private final androidx.fragment.app.Fragment fragment;
 
-        UiApiCallback(androidx.appcompat.app.AppCompatActivity activity) {
-            this.activity = activity;
+        UiApiCallback(androidx.fragment.app.Fragment fragment) {
+            this.fragment = fragment;
         }
 
         @Override
         public final void onSuccess(String body) {
-            activity.runOnUiThread(() -> onUiSuccess(body));
+            android.app.Activity activity = fragment.getActivity();
+            if (activity == null || !fragment.isAdded() || activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+            activity.runOnUiThread(() -> {
+                if (!fragment.isAdded()) return;
+                onUiSuccess(body);
+            });
         }
 
         @Override
         public final void onError(Throwable throwable) {
-            activity.runOnUiThread(() -> onUiError(throwable));
+            android.app.Activity activity = fragment.getActivity();
+            if (activity == null || !fragment.isAdded() || activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+            activity.runOnUiThread(() -> {
+                if (!fragment.isAdded()) return;
+                onUiError(throwable);
+            });
         }
 
         public abstract void onUiSuccess(String body);

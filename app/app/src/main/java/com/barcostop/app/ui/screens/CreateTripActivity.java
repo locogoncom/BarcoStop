@@ -3,6 +3,7 @@ package com.barcostop.app.ui.screens;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -16,6 +17,8 @@ import com.barcostop.app.core.BarcoStopApplication;
 import com.barcostop.app.core.actions.TripActions;
 import com.barcostop.app.core.storage.SessionStore;
 import com.barcostop.app.ui.feedback.FeedbackFx;
+import com.barcostop.app.ui.util.KeyboardUtils;
+import com.google.android.material.appbar.MaterialToolbar;
 
 import org.json.JSONObject;
 
@@ -44,6 +47,12 @@ public class CreateTripActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_trip);
+        MaterialToolbar toolbar = findViewById(R.id.create_toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle(R.string.screen_create_trip);
+        }
 
         BarcoStopApplication app = (BarcoStopApplication) getApplication();
         tripActions = new TripActions(app.getApiClient());
@@ -79,14 +88,13 @@ public class CreateTripActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
         refreshConditionalFields();
-
-        setTitle("Create trip");
     }
 
     private void submit() {
+        KeyboardUtils.hide(this, getCurrentFocus());
         String userId = safe(sessionStore.getUserId());
         if (userId.isEmpty()) {
-            FeedbackFx.info(this, "Login required");
+            FeedbackFx.info(this, getString(R.string.trip_login_required));
             return;
         }
 
@@ -112,23 +120,23 @@ public class CreateTripActivity extends AppCompatActivity {
         }
 
         if (title.isEmpty() || origin.isEmpty() || destination.isEmpty() || date.isEmpty()) {
-            FeedbackFx.info(this, "Fill all required fields");
+            FeedbackFx.info(this, getString(R.string.trip_form_required_fields));
             return;
         }
         if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
-            FeedbackFx.info(this, "Date format must be YYYY-MM-DD");
+            FeedbackFx.info(this, getString(R.string.trip_form_date_format));
             return;
         }
         if (!isRegatta && seats < 1) {
-            FeedbackFx.info(this, "Seats must be >= 1");
+            FeedbackFx.info(this, getString(R.string.trip_form_seats_min));
             return;
         }
         if (!isRegatta && price < 0) {
-            FeedbackFx.info(this, "Price must be >= 0");
+            FeedbackFx.info(this, getString(R.string.trip_form_price_min));
             return;
         }
         if (!isRegatta && price == 0 && contributionType.isEmpty()) {
-            FeedbackFx.info(this, "Contribution type required when price is 0");
+            FeedbackFx.info(this, getString(R.string.trip_form_contribution_required));
             return;
         }
 
@@ -162,19 +170,19 @@ public class CreateTripActivity extends AppCompatActivity {
                 @Override
                 public void onUiSuccess(String body) {
                     loading.setVisibility(View.GONE);
-                    FeedbackFx.success(CreateTripActivity.this, "Trip created");
+                    FeedbackFx.success(CreateTripActivity.this, getString(R.string.trip_create_ok));
                     finish();
                 }
 
                 @Override
                 public void onUiError(Throwable throwable) {
                     loading.setVisibility(View.GONE);
-                    FeedbackFx.error(CreateTripActivity.this, "Could not create trip");
+                    FeedbackFx.error(CreateTripActivity.this, getString(R.string.trip_create_error));
                 }
             });
         } catch (Throwable throwable) {
             loading.setVisibility(View.GONE);
-            FeedbackFx.error(this, "Invalid payload");
+            FeedbackFx.error(this, getString(R.string.trip_payload_invalid));
         }
     }
 
@@ -252,5 +260,14 @@ public class CreateTripActivity extends AppCompatActivity {
         public abstract void onUiSuccess(String body);
 
         public abstract void onUiError(Throwable throwable);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 }

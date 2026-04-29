@@ -187,7 +187,7 @@ final class MessageRepository extends BaseRepository
 
     public function getTrip(string $tripId): ?array
     {
-        return $this->fetchOne('SELECT id, patron_id, departure_date, description FROM trips WHERE id = ? LIMIT 1', [$tripId]);
+        return $this->fetchOne('SELECT id, patron_id, departure_date, description, trip_meta FROM trips WHERE id = ? LIMIT 1', [$tripId]);
     }
 
     public function getRegattaChat(string $tripId): ?array

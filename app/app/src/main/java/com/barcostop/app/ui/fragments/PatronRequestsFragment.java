@@ -20,6 +20,7 @@ import com.barcostop.app.core.actions.BookingActions;
 import com.barcostop.app.core.actions.MessageActions;
 import com.barcostop.app.core.actions.TripActions;
 import com.barcostop.app.core.storage.SessionStore;
+import com.barcostop.app.core.util.TripTextSanitizer;
 import com.barcostop.app.ui.adapters.ReservationAdapter;
 import com.barcostop.app.ui.feedback.FeedbackFx;
 import com.barcostop.app.ui.screens.ChatActivity;
@@ -43,6 +44,7 @@ public class PatronRequestsFragment extends Fragment {
     private SwipeRefreshLayout swipe;
     private ProgressBar loading;
     private TextView empty;
+    private TextView summary;
 
     @Nullable
     @Override
@@ -63,7 +65,11 @@ public class PatronRequestsFragment extends Fragment {
         swipe = view.findViewById(R.id.res_swipe);
         loading = view.findViewById(R.id.res_loading);
         empty = view.findViewById(R.id.res_empty);
+        summary = view.findViewById(R.id.res_summary);
+        TextView title = view.findViewById(R.id.res_title);
+        if (title != null) title.setText(R.string.tab_requests);
         empty.setText(R.string.patron_requests_empty);
+        if (summary != null) summary.setText(getString(R.string.patron_requests_summary_count, 0));
 
         RecyclerView recycler = view.findViewById(R.id.res_recycler);
         recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -81,6 +87,11 @@ public class PatronRequestsFragment extends Fragment {
             public void onSecondary(ReservationAdapter.Item item) {
                 update(item.id, "rejected", getString(R.string.patron_requests_rejected));
             }
+
+            @Override
+            public void onTertiary(ReservationAdapter.Item item) {
+                // No tertiary action for captain requests.
+            }
         });
         recycler.setAdapter(adapter);
 
@@ -97,7 +108,7 @@ public class PatronRequestsFragment extends Fragment {
             empty.setVisibility(View.GONE);
         }
 
-        tripActions.listTrips(new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        tripActions.listTrips(new UiApiCallback(PatronRequestsFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 Set<String> ownTripIds = parseOwnTripIds(body, userId);
@@ -124,7 +135,7 @@ public class PatronRequestsFragment extends Fragment {
         }
 
         String tripId = tripIds.get(index);
-        bookingActions.listReservationsByTrip(tripId, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        bookingActions.listReservationsByTrip(tripId, new UiApiCallback(PatronRequestsFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 collected.addAll(parseTripReservations(body));
@@ -143,6 +154,9 @@ public class PatronRequestsFragment extends Fragment {
         swipe.setRefreshing(false);
         adapter.submit(items);
         empty.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+        if (summary != null) {
+            summary.setText(getString(R.string.patron_requests_summary_count, items.size()));
+        }
     }
 
     private void onFailure(Throwable throwable) {
@@ -195,6 +209,7 @@ public class PatronRequestsFragment extends Fragment {
                 item.travelerName = readFirst(obj, "userName", "user_name");
 
                 String title = trip != null ? readFirst(trip, "title", "description") : "";
+                title = TripTextSanitizer.stripBsMeta(title);
                 item.tripTitle = title.isEmpty() ? getString(R.string.patron_requests_trip_fallback) : title;
                 String origin = trip != null ? readFirst(trip, "origin") : "";
                 String destination = trip != null ? readFirst(trip, "destination") : "";
@@ -203,7 +218,7 @@ public class PatronRequestsFragment extends Fragment {
                 String travelerLabel = item.travelerName.isEmpty()
                         ? getString(R.string.patron_requests_traveler_fallback)
                         : item.travelerName;
-                item.route = travelerLabel + " · " + origin + " → " + destination + " · " + departureDate + " · seats " + (seats.isEmpty() ? "1" : seats);
+                item.route = travelerLabel + " · " + origin + " → " + destination + " · " + departureDate + " · plazas " + (seats.isEmpty() ? "1" : seats);
 
                 boolean pending = item.status.equalsIgnoreCase("pending");
                 boolean approved = item.status.equalsIgnoreCase("approved") || item.status.equalsIgnoreCase("confirmed");
@@ -221,7 +236,7 @@ public class PatronRequestsFragment extends Fragment {
     }
 
     private void update(String reservationId, String status, String successText) {
-        bookingActions.updateReservationStatus(reservationId, status, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        bookingActions.updateReservationStatus(reservationId, status, new UiApiCallback(PatronRequestsFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 FeedbackFx.success(requireActivity(), successText);
@@ -244,7 +259,7 @@ public class PatronRequestsFragment extends Fragment {
         }
 
         String payload = "{\"userId1\":\"" + myUserId + "\",\"userId2\":\"" + otherUserId + "\",\"tripId\":\"" + safe(item.tripId) + "\"}";
-        messageActions.createOrGetConversation(payload, new UiApiCallback((androidx.appcompat.app.AppCompatActivity) requireActivity()) {
+        messageActions.createOrGetConversation(payload, new UiApiCallback(PatronRequestsFragment.this) {
             @Override
             public void onUiSuccess(String body) {
                 String conversationId = "";
@@ -290,20 +305,34 @@ public class PatronRequestsFragment extends Fragment {
     }
 
     private abstract static class UiApiCallback implements com.barcostop.app.core.network.ApiCallback {
-        private final androidx.appcompat.app.AppCompatActivity activity;
+        private final androidx.fragment.app.Fragment fragment;
 
-        UiApiCallback(androidx.appcompat.app.AppCompatActivity activity) {
-            this.activity = activity;
+        UiApiCallback(androidx.fragment.app.Fragment fragment) {
+            this.fragment = fragment;
         }
 
         @Override
         public final void onSuccess(String body) {
-            activity.runOnUiThread(() -> onUiSuccess(body));
+            android.app.Activity activity = fragment.getActivity();
+            if (activity == null || !fragment.isAdded() || activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+            activity.runOnUiThread(() -> {
+                if (!fragment.isAdded()) return;
+                onUiSuccess(body);
+            });
         }
 
         @Override
         public final void onError(Throwable throwable) {
-            activity.runOnUiThread(() -> onUiError(throwable));
+            android.app.Activity activity = fragment.getActivity();
+            if (activity == null || !fragment.isAdded() || activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+            activity.runOnUiThread(() -> {
+                if (!fragment.isAdded()) return;
+                onUiError(throwable);
+            });
         }
 
         public abstract void onUiSuccess(String body);

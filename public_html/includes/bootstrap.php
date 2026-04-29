@@ -129,7 +129,7 @@ function siteParseTripDescription(string $raw): array
     $description = trim($raw);
     $meta = [];
 
-    $marker = "\n[BSMETA]";
+    $marker = '[BSMETA]';
     $pos = strpos($description, $marker);
     if ($pos === false) {
         return ['plain' => $description, 'meta' => $meta];
@@ -173,6 +173,16 @@ function siteTripImageUrl(array $trip): string
     $description = (string) ($trip['description'] ?? '');
     $parsed = siteParseTripDescription($description);
     $meta = $parsed['meta'];
+    $tripMeta = $trip['tripMeta'] ?? $trip['descriptionMeta'] ?? [];
+    if (is_string($tripMeta) && trim($tripMeta) !== '') {
+        $decoded = json_decode($tripMeta, true);
+        if (is_array($decoded)) {
+            $tripMeta = $decoded;
+        }
+    }
+    if (is_array($tripMeta) && !empty($tripMeta)) {
+        $meta = array_merge($meta, $tripMeta);
+    }
     $metaUrl = is_array($meta) ? (string) ($meta['boatImageUrl'] ?? '') : '';
     $directUrl = (string) ($trip['boatImageUrl'] ?? '');
 
@@ -181,7 +191,7 @@ function siteTripImageUrl(array $trip): string
         return $resolved;
     }
 
-    return 'assets/logo-barcostop-header.png';
+    return 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?auto=format&fit=crop&w=1200&q=80';
 }
 
 /**
@@ -235,7 +245,7 @@ function siteHomeMetricsFromApi(): ?array
     });
 
     $latestTrips = [];
-    foreach (array_slice($trips, 0, 6) as $trip) {
+    foreach (array_slice($trips, 0, 4) as $trip) {
         if (!is_array($trip)) {
             continue;
         }
@@ -366,7 +376,7 @@ function siteHomeMetrics(): array
             FROM trips t
             LEFT JOIN users u ON u.id = t.patron_id
             ORDER BY t.created_at DESC
-            LIMIT 6'
+            LIMIT 4'
         );
     } catch (\Throwable $e) {
         $apiMetrics = siteHomeMetricsFromApi();

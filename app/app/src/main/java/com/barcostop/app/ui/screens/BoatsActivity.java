@@ -1,6 +1,7 @@
 package com.barcostop.app.ui.screens;
 
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -18,6 +19,8 @@ import com.barcostop.app.core.actions.BoatActions;
 import com.barcostop.app.core.storage.SessionStore;
 import com.barcostop.app.ui.adapters.BoatManageAdapter;
 import com.barcostop.app.ui.feedback.FeedbackFx;
+import com.barcostop.app.ui.util.KeyboardUtils;
+import com.google.android.material.appbar.MaterialToolbar;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -46,7 +49,12 @@ public class BoatsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_boats);
-        setTitle(R.string.screen_boats);
+        MaterialToolbar toolbar = findViewById(R.id.boats_toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle(R.string.screen_boats);
+        }
 
         BarcoStopApplication app = (BarcoStopApplication) getApplication();
         boatActions = new BoatActions(app.getApiClient());
@@ -151,11 +159,13 @@ public class BoatsActivity extends AppCompatActivity {
     }
 
     private void hideForm() {
+        KeyboardUtils.hide(this, getCurrentFocus());
         form.setVisibility(View.GONE);
         editingBoatId = "";
     }
 
     private void saveBoat() {
+        KeyboardUtils.hide(this, getCurrentFocus());
         String userId = safe(sessionStore.getUserId());
         if (userId.isEmpty()) return;
 
@@ -282,5 +292,14 @@ public class BoatsActivity extends AppCompatActivity {
         public abstract void onUiSuccess(String body);
 
         public abstract void onUiError(Throwable throwable);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 }

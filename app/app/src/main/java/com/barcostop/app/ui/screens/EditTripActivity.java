@@ -3,6 +3,7 @@ package com.barcostop.app.ui.screens;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -16,6 +17,8 @@ import com.barcostop.app.core.BarcoStopApplication;
 import com.barcostop.app.core.actions.TripActions;
 import com.barcostop.app.core.storage.SessionStore;
 import com.barcostop.app.ui.feedback.FeedbackFx;
+import com.barcostop.app.ui.util.KeyboardUtils;
+import com.google.android.material.appbar.MaterialToolbar;
 
 import org.json.JSONObject;
 
@@ -45,10 +48,16 @@ public class EditTripActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_trip);
+        MaterialToolbar toolbar = findViewById(R.id.edit_toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle(R.string.trip_btn_edit);
+        }
 
         tripId = getIntent().getStringExtra("tripId");
         if (tripId == null || tripId.trim().isEmpty()) {
-            FeedbackFx.error(this, "Trip not found");
+            FeedbackFx.error(this, getString(R.string.trip_not_found));
             finish();
             return;
         }
@@ -87,7 +96,6 @@ public class EditTripActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
         loadTrip();
-        setTitle("Edit trip");
     }
 
     private void loadTrip() {
@@ -100,8 +108,7 @@ public class EditTripActivity extends AppCompatActivity {
                     JSONObject trip = new JSONObject(body);
                     JSONObject route = trip.optJSONObject("route");
 
-                    String rawDescription = readFirst(trip, "description");
-                    ParsedDescription parsed = parseDescription(rawDescription);
+                    ParsedDescription parsed = parseDescription(trip);
 
                     titleInput.setText(parsed.title);
                     noteInput.setText(parsed.captainNote);
@@ -144,22 +151,23 @@ public class EditTripActivity extends AppCompatActivity {
 
                     refreshConditionalFields();
                 } catch (Throwable t) {
-                    FeedbackFx.error(EditTripActivity.this, "Could not parse trip");
+                    FeedbackFx.error(EditTripActivity.this, getString(R.string.trip_parse_error));
                 }
             }
 
             @Override
             public void onUiError(Throwable throwable) {
                 loading.setVisibility(View.GONE);
-                FeedbackFx.error(EditTripActivity.this, "Could not load trip");
+                FeedbackFx.error(EditTripActivity.this, getString(R.string.trip_load_error));
             }
         });
     }
 
     private void save() {
+        KeyboardUtils.hide(this, getCurrentFocus());
         String actorId = sessionStore.getUserId();
         if (actorId == null || actorId.trim().isEmpty()) {
-            FeedbackFx.info(this, "Login required");
+            FeedbackFx.info(this, getString(R.string.trip_login_required));
             return;
         }
 
@@ -185,11 +193,23 @@ public class EditTripActivity extends AppCompatActivity {
         }
 
         if (title.isEmpty() || origin.isEmpty() || destination.isEmpty() || date.isEmpty()) {
-            FeedbackFx.info(this, "Fill all required fields");
+            FeedbackFx.info(this, getString(R.string.trip_form_required_fields));
             return;
         }
         if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
-            FeedbackFx.info(this, "Date format must be YYYY-MM-DD");
+            FeedbackFx.info(this, getString(R.string.trip_form_date_format));
+            return;
+        }
+        if (!isRegatta && seats < 1) {
+            FeedbackFx.info(this, getString(R.string.trip_form_seats_min));
+            return;
+        }
+        if (!isRegatta && price < 0) {
+            FeedbackFx.info(this, getString(R.string.trip_form_price_min));
+            return;
+        }
+        if (!isRegatta && price == 0 && contributionType.trim().isEmpty()) {
+            FeedbackFx.info(this, getString(R.string.trip_form_contribution_required));
             return;
         }
 
@@ -221,7 +241,7 @@ public class EditTripActivity extends AppCompatActivity {
                 @Override
                 public void onUiSuccess(String body) {
                     loading.setVisibility(View.GONE);
-                    FeedbackFx.success(EditTripActivity.this, "Trip updated");
+                    FeedbackFx.success(EditTripActivity.this, getString(R.string.trip_update_ok));
                     setResult(RESULT_OK);
                     finish();
                 }
@@ -229,12 +249,12 @@ public class EditTripActivity extends AppCompatActivity {
                 @Override
                 public void onUiError(Throwable throwable) {
                     loading.setVisibility(View.GONE);
-                    FeedbackFx.error(EditTripActivity.this, "Could not update trip");
+                    FeedbackFx.error(EditTripActivity.this, getString(R.string.trip_update_error));
                 }
             });
         } catch (Throwable throwable) {
             loading.setVisibility(View.GONE);
-            FeedbackFx.error(this, "Invalid payload");
+            FeedbackFx.error(this, getString(R.string.trip_payload_invalid));
         }
     }
 
@@ -298,17 +318,37 @@ public class EditTripActivity extends AppCompatActivity {
         String contributionNote = "";
     }
 
-    private static ParsedDescription parseDescription(String rawDescription) {
+    private static ParsedDescription parseDescription(JSONObject trip) {
         ParsedDescription out = new ParsedDescription();
+        String topLevelKind = trip.optString("tripKind", "").trim();
+        if (TRIP_KIND_REGATTA.equals(topLevelKind)) {
+            out.tripKind = TRIP_KIND_REGATTA;
+        }
+
+        JSONObject metaObject = trip.optJSONObject("descriptionMeta");
+        if (metaObject != null) {
+            String tripKind = metaObject.optString("tripKind", out.tripKind).trim();
+            out.tripKind = TRIP_KIND_REGATTA.equals(tripKind) ? TRIP_KIND_REGATTA : TRIP_KIND_TRIP;
+            out.captainNote = metaObject.optString("captainNote", out.captainNote).trim();
+            out.boatImageUrl = metaObject.optString("boatImageUrl", out.boatImageUrl).trim();
+            out.contributionType = metaObject.optString("contributionType", out.contributionType).trim();
+            out.contributionNote = metaObject.optString("contributionNote", out.contributionNote).trim();
+            String timeWindow = metaObject.optString("timeWindow", out.timeWindow).trim();
+            if ("afternoon".equals(timeWindow) || "night".equals(timeWindow) || "morning".equals(timeWindow)) {
+                out.timeWindow = timeWindow;
+            }
+        }
+
+        String rawDescription = readFirst(trip, "description");
         String raw = rawDescription == null ? "" : rawDescription;
-        int marker = raw.indexOf("\n[BSMETA]");
+        int marker = raw.indexOf("[BSMETA]");
         if (marker < 0) {
             out.title = raw.trim();
             return out;
         }
 
         out.title = raw.substring(0, marker).trim();
-        String metaRaw = raw.substring(marker + "\n[BSMETA]".length()).trim();
+        String metaRaw = raw.substring(marker + "[BSMETA]".length()).trim();
         try {
             JSONObject meta = new JSONObject(metaRaw);
             String tripKind = meta.optString("tripKind", TRIP_KIND_TRIP).trim();
@@ -368,5 +408,14 @@ public class EditTripActivity extends AppCompatActivity {
         public abstract void onUiSuccess(String body);
 
         public abstract void onUiError(Throwable throwable);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 }

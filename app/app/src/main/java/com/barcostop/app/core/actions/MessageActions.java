@@ -31,4 +31,30 @@ public class MessageActions {
         req.jsonBody = jsonBody;
         apiClient.execute(req, callback);
     }
+
+    public void getBlockStatus(String userId, String otherUserId, ApiCallback callback) {
+        apiClient.execute(new ApiRequest("GET", ApiEndpoints.MESSAGES_BLOCK + "/status?userId=" + userId + "&otherUserId=" + otherUserId), callback);
+    }
+
+    public void blockUser(String jsonBody, ApiCallback callback) {
+        ApiRequest req = new ApiRequest("POST", ApiEndpoints.MESSAGES_BLOCK);
+        req.jsonBody = jsonBody;
+        apiClient.execute(req, callback);
+    }
+
+    public void unblockUser(String jsonBody, ApiCallback callback) {
+        ApiRequest req = new ApiRequest("DELETE", ApiEndpoints.MESSAGES_BLOCK);
+        req.jsonBody = jsonBody;
+        apiClient.execute(req, callback);
+    }
+
+    public void reportUser(String jsonBody, ApiCallback callback) {
+        ApiRequest req = new ApiRequest("POST", ApiEndpoints.MESSAGES_REPORT);
+        req.jsonBody = jsonBody;
+        apiClient.execute(req, callback);
+    }
+
+    public void getRegattaChat(String tripId, String userId, ApiCallback callback) {
+        apiClient.execute(new ApiRequest("GET", "messages/regatta/" + tripId + "/chat?userId=" + userId), callback);
+    }
 }
