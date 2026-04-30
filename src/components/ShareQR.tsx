@@ -1,5 +1,3 @@
-import { useRef } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
 import { Button } from './ui/Button';
 import { Card, CardContent, CardHeader } from './ui/Card';
 import { Download, Copy, X, Share2 } from 'lucide-react';
@@ -10,36 +8,16 @@ interface ShareQRProps {
 }
 
 export function ShareQR({ onClose, appUrl }: ShareQRProps) {
-  const qrRef = useRef<any>(null);
-  const url = appUrl || window.location.origin;
+  const url = appUrl || 'https://barcostop.net/qr';
   const canShare = typeof navigator !== 'undefined' && !!navigator.share;
+  const qrImageSrc = '/assets/http_www_barcostop_net_qr.png';
 
   const handleDownload = async () => {
     try {
-      const svg = qrRef.current?.querySelector('svg');
-      if (!svg) return;
-
-      // Convert SVG to PNG using canvas
-      const svgData = new XMLSerializer().serializeToString(svg);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      canvas.width = 200;
-      canvas.height = 200;
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, 200, 200);
-
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0);
-        // Download as PNG
-        const link = document.createElement('a');
-        link.href = canvas.toDataURL('image/png');
-        link.download = 'barcostop-qr.png';
-        link.click();
-      };
-      img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+      const link = document.createElement('a');
+      link.href = qrImageSrc;
+      link.download = 'barcostop-qr.png';
+      link.click();
     } catch (err) {
       console.error('Error downloading QR:', err);
       alert('Error al descargar el QR');
@@ -85,16 +63,7 @@ export function ShareQR({ onClose, appUrl }: ShareQRProps) {
 
         <CardContent className="space-y-6 text-center">
           <div className="flex justify-center p-4 bg-white rounded-lg border">
-            <div ref={qrRef}>
-              <QRCodeSVG
-                value={url}
-                size={200}
-                level="M"
-                includeMargin={true}
-                fgColor="#000000"
-                bgColor="#ffffff"
-              />
-            </div>
+            <img src={qrImageSrc} alt="QR de BarcoStop" className="w-[200px] h-[200px] object-contain" />
           </div>
 
           <div>

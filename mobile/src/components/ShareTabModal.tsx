@@ -1,9 +1,9 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {
   Alert,
+  Image,
   Linking,
   Modal,
-  Platform,
   Share,
   StyleSheet,
   Text,
@@ -11,7 +11,6 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import QRCode from 'react-native-qrcode-svg';
 import {buildPayPalMeUrl} from '../config/paypal';
 import {PayPalWebViewModal} from '../components/PayPalWebViewModal';
 import {colors} from '../theme/colors';
@@ -26,7 +25,6 @@ const APP_SHARE_TEXT = [
   APP_INTERNAL_TEST_URL,
 ].join('\n');
 
-const APP_QR_URL = APP_INTERNAL_TEST_URL;
 const PAYPAL_DONATION_URL = buildPayPalMeUrl(2.5, 2.5);
 const SHARE_COUNT_KEY = '@barcostop/shareCount';
 
@@ -151,9 +149,9 @@ export function ShareTabModal({visible, onClose}: Props) {
             <Text style={styles.title}>QR de BarcoStop</Text>
             <Text style={styles.counterText}>Compartidos totales: {shareCount}</Text>
             <View style={styles.qrWrap}>
-              <QRCode value={APP_QR_URL} size={180} color={colors.primary} backgroundColor={colors.white} />
+              <Image source={require('../assets/http_www_barcostop_net_qr.png')} style={styles.qrImage} />
             </View>
-            <Text style={styles.helperText}>Escanéalo para abrir el acceso de pruebas internas en Google Play</Text>
+            <Text style={styles.helperText}>Escanéalo para abrir barcostop.net/qr</Text>
             <TouchableOpacity style={styles.closeBtn} onPress={() => setShowQr(false)}>
               <Text style={styles.closeText}>Cerrar</Text>
             </TouchableOpacity>
@@ -266,6 +264,11 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 18,
     marginVertical: 14,
+  },
+  qrImage: {
+    width: 180,
+    height: 180,
+    resizeMode: 'contain',
   },
   helperText: {
     fontSize: 13,
