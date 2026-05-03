@@ -16,5 +16,6 @@
   <php>
     <env name="BARCOSTOP_RUN_LIVE_AUTH_TEST" value="0"/>
     <env name="BARCOSTOP_RUN_LIVE_TRIP_CRUD_TEST" value="0"/>
+    <env name="BARCOSTOP_RUN_LIVE_UPLOAD_TEST" value="0"/>
   </php>
 </phpunit>

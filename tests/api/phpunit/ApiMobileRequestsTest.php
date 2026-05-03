@@ -230,6 +230,67 @@ final class ApiMobileRequestsTest extends TestCase
         }
     }
 
+    public function testLiveImageUploadsAvatarAndTripWhenEnabled(): void
+    {
+        $enabled = getenv('BARCOSTOP_RUN_LIVE_UPLOAD_TEST') === '1';
+        if (!$enabled) {
+            $this->markTestSkipped('Test live de uploads desactivado. Exporta BARCOSTOP_RUN_LIVE_UPLOAD_TEST=1 para ejecutarlo.');
+        }
+        if (!function_exists('curl_init')) {
+            $this->markTestSkipped('Extensión cURL no disponible para tests multipart/form-data live.');
+        }
+
+        $baseUrl = $this->liveApiBaseUrl();
+        $login = $this->loginLiveOrSkip();
+        $token = (string) ($login['json']['token'] ?? '');
+        $userId = (string) ($login['json']['userId'] ?? '');
+
+        self::assertNotSame('', $token, 'Token requerido para test live uploads.');
+        self::assertNotSame('', $userId, 'userId requerido para test live uploads.');
+
+        $avatarFile = $this->createTempTinyPng('avatar-live');
+        $tripFile = $this->createTempTinyPng('trip-live');
+
+        try {
+            $avatar = $this->httpMultipartAuth(
+                $baseUrl . '/users/' . rawurlencode($userId) . '/avatar',
+                ['avatar' => new CURLFile($avatarFile, 'image/png', 'avatar.png')],
+                $token
+            );
+            if ($avatar['networkError'] !== null) {
+                $this->markTestSkipped('Sin conectividad para test live uploads (avatar): ' . $avatar['networkError']);
+            }
+
+            self::assertSame(201, $avatar['status'], 'Subir avatar debe responder 201');
+            self::assertIsArray($avatar['json'], 'Subir avatar debe devolver JSON');
+            $avatarPath = (string) (($avatar['json']['avatar'] ?? '') ?: (($avatar['json']['user']['avatar'] ?? '') ?: ''));
+            self::assertNotSame('', $avatarPath, 'Subir avatar debe devolver ruta/avatar');
+            self::assertStringContainsString('/uploads/avatars/', $avatarPath, 'Ruta de avatar esperada');
+
+            $tripImage = $this->httpMultipartAuth(
+                $baseUrl . '/trips/upload-image',
+                ['image' => new CURLFile($tripFile, 'image/png', 'trip.png')],
+                $token,
+                [
+                    'x-user-id' => $userId,
+                    'x-image-kind' => 'trip',
+                ]
+            );
+            if ($tripImage['networkError'] !== null) {
+                $this->markTestSkipped('Sin conectividad para test live uploads (trip): ' . $tripImage['networkError']);
+            }
+
+            self::assertSame(201, $tripImage['status'], 'Subir imagen de viaje debe responder 201');
+            self::assertIsArray($tripImage['json'], 'Subir imagen de viaje debe devolver JSON');
+            $tripPath = (string) ($tripImage['json']['image'] ?? '');
+            self::assertNotSame('', $tripPath, 'Subir imagen de viaje debe devolver ruta');
+            self::assertStringContainsString('/uploads/trips/', $tripPath, 'Ruta de imagen de viaje esperada');
+        } finally {
+            @unlink($avatarFile);
+            @unlink($tripFile);
+        }
+    }
+
     /**
      * @return array{status:int,body:string,json:array<string,mixed>|null,networkError:?string}
      */
@@ -254,6 +315,28 @@ final class ApiMobileRequestsTest extends TestCase
     private function liveApiBaseUrl(): string
     {
         return rtrim((string) (getenv('BARCOSTOP_LIVE_API_BASE_URL') ?: 'https://api.barcostop.net/api/v1'), '/');
+    }
+
+    private function createTempTinyPng(string $prefix): string
+    {
+        $tinyPng = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7ZxwkAAAAASUVORK5CYII=',
+            true
+        );
+        if (!is_string($tinyPng) || $tinyPng === '') {
+            throw new RuntimeException('No se pudo crear PNG minimo para test live.');
+        }
+
+        $tmp = tempnam(sys_get_temp_dir(), $prefix);
+        if ($tmp === false) {
+            throw new RuntimeException('No se pudo crear archivo temporal para test live.');
+        }
+
+        if (@file_put_contents($tmp, $tinyPng) === false) {
+            throw new RuntimeException('No se pudo escribir archivo PNG temporal.');
+        }
+
+        return $tmp;
     }
 
     private function buildRouterFromApiKernel(): Router
@@ -426,5 +509,58 @@ final class ApiMobileRequestsTest extends TestCase
         return $this->httpJson($method, $url, $payload, [
             'Authorization' => 'Bearer ' . $token,
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $fields
+     * @param array<string, string> $extraHeaders
+     * @return array{status:int,body:string,json:array<string,mixed>|null,networkError:?string}
+     */
+    private function httpMultipartAuth(string $url, array $fields, string $token, array $extraHeaders = []): array
+    {
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return [
+                'status' => 0,
+                'body' => '',
+                'json' => null,
+                'networkError' => 'curl_init devolvió false',
+            ];
+        }
+
+        $headers = [
+            'Accept: application/json',
+            'Authorization: Bearer ' . $token,
+        ];
+        foreach ($extraHeaders as $name => $value) {
+            $headers[] = $name . ': ' . $value;
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $fields,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_TIMEOUT => 20,
+        ]);
+
+        $result = curl_exec($ch);
+        $networkError = null;
+        if ($result === false) {
+            $networkError = curl_error($ch) ?: 'network error';
+        }
+
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $text = is_string($result) ? $result : '';
+        $json = json_decode($text, true);
+
+        return [
+            'status' => $status,
+            'body' => $text,
+            'json' => is_array($json) ? $json : null,
+            'networkError' => $networkError,
+        ];
     }
 }

@@ -31,16 +31,20 @@ import com.barcostop.app.core.actions.SupportActions;
 import com.barcostop.app.core.actions.TripActions;
 import com.barcostop.app.core.actions.UserActions;
 import com.barcostop.app.core.network.ApiConfig;
+import com.barcostop.app.core.network.AssetUrlResolver;
 import com.barcostop.app.core.storage.SessionStore;
 import com.barcostop.app.ui.adapters.ProfileTripAdapter;
 import com.barcostop.app.ui.feedback.FeedbackFx;
 import com.barcostop.app.ui.screens.HomeActivity;
 import com.barcostop.app.ui.screens.MainAppActivity;
 import com.barcostop.app.ui.util.KeyboardUtils;
+import com.barcostop.app.ui.util.RemoteImageLoader;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -233,7 +237,9 @@ public class ProfileFragment extends Fragment {
                     instagramInput.setText(readFirst(user, "instagram"));
                     phoneInput.setText(readFirst(user, "phone"));
                     languagesInput.setText(readFirst(user, "languages"));
-                    avatarHintView.setText(nonEmpty(readFirst(user, "avatar"), getString(R.string.profile_avatar_none)));
+                    String avatarUrl = nonEmpty(readFirst(user, "avatar"), "");
+                    avatarHintView.setText(nonEmpty(avatarUrl, getString(R.string.profile_avatar_none)));
+                    RemoteImageLoader.load(avatarPreview, AssetUrlResolver.resolve(avatarUrl), R.drawable.ic_barcostop_logo);
                     sailingExperienceInput.setText(readFirst(user, "sailingExperience", "sailing_experience"));
                     certificationsInput.setText(readFirst(user, "certifications"));
                     preferredRoutesInput.setText(readFirst(user, "preferredRoutes", "preferred_routes"));
@@ -532,21 +538,27 @@ public class ProfileFragment extends Fragment {
 
         new Thread(() -> {
             try {
-                byte[] bytes;
-                try (java.io.InputStream input = requireContext().getContentResolver().openInputStream(uri)) {
-                    if (input == null) throw new IllegalStateException("No image stream");
-                    bytes = input.readAllBytes();
-                }
-
-                if (bytes.length > 5 * 1024 * 1024) {
-                    requireActivity().runOnUiThread(() ->
-                            FeedbackFx.info(requireActivity(), getString(R.string.profile_avatar_too_large))
-                    );
+                if (getContext() == null) {
+                    postAvatarError(getString(R.string.profile_avatar_upload_error));
                     return;
                 }
 
-                String mime = safe(requireContext().getContentResolver().getType(uri));
+                byte[] bytes;
+                try (InputStream input = getContext().getContentResolver().openInputStream(uri)) {
+                    if (input == null) throw new IllegalStateException("No image stream");
+                    bytes = readAllBytesCompat(input);
+                }
+
+                if (bytes.length > 5 * 1024 * 1024) {
+                    runOnUiIfAdded(() -> FeedbackFx.info(requireActivity(), getString(R.string.profile_avatar_too_large)));
+                    return;
+                }
+
+                String mime = safe(getContext().getContentResolver().getType(uri));
                 if (mime.isEmpty()) mime = "image/jpeg";
+                if (mime.equalsIgnoreCase("image/heic") || mime.equalsIgnoreCase("image/heif")) {
+                    mime = "image/jpeg";
+                }
                 String extension = mime.endsWith("png") ? ".png" : ".jpg";
                 String fileName = "avatar" + extension;
 
@@ -572,22 +584,43 @@ public class ProfileFragment extends Fragment {
                     String responseBody = response.body() != null ? response.body().string() : "";
                     if (!response.isSuccessful()) {
                         String error = parseErrorBody(responseBody, getString(R.string.profile_avatar_upload_error));
-                        requireActivity().runOnUiThread(() -> FeedbackFx.error(requireActivity(), error));
+                        postAvatarError(error);
                         return;
                     }
 
                     String avatarPath = extractAvatarPath(responseBody);
-                    requireActivity().runOnUiThread(() -> {
+                    runOnUiIfAdded(() -> {
                         avatarHintView.setText(nonEmpty(avatarPath, getString(R.string.profile_avatar_none)));
+                        RemoteImageLoader.load(avatarPreview, AssetUrlResolver.resolve(avatarPath), R.drawable.ic_barcostop_logo);
                         FeedbackFx.success(requireActivity(), getString(R.string.profile_avatar_upload_ok));
                     });
                 }
             } catch (Throwable throwable) {
-                requireActivity().runOnUiThread(() ->
-                        FeedbackFx.error(requireActivity(), getString(R.string.profile_avatar_upload_error))
-                );
+                postAvatarError(getString(R.string.profile_avatar_upload_error));
             }
         }).start();
+    }
+
+    private void postAvatarError(String message) {
+        runOnUiIfAdded(() -> FeedbackFx.error(requireActivity(), nonEmpty(message, getString(R.string.profile_avatar_upload_error))));
+    }
+
+    private void runOnUiIfAdded(Runnable runnable) {
+        if (runnable == null || !isAdded() || getActivity() == null) return;
+        getActivity().runOnUiThread(() -> {
+            if (!isAdded() || getActivity() == null) return;
+            runnable.run();
+        });
+    }
+
+    private static byte[] readAllBytesCompat(InputStream input) throws java.io.IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8 * 1024];
+        int read;
+        while ((read = input.read(buffer)) != -1) {
+            output.write(buffer, 0, read);
+        }
+        return output.toByteArray();
     }
 
     private static String extractAvatarPath(String body) {
