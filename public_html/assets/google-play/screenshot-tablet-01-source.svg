@@ -1,0 +1,21 @@
+<svg width="1920" height="1200" viewBox="0 0 1920 1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1D4ED8"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1200" fill="url(#bg)"/>
+  <text x="100" y="132" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="82" font-weight="800">BarcoStop en tablet</text>
+
+  <rect x="80" y="200" width="1760" height="900" rx="34" fill="#FFFFFF" fill-opacity="0.15"/>
+  <rect x="130" y="260" width="1120" height="760" rx="22" fill="#FFFFFF"/>
+  <text x="180" y="340" fill="#0F172A" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="700">Mapa y viajes disponibles</text>
+  <rect x="180" y="380" width="1020" height="560" rx="16" fill="#DBEAFE"/>
+
+  <rect x="1290" y="260" width="500" height="760" rx="22" fill="#FFFFFF"/>
+  <text x="1336" y="340" fill="#0F172A" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700">Panel rapido</text>
+  <rect x="1336" y="384" width="408" height="130" rx="16" fill="#E2E8F0"/>
+  <rect x="1336" y="546" width="408" height="130" rx="16" fill="#E2E8F0"/>
+  <rect x="1336" y="708" width="408" height="130" rx="16" fill="#E2E8F0"/>
+</svg>

@@ -1,0 +1,33 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BarcoStop feature graphic velero oficial">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1D4ED8"/>
+      <stop offset="55%" stop-color="#0EA5E9"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="500" fill="url(#bg)"/>
+
+  <path d="M0 352 C104 296 208 296 312 352 C416 408 520 408 624 352 C728 296 832 296 1024 360 L1024 500 L0 500 Z" fill="#E6F7FF" fill-opacity="0.2"/>
+  <path d="M0 392 C104 344 208 344 312 392 C416 440 520 440 624 392 C728 344 832 344 1024 402 L1024 500 L0 500 Z" fill="#BFE9FF" fill-opacity="0.28"/>
+
+  <g transform="translate(82 80)">
+    <text x="0" y="64" fill="#FFFFFF" font-size="90" font-family="Segoe UI, Arial, sans-serif" font-weight="800" letter-spacing="1">BarcoStop</text>
+    <rect x="0" y="84" width="392" height="8" rx="4" fill="url(#accent)"/>
+    <text x="0" y="146" fill="#EAF9FF" font-size="34" font-family="Segoe UI, Arial, sans-serif" font-weight="600">Comparte viajes en barco</text>
+    <text x="0" y="188" fill="#D7F0FA" font-size="25" font-family="Segoe UI, Arial, sans-serif">Nuestra experiencia, nuestra comunidad</text>
+  </g>
+
+  <g transform="translate(676 64)">
+    <rect width="252" height="252" rx="36" fill="#FFFFFF" fill-opacity="0.1" stroke="#FFFFFF" stroke-opacity="0.2"/>
+    <path d="M126 58v134" stroke="#F4FBFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M128 70l-5 96 74-50z" fill="#FFFFFF"/>
+    <path d="M117 90l4 74-58-38z" fill="#ECF8FF"/>
+    <path d="M42 188c28 10 56 15 84 15 28 0 56-5 84-15-6 22-22 38-43 44-12 3-26 5-41 5-15 0-29-2-41-5-21-6-37-22-43-44z" fill="url(#accent)"/>
+  </g>
+</svg>
