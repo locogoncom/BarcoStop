@@ -38,6 +38,7 @@ import com.barcostop.app.ui.feedback.FeedbackFx;
 import com.barcostop.app.ui.screens.HomeActivity;
 import com.barcostop.app.ui.screens.MainAppActivity;
 import com.barcostop.app.ui.util.KeyboardUtils;
+import com.barcostop.app.ui.util.ReputationCalculator;
 import com.barcostop.app.ui.util.RemoteImageLoader;
 
 import org.json.JSONArray;
@@ -104,6 +105,8 @@ public class ProfileFragment extends Fragment {
     private TextView captainSectionTitle;
     private TextView myTripsEmptyView;
     private TextView ratingSummaryView;
+    private TextView reputationRankView;
+    private TextView reputationPointsView;
     private TextView donationSummaryView;
     private TextView supportEmptyView;
     private LinearLayout supportListView;
@@ -113,6 +116,10 @@ public class ProfileFragment extends Fragment {
     private ActivityResultLauncher<String> avatarPicker;
     private String currentRole = HomeActivity.ROLE_VIAJERO;
     private String currentBoatId = "";
+    private JSONObject currentUserProfile;
+    private JSONArray currentRatings = new JSONArray();
+    private int reputationCreatedTrips = 0;
+    private int reputationCompletedTrips = 0;
 
     @Nullable
     @Override
@@ -168,6 +175,8 @@ public class ProfileFragment extends Fragment {
         myTripsEmptyView = view.findViewById(R.id.profile_my_trips_empty);
         myTripsRecycler = view.findViewById(R.id.profile_my_trips_recycler);
         ratingSummaryView = view.findViewById(R.id.profile_rating_summary);
+        reputationRankView = view.findViewById(R.id.profile_reputation_rank);
+        reputationPointsView = view.findViewById(R.id.profile_reputation_points);
         donationSummaryView = view.findViewById(R.id.profile_donation_summary);
         supportEmptyView = view.findViewById(R.id.profile_support_empty);
         supportListView = view.findViewById(R.id.profile_support_list);
@@ -224,6 +233,7 @@ public class ProfileFragment extends Fragment {
                     String role = normalizeRole(readFirst(user, "role"));
                     String name = readFirst(user, "name", "username");
                     String bio = readFirst(user, "bio");
+                    currentUserProfile = user;
                     currentRole = role;
                     bindRoleSections();
 
@@ -265,6 +275,7 @@ public class ProfileFragment extends Fragment {
                     loadRatings(userId);
                     loadDonationSummary(userId);
                     loadSupportMessages(userId);
+                    renderReputation();
                 } catch (Throwable throwable) {
                     FeedbackFx.error(requireActivity(), getString(R.string.profile_load_error));
                 }
@@ -340,15 +351,22 @@ public class ProfileFragment extends Fragment {
                     JSONObject json = new JSONObject(body);
                     double avg = json.optDouble("averageRating", 0);
                     int reviewCount = json.optInt("reviewCount", 0);
+                    currentRatings = json.optJSONArray("ratings");
+                    if (currentRatings == null) currentRatings = new JSONArray();
                     ratingSummaryView.setText(getString(R.string.profile_rating_summary_value, avg, reviewCount));
+                    renderReputation();
                 } catch (Throwable throwable) {
+                    currentRatings = new JSONArray();
                     ratingSummaryView.setText(getString(R.string.profile_rating_summary_placeholder));
+                    renderReputation();
                 }
             }
 
             @Override
             public void onUiError(Throwable throwable) {
+                currentRatings = new JSONArray();
                 ratingSummaryView.setText(getString(R.string.profile_rating_summary_placeholder));
+                renderReputation();
             }
         });
     }
@@ -718,6 +736,8 @@ public class ProfileFragment extends Fragment {
             @Override
             public void onUiSuccess(String body) {
                 List<ProfileTripAdapter.Item> items = new ArrayList<>();
+                reputationCreatedTrips = 0;
+                reputationCompletedTrips = 0;
                 try {
                     JSONArray arr = new JSONArray(body);
                     for (int i = 0; i < arr.length(); i++) {
@@ -725,16 +745,22 @@ public class ProfileFragment extends Fragment {
                         if (trip == null) continue;
                         String patronId = readFirst(trip, "patronId", "patron_id");
                         if (!userId.equals(patronId)) continue;
+                        reputationCreatedTrips += 1;
+                        if (isCompletedStatus(readFirst(trip, "status"))) reputationCompletedTrips += 1;
                         items.add(mapTripItem(trip, false));
                     }
                 } catch (Throwable ignored) {
                 }
                 renderMyTrips(items);
+                renderReputation();
             }
 
             @Override
             public void onUiError(Throwable throwable) {
+                reputationCreatedTrips = 0;
+                reputationCompletedTrips = 0;
                 renderMyTrips(new ArrayList<>());
+                renderReputation();
             }
         });
     }
@@ -761,6 +787,8 @@ public class ProfileFragment extends Fragment {
                     @Override
                     public void onUiSuccess(String tripsBody) {
                         List<ProfileTripAdapter.Item> items = new ArrayList<>();
+                        reputationCreatedTrips = 0;
+                        reputationCompletedTrips = 0;
                         try {
                             JSONArray arr = new JSONArray(tripsBody);
                             for (int i = 0; i < arr.length(); i++) {
@@ -773,20 +801,51 @@ public class ProfileFragment extends Fragment {
                         } catch (Throwable ignored) {
                         }
                         renderMyTrips(items);
+                        renderReputation();
                     }
 
                     @Override
                     public void onUiError(Throwable throwable) {
+                        reputationCreatedTrips = 0;
+                        reputationCompletedTrips = 0;
                         renderMyTrips(new ArrayList<>());
+                        renderReputation();
                     }
                 });
             }
 
             @Override
             public void onUiError(Throwable throwable) {
+                reputationCreatedTrips = 0;
+                reputationCompletedTrips = 0;
                 renderMyTrips(new ArrayList<>());
+                renderReputation();
             }
         });
+    }
+
+    private void renderReputation() {
+        if (reputationRankView == null || reputationPointsView == null || currentUserProfile == null) return;
+        ReputationCalculator.Snapshot snapshot = ReputationCalculator.from(
+                currentUserProfile,
+                HomeActivity.ROLE_PATRON.equals(currentRole),
+                reputationCreatedTrips,
+                reputationCompletedTrips,
+                currentRatings
+        );
+        reputationRankView.setText(getString(R.string.profile_reputation_rank_value, snapshot.insignia, snapshot.rankName));
+        reputationPointsView.setText(getString(
+                R.string.profile_reputation_points_value,
+                snapshot.totalPoints,
+                snapshot.createdTrips,
+                snapshot.completedTrips,
+                snapshot.profileComplete ? getString(R.string.profile_reputation_complete_yes) : getString(R.string.profile_reputation_complete_no)
+        ));
+    }
+
+    private static boolean isCompletedStatus(String status) {
+        String safe = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
+        return safe.equals("completed") || safe.equals("completado") || safe.equals("finished") || safe.equals("done");
     }
 
     private ProfileTripAdapter.Item mapTripItem(JSONObject trip, boolean travelerMode) {

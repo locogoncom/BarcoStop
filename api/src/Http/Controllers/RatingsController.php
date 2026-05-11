@@ -75,13 +75,15 @@ final class RatingsController
         try {
             $ratings = \BarcoStop\ServerPhp\Config\Database::fetchAll('SELECT * FROM ratings WHERE user_id = ? ORDER BY created_at DESC', [$userId]);
             $avg = \BarcoStop\ServerPhp\Config\Database::fetchOne('SELECT AVG(rating) as average, COUNT(*) as count FROM ratings WHERE user_id = ?', [$userId]);
+            $reputation = $this->users->getReputationSnapshot($userId);
             JsonResponse::send([
                 'ratings' => $ratings,
                 'averageRating' => (float) ($avg['average'] ?? 0),
                 'reviewCount' => (int) ($avg['count'] ?? 0),
+                'reputation' => $reputation,
             ]);
         } catch (\Throwable) {
-            JsonResponse::send(['ratings' => [], 'averageRating' => 0, 'reviewCount' => 0]);
+            JsonResponse::send(['ratings' => [], 'averageRating' => 0, 'reviewCount' => 0, 'reputation' => $this->users->getReputationSnapshot($userId)]);
         }
     }
 

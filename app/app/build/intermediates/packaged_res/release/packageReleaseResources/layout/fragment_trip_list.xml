@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_page">
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/trips_search_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:orientation="vertical"
+                android:paddingHorizontal="0dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="@dimen/bs_search_toolbar_bottom_pad">
+
+                <EditText
+                    android:id="@+id/trips_search_origin"
+                    style="@style/Widget.BarcoStop.SearchField.Flat"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/trips_search_hint" />
+
+                <LinearLayout
+                    android:id="@+id/trips_search_extra"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <EditText
+                        android:id="@+id/trips_search_destination"
+                        style="@style/Widget.BarcoStop.SearchField.Flat"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/bs_search_gap"
+                        android:hint="@string/trips_search_destination_hint" />
+
+                    <EditText
+                        android:id="@+id/trips_search_date"
+                        style="@style/Widget.BarcoStop.SearchField.Flat"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/bs_search_gap"
+                        android:hint="@string/trips_search_date_hint" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/bs_search_gap"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/trips_btn_today"
+                            style="@style/Widget.BarcoStop.Button.SoftGreen.Compact"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/trips_search_today" />
+
+                        <Button
+                            android:id="@+id/trips_btn_tomorrow"
+                            style="@style/Widget.BarcoStop.Button.SoftGreen.Compact"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:text="@string/trips_search_tomorrow" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/trips_btn_clear_search"
+                        style="@style/Widget.BarcoStop.Button.SoftGreen"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/bs_search_gap"
+                        android:text="@string/trips_search_clear" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/trips_recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:paddingTop="@dimen/bs_search_list_top_pad"
+                    android:paddingBottom="10dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <TextView
+        android:id="@+id/empty_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="@string/empty_trips"
+        android:textColor="@color/bs_text"
+        android:textSize="15sp"
+        android:visibility="gone" />
+
+    <ProgressBar
+        android:id="@+id/loading_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center" />
+
+    <Button
+        android:id="@+id/trips_create_button"
+        style="@style/Widget.BarcoStop.Button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="10dp"
+        android:elevation="4dp"
+        android:text="@string/trips_create_cta"
+        android:visibility="gone" />
+</FrameLayout>

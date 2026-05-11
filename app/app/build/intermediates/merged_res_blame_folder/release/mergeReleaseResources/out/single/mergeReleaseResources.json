@@ -1,0 +1,246 @@
+[
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_home_card.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_home_card.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-mdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_reservation.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_reservation.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_route_dot_start.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_route_dot_start.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_fragment_share.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/fragment_share.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_route_dot_end.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_route_dot_end.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_users.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_users.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_trip.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_trip.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_res_status_chip.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_res_status_chip.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_trip_detail_route_pill.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_trip_detail_route_pill.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_boats.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_boats.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_trip_image_placeholder.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_trip_image_placeholder.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_input.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_input.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/menu_main_bottom_nav.xml.flat",
+        "source": "com.barcostop.app-main-36:/menu/main_bottom_nav.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_fragment_trip_list.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/fragment_trip_list.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_input_flat.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_input_flat.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_section_card.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_section_card.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_home.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_home.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-xxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_auth.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_auth.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_edit_trip.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_edit_trip.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/color_bs_nav_item_tint.xml.flat",
+        "source": "com.barcostop.app-main-36:/color/bs_nav_item_tint.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_create_trip.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_create_trip.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_chat_message_outgoing.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_chat_message_outgoing.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_google_button.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_google_button.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_chat_bubble_incoming.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_chat_bubble_incoming.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_user_select.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_user_select.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_trip_detail.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_trip_detail.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_chat_message_incoming.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_chat_message_incoming.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_trip_detail_status_chip.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_trip_detail_status_chip.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_ic_barcostop_logo.png.flat",
+        "source": "com.barcostop.app-main-36:/drawable/ic_barcostop_logo.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_fragment_messages.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/fragment_messages.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_trip_detail_header.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_trip_detail_header.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_boat_manage.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_boat_manage.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_profile_trip.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_profile_trip.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_conversation.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_conversation.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_popup_menu_soft_green.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_popup_menu_soft_green.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_new_chat.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_new_chat.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_fragment_favorites.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/fragment_favorites.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_fragment_reservations.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/fragment_reservations.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_page.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_page.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_main_app.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_main_app.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_chat.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_chat.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_build_badge.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_build_badge.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_chat_bubble_outgoing.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_chat_bubble_outgoing.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_activity_user_public_profile.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/activity_user_public_profile.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_unread_badge.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_unread_badge.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-xhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "com.barcostop.app-main-36:/mipmap-hdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/menu_main_app_actions.xml.flat",
+        "source": "com.barcostop.app-main-36:/menu/main_app_actions.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_user_browse.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_user_browse.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_fragment_profile.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/fragment_profile.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/drawable_bg_avatar_chip.xml.flat",
+        "source": "com.barcostop.app-main-36:/drawable/bg_avatar_chip.xml"
+    },
+    {
+        "merged": "com.barcostop.app-release-35:/layout_item_favorite.xml.flat",
+        "source": "com.barcostop.app-main-36:/layout/item_favorite.xml"
+    }
+]

@@ -147,12 +147,26 @@ public class ShareFragment extends Fragment {
     }
 
     private void openPayPalDonation() {
-        String url = resolvePayPalDonationUrl();
-        if (url.isEmpty()) {
+        String baseUrl = resolvePayPalDonationBaseUrl();
+        if (baseUrl.isEmpty()) {
             FeedbackFx.info(requireActivity(), getString(R.string.share_paypal_missing));
             return;
         }
 
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.paypal_donate_title)
+                .setItems(new CharSequence[]{
+                                getString(R.string.paypal_donate_option_five),
+                                getString(R.string.paypal_donate_option_custom)
+                        }, (dialog, which) -> {
+                            String url = which == 0 ? resolvePayPalDonationSuggestedUrl(baseUrl) : baseUrl;
+                            openExternalDonationUrl(url);
+                        })
+                .setNegativeButton(R.string.common_close, null)
+                .show();
+    }
+
+    private void openExternalDonationUrl(String url) {
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
@@ -161,12 +175,17 @@ public class ShareFragment extends Fragment {
         }
     }
 
-    private static String resolvePayPalDonationUrl() {
+    private static String resolvePayPalDonationBaseUrl() {
         String raw = BuildConfig.PAYPAL_ME == null ? "" : BuildConfig.PAYPAL_ME.trim();
         if (raw.isEmpty()) return "";
-        if (raw.contains("?")) return raw;
+        if (!raw.contains("://")) raw = "https://" + raw;
+        return raw;
+    }
+
+    private static String resolvePayPalDonationSuggestedUrl(String baseUrl) {
+        String raw = baseUrl.trim();
         if (raw.endsWith("/")) raw = raw.substring(0, raw.length() - 1);
-        return raw + "/2.5?locale.x=es_ES&country.x=ES";
+        return raw + "/5";
     }
 
     private static Bitmap createQrBitmap(String text, int sizePx) throws Exception {

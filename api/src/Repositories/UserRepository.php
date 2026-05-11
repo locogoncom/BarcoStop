@@ -8,6 +8,51 @@ use BarcoStop\ServerPhp\Support\Helpers;
 
 final class UserRepository extends BaseRepository
 {
+    public function getReputationSnapshot(string $userId, ?array $userRow = null): array
+    {
+        $row = $userRow ?? $this->fetchOne('SELECT * FROM users WHERE id = ?', [$userId]);
+        if (!$row) {
+            return [
+                'totalPoints' => 0,
+                'rankName' => 'Marinero',
+                'rankInsignia' => '·',
+                'createdTrips' => 0,
+                'completedTrips' => 0,
+                'reviewCount' => 0,
+                'profileComplete' => false,
+            ];
+        }
+
+        $createdTrips = (int) (($this->fetchOne('SELECT COUNT(*) AS total FROM trips WHERE patron_id = ?', [$userId])['total'] ?? 0));
+        $completedTrips = (int) (($this->fetchOne(
+            "SELECT COUNT(*) AS total FROM trips WHERE patron_id = ? AND LOWER(COALESCE(status, '')) IN ('completed', 'completado', 'finished', 'done')",
+            [$userId]
+        )['total'] ?? 0));
+        $reviewCount = (int) (($this->fetchOne('SELECT COUNT(*) AS total FROM ratings WHERE user_id = ?', [$userId])['total'] ?? 0));
+        $ratingsRows = $this->fetchAll('SELECT rating FROM ratings WHERE user_id = ?', [$userId]);
+        $ratingPoints = 0;
+        foreach ($ratingsRows as $ratingRow) {
+            $rating = (int) ($ratingRow['rating'] ?? 0);
+            if ($rating <= 0) {
+                continue;
+            }
+            $ratingPoints += min(10, $rating <= 5 ? $rating * 2 : $rating);
+        }
+
+        $profileComplete = $this->isProfileComplete($row);
+        $totalPoints = ($profileComplete ? 25 : 0) + ($createdTrips * 10) + ($completedTrips * 15) + $ratingPoints;
+
+        return [
+            'totalPoints' => $totalPoints,
+            'rankName' => $this->rankName($totalPoints),
+            'rankInsignia' => $this->rankInsignia($totalPoints),
+            'createdTrips' => $createdTrips,
+            'completedTrips' => $completedTrips,
+            'reviewCount' => $reviewCount,
+            'profileComplete' => $profileComplete,
+        ];
+    }
+
     public function create(array $payload): string
     {
         $id = \Ramsey\Uuid\Uuid::uuid4()->toString();
@@ -193,6 +238,7 @@ final class UserRepository extends BaseRepository
     private function hydrateUser(array $row): array
     {
         $id = (string) $row['id'];
+        $reputation = $this->getReputationSnapshot($id, $row);
         return [
             'id' => $id,
             'name' => $row['name'],
@@ -220,10 +266,82 @@ final class UserRepository extends BaseRepository
             'homePort' => $row['home_port'],
             'captainLicense' => $row['captain_license'],
             'averageRating' => (float) ($row['average_rating'] ?? 0),
+            'totalPoints' => $reputation['totalPoints'],
+            'rankName' => $reputation['rankName'],
+            'rankInsignia' => $reputation['rankInsignia'],
+            'createdTrips' => $reputation['createdTrips'],
+            'completedTrips' => $reputation['completedTrips'],
+            'reviewCount' => $reputation['reviewCount'],
+            'profileComplete' => $reputation['profileComplete'],
+            'reputation' => $reputation,
             'createdAt' => Helpers::nowMillis($row['created_at'] ?? null),
             'updatedAt' => Helpers::nowMillis($row['updated_at'] ?? null),
             'skills' => $this->getSkills($id),
             'ratings' => $this->getRatings($id),
         ];
+    }
+
+    private function isProfileComplete(array $row): bool
+    {
+        $commonFields = [
+            trim((string) ($row['name'] ?? '')),
+            trim((string) ($row['bio'] ?? '')),
+            trim((string) ($row['current_location'] ?? '')),
+            trim((string) ($row['instagram'] ?? '')),
+            trim((string) ($row['phone'] ?? '')),
+            trim((string) ($row['languages'] ?? '')),
+            trim((string) ($row['avatar'] ?? '')),
+        ];
+
+        foreach ($commonFields as $value) {
+            if ($value === '') {
+                return false;
+            }
+        }
+
+        $isCaptain = Helpers::normalizeRole($row['role'] ?? null, false) === 'patron';
+        $roleFields = $isCaptain
+            ? [
+                trim((string) ($row['boat_name'] ?? '')),
+                trim((string) ($row['boat_type'] ?? '')),
+                trim((string) ($row['boat_model'] ?? '')),
+                trim((string) ($row['boat_length_m'] ?? '')),
+                trim((string) ($row['boat_capacity'] ?? '')),
+                trim((string) ($row['boat_year'] ?? '')),
+                trim((string) ($row['boat_license'] ?? '')),
+                trim((string) ($row['home_port'] ?? '')),
+                trim((string) ($row['captain_license'] ?? '')),
+            ]
+            : [
+                trim((string) ($row['sailing_experience'] ?? '')),
+                trim((string) ($row['certifications'] ?? '')),
+                trim((string) ($row['preferred_routes'] ?? '')),
+            ];
+
+        foreach ($roleFields as $value) {
+            if ($value === '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function rankName(int $totalPoints): string
+    {
+        if ($totalPoints >= 100) return 'Capitan';
+        if ($totalPoints >= 75) return 'Oficial';
+        if ($totalPoints >= 50) return 'Contramaestre';
+        if ($totalPoints >= 25) return 'Marinero avanzado';
+        return 'Marinero';
+    }
+
+    private function rankInsignia(int $totalPoints): string
+    {
+        if ($totalPoints >= 100) return '⚓⚓⚓⚓';
+        if ($totalPoints >= 75) return '⚓⚓⚓';
+        if ($totalPoints >= 50) return '⚓⚓';
+        if ($totalPoints >= 25) return '⚓';
+        return '·';
     }
 }

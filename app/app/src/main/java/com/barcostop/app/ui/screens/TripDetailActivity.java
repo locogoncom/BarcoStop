@@ -25,6 +25,7 @@ import com.barcostop.app.core.actions.TripActions;
 import com.barcostop.app.core.network.AssetUrlResolver;
 import com.barcostop.app.core.storage.SessionStore;
 import com.barcostop.app.ui.feedback.FeedbackFx;
+import com.barcostop.app.ui.util.ReputationCalculator;
 import com.barcostop.app.ui.util.RemoteImageLoader;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -56,6 +57,7 @@ public class TripDetailActivity extends AppCompatActivity {
     private TextView routeDestinationView;
     private TextView captainNameView;
     private TextView captainRatingView;
+    private TextView captainReputationView;
     private TextView boatNameView;
     private TextView boatTypeView;
     private TextView boatModelView;
@@ -97,6 +99,10 @@ public class TripDetailActivity extends AppCompatActivity {
     private String reservationId = "";
     private String reservationStatus = "";
     private boolean isFavorite = false;
+    private JSONObject patronProfile;
+    private JSONArray captainRatings = new JSONArray();
+    private int captainCreatedTrips = 0;
+    private int captainCompletedTrips = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -144,6 +150,7 @@ public class TripDetailActivity extends AppCompatActivity {
         checkpointsCard = findViewById(R.id.detail_checkpoints_card);
         captainNameView = findViewById(R.id.detail_captain_name);
         captainRatingView = findViewById(R.id.detail_captain_rating);
+        captainReputationView = findViewById(R.id.detail_captain_reputation);
         boatNameView = findViewById(R.id.detail_boat_name);
         boatTypeView = findViewById(R.id.detail_boat_type);
         boatModelView = findViewById(R.id.detail_boat_model);
@@ -318,14 +325,17 @@ public class TripDetailActivity extends AppCompatActivity {
                     String boatType = patron != null ? readFirst(patron, "boatType", "boat_type") : "";
                     String boatModel = patron != null ? readFirst(patron, "boatModel", "boat_model") : "";
                     String avgRating = patron != null ? readFirst(patron, "averageRating", "average_rating") : "";
+                    patronProfile = patron;
                     captainCard.setVisibility((patron != null || !patronName.isEmpty()) ? View.VISIBLE : View.GONE);
                     if (captainActionsRow != null) captainActionsRow.setVisibility(captainCard.getVisibility());
                     captainNameView.setText(getString(R.string.trip_detail_captain_label) + ": " + fallback(patronName));
                     captainRatingView.setText(getString(R.string.trip_detail_rating_label) + ": " + (avgRating.isEmpty() ? "0.0/5.0" : avgRating + "/5.0"));
+                    renderCaptainReputation();
                     boatNameView.setText(getString(R.string.trip_detail_boat_name_label) + ": " + fallback(boatName));
                     boatTypeView.setText(getString(R.string.trip_detail_boat_type_label) + ": " + fallback(boatType));
                     boatModelView.setText(getString(R.string.trip_detail_boat_model_label) + ": " + fallback(boatModel));
                     loadCaptainRatings();
+                    loadCaptainTripStats();
                     loadRegattaSnapshot();
                 } catch (Throwable throwable) {
                     FeedbackFx.error(TripDetailActivity.this, getString(R.string.trip_load_invalid_payload));
@@ -865,20 +875,69 @@ public class TripDetailActivity extends AppCompatActivity {
                     JSONObject json = new JSONObject(body);
                     double avg = json.optDouble("averageRating", 0);
                     JSONArray ratings = json.optJSONArray("ratings");
+                    captainRatings = ratings == null ? new JSONArray() : ratings;
                     if (captainRatingView != null) {
                         captainRatingView.setText(getString(R.string.trip_detail_rating_label) + ": " + String.format(Locale.ROOT, "%.1f/5.0", avg));
                     }
+                    renderCaptainReputation();
                     renderReviews(ratings);
                 } catch (Throwable throwable) {
+                    captainRatings = new JSONArray();
+                    renderCaptainReputation();
                     renderReviews(new JSONArray());
                 }
             }
 
             @Override
             public void onUiError(Throwable throwable) {
+                captainRatings = new JSONArray();
+                renderCaptainReputation();
                 renderReviews(new JSONArray());
             }
         });
+    }
+
+    private void loadCaptainTripStats() {
+        captainCreatedTrips = 0;
+        captainCompletedTrips = 0;
+        if (patronId.isEmpty()) {
+            renderCaptainReputation();
+            return;
+        }
+        tripActions.listTrips(new UiApiCallback(this) {
+            @Override
+            public void onUiSuccess(String body) {
+                try {
+                    JSONArray arr = new JSONArray(body);
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject trip = arr.optJSONObject(i);
+                        if (trip == null) continue;
+                        String rowPatronId = readFirst(trip, "patronId", "patron_id");
+                        if (!patronId.equals(rowPatronId)) continue;
+                        captainCreatedTrips += 1;
+                        if (isCompletedStatus(readFirst(trip, "status"))) captainCompletedTrips += 1;
+                    }
+                } catch (Throwable ignored) {
+                }
+                renderCaptainReputation();
+            }
+
+            @Override
+            public void onUiError(Throwable throwable) {
+                renderCaptainReputation();
+            }
+        });
+    }
+
+    private void renderCaptainReputation() {
+        if (captainReputationView == null || patronProfile == null) return;
+        ReputationCalculator.Snapshot snapshot = ReputationCalculator.from(patronProfile, true, captainCreatedTrips, captainCompletedTrips, captainRatings);
+        captainReputationView.setText(getString(R.string.trip_detail_reputation_value, snapshot.insignia, snapshot.rankName, snapshot.totalPoints));
+    }
+
+    private static boolean isCompletedStatus(String status) {
+        String safe = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
+        return safe.equals("completed") || safe.equals("completado") || safe.equals("finished") || safe.equals("done");
     }
 
     private void renderReviews(JSONArray ratings) {

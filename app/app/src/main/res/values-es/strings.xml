@@ -58,7 +58,7 @@
     <string name="reservations_update_error">No se pudo actualizar la reserva</string>
     <string name="reservations_cancelled_ok">Reserva cancelada</string>
     <string name="reservations_open_chat_cta">Abrir chat</string>
-    <string name="reservations_paypal_cta">PayPal</string>
+    <string name="reservations_paypal_cta">PayPal 5 EUR+</string>
     <string name="reservations_paypal_missing">PayPal aun no esta configurado</string>
     <string name="reservations_paypal_error">No se pudo abrir PayPal</string>
     <string name="reservations_chat_unavailable">Chat no disponible</string>
@@ -105,7 +105,8 @@
     <string name="share_btn_whatsapp">WhatsApp</string>
     <string name="share_btn_instagram">Instagram</string>
     <string name="share_btn_qr">Ver QR</string>
-    <string name="share_btn_donate">Donar con PayPal</string>
+    <string name="share_btn_donate">Donar con PayPal 5 EUR+</string>
+    <string name="share_donate_slogan">Gracias por el cafe o birra para BarcoStop. Seguiremos mejorando esta comunidad.</string>
     <string name="share_payload_template">BarcoStop: comparte travesias, conoce tripulacion y vive el mar en comunidad.\n\nDescargatela y sube tu primera experiencia hoy.\n\n%1$s</string>
     <string name="share_generic_error">No se pudo abrir el menu de compartir</string>
     <string name="share_whatsapp_error">No se pudo abrir WhatsApp</string>
@@ -116,6 +117,9 @@
     <string name="share_qr_error">No se pudo generar el QR</string>
     <string name="share_paypal_missing">PayPal aun no esta configurado</string>
     <string name="share_paypal_error">No se pudo abrir PayPal</string>
+    <string name="paypal_donate_title">Apoya a BarcoStop</string>
+    <string name="paypal_donate_option_five">Donar 5 EUR</string>
+    <string name="paypal_donate_option_custom">Donar mas o elegir otra cantidad</string>
     <string name="new_chat_search_hint">Buscar usuario</string>
     <string name="new_chat_title">Nuevo chat</string>
     <string name="new_chat_load_users_error">No se pudieron cargar los usuarios</string>
@@ -196,6 +200,12 @@
     <string name="profile_reputation_title">Reputacion y soporte</string>
     <string name="profile_rating_summary_placeholder">Valoracion: --</string>
     <string name="profile_rating_summary_value">Valoracion: %1$.1f (%2$d resenas)</string>
+    <string name="profile_reputation_rank_placeholder">Rango nautico: --</string>
+    <string name="profile_reputation_points_placeholder">Puntos: --</string>
+    <string name="profile_reputation_rank_value">Rango nautico: %1$s %2$s</string>
+    <string name="profile_reputation_points_value">Puntos: %1$d · Viajes: %2$d · Completados: %3$d · Perfil completo: %4$s</string>
+    <string name="profile_reputation_complete_yes">si</string>
+    <string name="profile_reputation_complete_no">no</string>
     <string name="profile_donation_summary_placeholder">Aportes de soporte: --</string>
     <string name="profile_donation_summary_value">Aportes de soporte: %1$d · Total: €%2$.2f</string>
     <string name="profile_donate_cta">Aportar €2.50</string>
@@ -247,6 +257,7 @@
     <string name="public_profile_no_reviews">Todavia no hay resenas publicas.</string>
     <string name="public_profile_no_bio">Sin biografia.</string>
     <string name="public_profile_rating_value">Valoracion: %1$.1f</string>
+    <string name="public_profile_reputation_value">Rango nautico: %1$s %2$s · %3$d pts</string>
     <string name="public_profile_boat_value">Barco: %1$s · %2$s</string>
     <string name="public_profile_location_value">Ubicacion actual: %1$s</string>
     <string name="public_profile_instagram_value">Instagram: %1$s</string>
@@ -333,6 +344,7 @@
     <string name="trip_detail_status_label">Estado</string>
     <string name="trip_detail_captain_label">👤 Patron</string>
     <string name="trip_detail_rating_label">⭐ Valoracion</string>
+    <string name="trip_detail_reputation_value">⚓ Reputacion: %1$s %2$s · %3$d pts</string>
     <string name="trip_detail_boat_name_label">⛵ Barco</string>
     <string name="trip_detail_boat_type_label">Tipo</string>
     <string name="trip_detail_boat_model_label">Modelo</string>

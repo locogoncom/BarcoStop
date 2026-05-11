@@ -58,7 +58,7 @@
     <string name="reservations_update_error">Could not update reservation</string>
     <string name="reservations_cancelled_ok">Reservation cancelled</string>
     <string name="reservations_open_chat_cta">Open chat</string>
-    <string name="reservations_paypal_cta">PayPal</string>
+    <string name="reservations_paypal_cta">PayPal 5 EUR+</string>
     <string name="reservations_paypal_missing">PayPal is not configured yet</string>
     <string name="reservations_paypal_error">Could not open PayPal</string>
     <string name="reservations_chat_unavailable">Chat unavailable</string>
@@ -105,7 +105,8 @@
     <string name="share_btn_whatsapp">WhatsApp</string>
     <string name="share_btn_instagram">Instagram</string>
     <string name="share_btn_qr">Show QR</string>
-    <string name="share_btn_donate">Donate with PayPal</string>
+    <string name="share_btn_donate">Donate with PayPal 5 EUR+</string>
+    <string name="share_donate_slogan">Thanks for the coffee or beer for BarcoStop. We will keep improving this community.</string>
     <string name="share_payload_template">BarcoStop: share crossings, find crew and enjoy the sea together.\n\nDownload it and post your first experience today.\n\n%1$s</string>
     <string name="share_generic_error">Could not open share menu</string>
     <string name="share_whatsapp_error">Could not open WhatsApp</string>
@@ -116,6 +117,9 @@
     <string name="share_qr_error">Could not generate QR code</string>
     <string name="share_paypal_missing">PayPal not configured yet</string>
     <string name="share_paypal_error">Could not open PayPal</string>
+    <string name="paypal_donate_title">Support BarcoStop</string>
+    <string name="paypal_donate_option_five">Donate 5 EUR</string>
+    <string name="paypal_donate_option_custom">Donate more or choose another amount</string>
     <string name="new_chat_search_hint">Search user</string>
     <string name="new_chat_title">New chat</string>
     <string name="new_chat_load_users_error">Could not load users</string>
@@ -196,6 +200,12 @@
     <string name="profile_reputation_title">Reputation and support</string>
     <string name="profile_rating_summary_placeholder">Rating: --</string>
     <string name="profile_rating_summary_value">Rating: %1$.1f (%2$d reviews)</string>
+    <string name="profile_reputation_rank_placeholder">Nautical rank: --</string>
+    <string name="profile_reputation_points_placeholder">Points: --</string>
+    <string name="profile_reputation_rank_value">Nautical rank: %1$s %2$s</string>
+    <string name="profile_reputation_points_value">Points: %1$d · Trips: %2$d · Completed: %3$d · Profile complete: %4$s</string>
+    <string name="profile_reputation_complete_yes">yes</string>
+    <string name="profile_reputation_complete_no">no</string>
     <string name="profile_donation_summary_placeholder">Support contributions: --</string>
     <string name="profile_donation_summary_value">Support contributions: %1$d · Total: €%2$.2f</string>
     <string name="profile_donate_cta">Contribute €2.50</string>
@@ -247,6 +257,7 @@
     <string name="public_profile_no_reviews">No public reviews yet.</string>
     <string name="public_profile_no_bio">No bio available.</string>
     <string name="public_profile_rating_value">Rating: %1$.1f</string>
+    <string name="public_profile_reputation_value">Nautical rank: %1$s %2$s · %3$d pts</string>
     <string name="public_profile_boat_value">Boat: %1$s · %2$s</string>
     <string name="public_profile_location_value">Current location: %1$s</string>
     <string name="public_profile_instagram_value">Instagram: %1$s</string>
@@ -333,6 +344,7 @@
     <string name="trip_detail_status_label">Status</string>
     <string name="trip_detail_captain_label">👤 Patron</string>
     <string name="trip_detail_rating_label">⭐ Rating</string>
+    <string name="trip_detail_reputation_value">⚓ Reputation: %1$s %2$s · %3$d pts</string>
     <string name="trip_detail_boat_name_label">⛵ Boat</string>
     <string name="trip_detail_boat_type_label">Type</string>
     <string name="trip_detail_boat_model_label">Model</string>

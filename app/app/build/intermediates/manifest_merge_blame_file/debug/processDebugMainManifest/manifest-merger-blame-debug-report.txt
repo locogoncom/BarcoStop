@@ -1,0 +1,222 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.barcostop.app.debug"
+4    android:versionCode="582605101"
+5    android:versionName="58.2026.05.10-0957-debug" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="21"
+9        android:targetSdkVersion="35" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:4:5-67
+11-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:4:22-64
+12
+13    <permission
+13-->[androidx.core:core:1.13.0] C:\Users\LocoGon\.gradle\caches\transforms-4\906753b1313d0d6416aa8391cc212691\transformed\core-1.13.0\AndroidManifest.xml:22:5-24:47
+14        android:name="com.barcostop.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+14-->[androidx.core:core:1.13.0] C:\Users\LocoGon\.gradle\caches\transforms-4\906753b1313d0d6416aa8391cc212691\transformed\core-1.13.0\AndroidManifest.xml:23:9-81
+15        android:protectionLevel="signature" />
+15-->[androidx.core:core:1.13.0] C:\Users\LocoGon\.gradle\caches\transforms-4\906753b1313d0d6416aa8391cc212691\transformed\core-1.13.0\AndroidManifest.xml:24:9-44
+16
+17    <uses-permission android:name="com.barcostop.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+17-->[androidx.core:core:1.13.0] C:\Users\LocoGon\.gradle\caches\transforms-4\906753b1313d0d6416aa8391cc212691\transformed\core-1.13.0\AndroidManifest.xml:26:5-97
+17-->[androidx.core:core:1.13.0] C:\Users\LocoGon\.gradle\caches\transforms-4\906753b1313d0d6416aa8391cc212691\transformed\core-1.13.0\AndroidManifest.xml:26:22-94
+18
+19    <application
+19-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:6:5-39:19
+20        android:name="com.barcostop.app.core.BarcoStopApplication"
+20-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:7:9-50
+21        android:allowBackup="true"
+21-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:8:9-35
+22        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+22-->[androidx.core:core:1.13.0] C:\Users\LocoGon\.gradle\caches\transforms-4\906753b1313d0d6416aa8391cc212691\transformed\core-1.13.0\AndroidManifest.xml:28:18-86
+23        android:debuggable="true"
+24        android:extractNativeLibs="true"
+25        android:icon="@mipmap/ic_launcher"
+25-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:9:9-43
+26        android:label="@string/app_name"
+26-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:10:9-41
+27        android:roundIcon="@mipmap/ic_launcher_round"
+27-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:11:9-54
+28        android:supportsRtl="true"
+28-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:12:9-35
+29        android:theme="@style/Theme.BarcoStop" >
+29-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:13:9-47
+30        <activity android:name="com.barcostop.app.ui.screens.MainAppActivity" />
+30-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:14:9-64
+30-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:14:19-61
+31        <activity android:name="com.barcostop.app.ui.screens.UsersActivity" />
+31-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:15:9-62
+31-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:15:19-59
+32        <activity android:name="com.barcostop.app.ui.screens.UserPublicProfileActivity" />
+32-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:16:9-74
+32-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:16:19-71
+33        <activity android:name="com.barcostop.app.ui.screens.TripListActivity" />
+33-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:17:9-65
+33-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:17:19-62
+34        <activity android:name="com.barcostop.app.ui.screens.EditTripActivity" />
+34-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:18:9-65
+34-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:18:19-62
+35        <activity android:name="com.barcostop.app.ui.screens.TripDetailActivity" />
+35-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:19:9-67
+35-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:19:19-64
+36        <activity android:name="com.barcostop.app.ui.screens.ReservationsActivity" />
+36-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:20:9-69
+36-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:20:19-66
+37        <activity android:name="com.barcostop.app.ui.screens.ProfileActivity" />
+37-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:21:9-64
+37-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:21:19-61
+38        <activity android:name="com.barcostop.app.ui.screens.PatronRequestsActivity" />
+38-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:22:9-71
+38-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:22:19-68
+39        <activity android:name="com.barcostop.app.ui.screens.MessagesActivity" />
+39-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:23:9-65
+39-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:23:19-62
+40        <activity android:name="com.barcostop.app.ui.screens.NewChatActivity" />
+40-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:24:9-64
+40-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:24:19-61
+41        <activity android:name="com.barcostop.app.ui.screens.FavoritesActivity" />
+41-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:25:9-66
+41-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:25:19-63
+42        <activity android:name="com.barcostop.app.ui.screens.CreateTripActivity" />
+42-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:26:9-67
+42-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:26:19-64
+43        <activity android:name="com.barcostop.app.ui.screens.ChatActivity" />
+43-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:27:9-61
+43-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:27:19-58
+44        <activity android:name="com.barcostop.app.ui.screens.BookingsActivity" />
+44-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:28:9-65
+44-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:28:19-62
+45        <activity android:name="com.barcostop.app.ui.screens.BoatsActivity" />
+45-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:29:9-62
+45-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:29:19-59
+46        <activity android:name="com.barcostop.app.ui.screens.AuthActivity" />
+46-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:30:9-61
+46-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:30:19-58
+47        <activity
+47-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:31:9-38:20
+48            android:name="com.barcostop.app.ui.screens.HomeActivity"
+48-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:32:13-52
+49            android:exported="true" >
+49-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:33:13-36
+50            <intent-filter>
+50-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:34:13-37:29
+51                <action android:name="android.intent.action.MAIN" />
+51-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:35:17-69
+51-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:35:25-66
+52
+53                <category android:name="android.intent.category.LAUNCHER" />
+53-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:36:17-77
+53-->C:\Users\LocoGon\Documents\BarcoStop\app\app\src\main\AndroidManifest.xml:36:27-74
+54            </intent-filter>
+55        </activity>
+56        <activity
+56-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:23:9-27:75
+57            android:name="com.google.android.gms.auth.api.signin.internal.SignInHubActivity"
+57-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:24:13-93
+58            android:excludeFromRecents="true"
+58-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:25:13-46
+59            android:exported="false"
+59-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:26:13-37
+60            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+60-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:27:13-72
+61        <!--
+62            Service handling Google Sign-In user revocation. For apps that do not integrate with
+63            Google Sign-In, this service will never be started.
+64        -->
+65        <service
+65-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:33:9-37:51
+66            android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
+66-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:34:13-89
+67            android:exported="true"
+67-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:35:13-36
+68            android:permission="com.google.android.gms.auth.api.signin.permission.REVOCATION_NOTIFICATION"
+68-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:36:13-107
+69            android:visibleToInstantApps="true" />
+69-->[com.google.android.gms:play-services-auth:21.2.0] C:\Users\LocoGon\.gradle\caches\transforms-4\93a4aa7d318d68901b61dc10621a0657\transformed\play-services-auth-21.2.0\AndroidManifest.xml:37:13-48
+70
+71        <activity
+71-->[com.google.android.gms:play-services-base:18.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\ff99864f1e2bbca3a230673e907dfd2b\transformed\play-services-base-18.3.0\AndroidManifest.xml:20:9-22:45
+72            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+72-->[com.google.android.gms:play-services-base:18.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\ff99864f1e2bbca3a230673e907dfd2b\transformed\play-services-base-18.3.0\AndroidManifest.xml:20:19-85
+73            android:exported="false"
+73-->[com.google.android.gms:play-services-base:18.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\ff99864f1e2bbca3a230673e907dfd2b\transformed\play-services-base-18.3.0\AndroidManifest.xml:22:19-43
+74            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+74-->[com.google.android.gms:play-services-base:18.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\ff99864f1e2bbca3a230673e907dfd2b\transformed\play-services-base-18.3.0\AndroidManifest.xml:21:19-78
+75
+76        <meta-data
+76-->[com.google.android.gms:play-services-basement:18.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\b8e1c31491d20eaa0108a6b49b3d6b3e\transformed\play-services-basement-18.3.0\AndroidManifest.xml:21:9-23:69
+77            android:name="com.google.android.gms.version"
+77-->[com.google.android.gms:play-services-basement:18.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\b8e1c31491d20eaa0108a6b49b3d6b3e\transformed\play-services-basement-18.3.0\AndroidManifest.xml:22:13-58
+78            android:value="@integer/google_play_services_version" />
+78-->[com.google.android.gms:play-services-basement:18.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\b8e1c31491d20eaa0108a6b49b3d6b3e\transformed\play-services-basement-18.3.0\AndroidManifest.xml:23:13-66
+79
+80        <provider
+80-->[androidx.emoji2:emoji2:1.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\1887968b9453b65aa905f72b1f88a7f7\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+81            android:name="androidx.startup.InitializationProvider"
+81-->[androidx.emoji2:emoji2:1.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\1887968b9453b65aa905f72b1f88a7f7\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+82            android:authorities="com.barcostop.app.debug.androidx-startup"
+82-->[androidx.emoji2:emoji2:1.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\1887968b9453b65aa905f72b1f88a7f7\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+83            android:exported="false" >
+83-->[androidx.emoji2:emoji2:1.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\1887968b9453b65aa905f72b1f88a7f7\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+84            <meta-data
+84-->[androidx.emoji2:emoji2:1.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\1887968b9453b65aa905f72b1f88a7f7\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+85                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+85-->[androidx.emoji2:emoji2:1.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\1887968b9453b65aa905f72b1f88a7f7\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+86                android:value="androidx.startup" />
+86-->[androidx.emoji2:emoji2:1.3.0] C:\Users\LocoGon\.gradle\caches\transforms-4\1887968b9453b65aa905f72b1f88a7f7\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+87            <meta-data
+87-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\LocoGon\.gradle\caches\transforms-4\ac41fc5dde15c4a4b3f6a5e608d90d03\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
+88                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+88-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\LocoGon\.gradle\caches\transforms-4\ac41fc5dde15c4a4b3f6a5e608d90d03\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
+89                android:value="androidx.startup" />
+89-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\LocoGon\.gradle\caches\transforms-4\ac41fc5dde15c4a4b3f6a5e608d90d03\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
+90            <meta-data
+90-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+91                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+91-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+92                android:value="androidx.startup" />
+92-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+93        </provider>
+94
+95        <receiver
+95-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+96            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+96-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+97            android:directBootAware="false"
+97-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+98            android:enabled="true"
+98-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+99            android:exported="true"
+99-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+100            android:permission="android.permission.DUMP" >
+100-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+101            <intent-filter>
+101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+102                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+103            </intent-filter>
+104            <intent-filter>
+104-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+105                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+106            </intent-filter>
+107            <intent-filter>
+107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+108                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+109            </intent-filter>
+110            <intent-filter>
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+111                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\LocoGon\.gradle\caches\transforms-4\7c763804dde89eb727ed288f84600f33\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+112            </intent-filter>
+113        </receiver>
+114    </application>
+115
+116</manifest>

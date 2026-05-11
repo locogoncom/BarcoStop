@@ -15,10 +15,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.barcostop.app.R;
 import com.barcostop.app.core.BarcoStopApplication;
 import com.barcostop.app.core.actions.RatingActions;
+import com.barcostop.app.core.actions.TripActions;
 import com.barcostop.app.core.actions.UserActions;
 import com.barcostop.app.core.storage.SessionStore;
 import com.barcostop.app.ui.feedback.FeedbackFx;
 import com.barcostop.app.ui.util.KeyboardUtils;
+import com.barcostop.app.ui.util.ReputationCalculator;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
@@ -33,10 +35,12 @@ import java.util.Locale;
 public class UserPublicProfileActivity extends AppCompatActivity {
     private UserActions userActions;
     private RatingActions ratingActions;
+    private TripActions tripActions;
     private SessionStore sessionStore;
     private TextView nameView;
     private TextView roleView;
     private TextView ratingView;
+    private TextView reputationView;
     private TextView bioView;
     private TextView locationView;
     private TextView instagramView;
@@ -50,6 +54,10 @@ public class UserPublicProfileActivity extends AppCompatActivity {
     private ProgressBar loading;
 
     private String userId = "";
+    private JSONObject currentUser;
+    private JSONArray currentRatings = new JSONArray();
+    private int createdTrips = 0;
+    private int completedTrips = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +73,7 @@ public class UserPublicProfileActivity extends AppCompatActivity {
         BarcoStopApplication app = (BarcoStopApplication) getApplication();
         userActions = new UserActions(app.getApiClient());
         ratingActions = new RatingActions(app.getApiClient());
+        tripActions = new TripActions(app.getApiClient());
         sessionStore = app.getSessionStore();
 
         userId = safe(getIntent().getStringExtra("userId"));
@@ -76,6 +85,7 @@ public class UserPublicProfileActivity extends AppCompatActivity {
         nameView = findViewById(R.id.public_profile_name);
         roleView = findViewById(R.id.public_profile_role);
         ratingView = findViewById(R.id.public_profile_rating);
+        reputationView = findViewById(R.id.public_profile_reputation);
         bioView = findViewById(R.id.public_profile_bio);
         locationView = findViewById(R.id.public_profile_location);
         instagramView = findViewById(R.id.public_profile_instagram);
@@ -134,6 +144,7 @@ public class UserPublicProfileActivity extends AppCompatActivity {
                 loading.setVisibility(View.GONE);
                 try {
                     JSONObject user = new JSONObject(body);
+                    currentUser = user;
                     String name = readFirst(user, "name");
                     String role = readFirst(user, "role");
                     String bio = readFirst(user, "bio");
@@ -167,6 +178,7 @@ public class UserPublicProfileActivity extends AppCompatActivity {
                         rateCommentInput.setEnabled(false);
                     }
 
+                    loadTripStats(role);
                     loadRatings();
                 } catch (Throwable throwable) {
                     FeedbackFx.error(UserPublicProfileActivity.this, getString(R.string.public_profile_load_error));
@@ -188,18 +200,69 @@ public class UserPublicProfileActivity extends AppCompatActivity {
                 try {
                     JSONObject json = new JSONObject(body);
                     double avgRating = json.optDouble("averageRating", 0);
+                    currentRatings = json.optJSONArray("ratings");
+                    if (currentRatings == null) currentRatings = new JSONArray();
                     ratingView.setText(getString(R.string.public_profile_rating_value, avgRating));
+                    renderReputation();
                     renderReviews(json.optJSONArray("ratings"));
                 } catch (Throwable throwable) {
+                    currentRatings = new JSONArray();
+                    renderReputation();
                     renderReviews(new JSONArray());
                 }
             }
 
             @Override
             public void onUiError(Throwable throwable) {
+                currentRatings = new JSONArray();
+                renderReputation();
                 renderReviews(new JSONArray());
             }
         });
+    }
+
+    private void loadTripStats(String role) {
+        createdTrips = 0;
+        completedTrips = 0;
+        if (!role.equalsIgnoreCase("patron")) {
+            renderReputation();
+            return;
+        }
+        tripActions.listTrips(new UiApiCallback(this) {
+            @Override
+            public void onUiSuccess(String body) {
+                try {
+                    JSONArray arr = new JSONArray(body);
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject trip = arr.optJSONObject(i);
+                        if (trip == null) continue;
+                        String patronId = readFirst(trip, "patronId", "patron_id");
+                        if (!userId.equals(patronId)) continue;
+                        createdTrips += 1;
+                        if (isCompletedStatus(readFirst(trip, "status"))) completedTrips += 1;
+                    }
+                } catch (Throwable ignored) {
+                }
+                renderReputation();
+            }
+
+            @Override
+            public void onUiError(Throwable throwable) {
+                renderReputation();
+            }
+        });
+    }
+
+    private void renderReputation() {
+        if (reputationView == null || currentUser == null) return;
+        boolean isCaptain = readFirst(currentUser, "role").equalsIgnoreCase("patron");
+        ReputationCalculator.Snapshot snapshot = ReputationCalculator.from(currentUser, isCaptain, createdTrips, completedTrips, currentRatings);
+        reputationView.setText(getString(R.string.public_profile_reputation_value, snapshot.insignia, snapshot.rankName, snapshot.totalPoints));
+    }
+
+    private static boolean isCompletedStatus(String status) {
+        String safe = status == null ? "" : status.trim().toLowerCase(Locale.ROOT);
+        return safe.equals("completed") || safe.equals("completado") || safe.equals("finished") || safe.equals("done");
     }
 
     private void submitRating() {

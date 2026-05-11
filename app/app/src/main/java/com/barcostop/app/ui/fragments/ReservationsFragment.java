@@ -11,6 +11,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -261,11 +262,26 @@ public class ReservationsFragment extends Fragment {
     }
 
     private void openPayPalDonation() {
-        String url = resolvePayPalDonationUrl();
-        if (url.isEmpty()) {
+        String baseUrl = resolvePayPalDonationBaseUrl();
+        if (baseUrl.isEmpty()) {
             FeedbackFx.info(requireActivity(), getString(R.string.reservations_paypal_missing));
             return;
         }
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.paypal_donate_title)
+                .setItems(new CharSequence[]{
+                                getString(R.string.paypal_donate_option_five),
+                                getString(R.string.paypal_donate_option_custom)
+                        }, (dialog, which) -> {
+                            String url = which == 0 ? resolvePayPalDonationSuggestedUrl(baseUrl) : baseUrl;
+                            openExternalDonationUrl(url);
+                        })
+                .setNegativeButton(R.string.common_close, null)
+                .show();
+    }
+
+    private void openExternalDonationUrl(String url) {
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
@@ -278,12 +294,17 @@ public class ReservationsFragment extends Fragment {
         return !safe(BuildConfig.PAYPAL_ME).isEmpty();
     }
 
-    private static String resolvePayPalDonationUrl() {
+    private static String resolvePayPalDonationBaseUrl() {
         String raw = safe(BuildConfig.PAYPAL_ME);
         if (raw.isEmpty()) return "";
-        if (raw.contains("?")) return raw;
+        if (!raw.contains("://")) raw = "https://" + raw;
+        return raw;
+    }
+
+    private static String resolvePayPalDonationSuggestedUrl(String baseUrl) {
+        String raw = baseUrl.trim();
         if (raw.endsWith("/")) raw = raw.substring(0, raw.length() - 1);
-        return raw + "/2.5?locale.x=es_ES&country.x=ES";
+        return raw + "/5";
     }
 
     private static String readFirst(JSONObject obj, String... keys) {
